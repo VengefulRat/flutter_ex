@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lore — Account Transfer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #080808;
+      color: #E8E2D4;
+      font-family: Georgia, serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+    }
+    .wordmark {
+      font-size: 13px;
+      color: #C9A96E;
+      letter-spacing: 6px;
+      font-weight: 300;
+      margin-bottom: 48px;
+    }
+    h1 {
+      font-size: 11px;
+      font-family: monospace;
+      letter-spacing: 4px;
+      color: #C9A96E;
+      margin-bottom: 12px;
+    }
+    p {
+      font-size: 13px;
+      color: #9a9a9a;
+      font-style: italic;
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+    label {
+      display: block;
+      font-family: monospace;
+      font-size: 8px;
+      letter-spacing: 3px;
+      color: #5a5a5a;
+      margin-bottom: 6px;
+      margin-top: 20px;
+    }
+    input {
+      width: 100%;
+      background: #0E0E0E;
+      border: 1px solid #2a2a2a;
+      color: #E8E2D4;
+      font-family: monospace;
+      font-size: 16px;
+      letter-spacing: 3px;
+      padding: 12px 14px;
+      outline: none;
+      border-radius: 0;
+    }
+    input:focus { border-color: rgba(201,169,110,0.5); }
+    input::placeholder { color: #2a2a2a; }
+    .pin-row {
+      display: flex;
+      gap: 10px;
+    }
+    .pin-row input {
+      width: 48px;
+      text-align: center;
+      font-size: 22px;
+      padding: 12px 0;
+    }
+    .warning {
+      border: 1px solid rgba(212,97,74,0.4);
+      padding: 14px;
+      margin: 24px 0;
+    }
+    .warning p {
+      color: #D4614A;
+      margin: 0;
+      font-size: 12px;
+    }
+    button {
+      width: 100%;
+      margin-top: 28px;
+      padding: 14px;
+      background: rgba(201,169,110,0.15);
+      border: none;
+      color: #C9A96E;
+      font-family: monospace;
+      font-size: 10px;
+      letter-spacing: 3px;
+      cursor: pointer;
+    }
+    button:hover { background: rgba(201,169,110,0.25); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .error {
+      font-size: 11px;
+      color: #D4614A;
+      font-style: italic;
+      margin-top: 12px;
+    }
+    .success {
+      text-align: center;
+      padding: 32px 0;
+    }
+    .success h2 {
+      font-size: 24px;
+      font-weight: 300;
+      font-style: italic;
+      color: #E8E2D4;
+      margin-bottom: 12px;
+    }
+    .success p {
+      font-size: 13px;
+      color: #9a9a9a;
+      margin: 0;
+    }
+    .divider {
+      border: none;
+      border-top: 1px solid #2a2a2a;
+      margin: 32px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="wordmark">L o r e</div>
+
+    <div id="form-view">
+      <h1>ACCOUNT TRANSFER</h1>
+      <p>Use this page to release your account from your old device so you can log in on a new one.<br><br>
+      You will need your unique code and your PIN.</p>
+
+      <div class="warning">
+        <p>⚠ Only do this if you are transferring to a new device or your old device was stolen or wiped. Once released, anyone with your unique code and PIN can claim the account.</p>
+      </div>
+
+      <label>YOUR UNIQUE CODE</label>
+      <input id="code-input" type="text" placeholder="LR-XXXX-XXXX"
+        oninput="this.value = this.value.toUpperCase()" autocomplete="off" spellcheck="false"/>
+
+      <label>YOUR PIN</label>
+      <input id="pin-input" type="password" inputmode="numeric"
+        maxlength="6" placeholder="••••" autocomplete="off"/>
+
+      <button id="release-btn" onclick="releaseAccount()">RELEASE ACCOUNT</button>
+      <div id="error-msg" class="error" style="display:none"></div>
+    </div>
+
+    <div id="success-view" class="success" style="display:none">
+      <h2>Account released.</h2>
+      <p>Your account is now free. Open Lore on your new device and enter your unique code to claim it.</p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, updateDoc, deleteField }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBaciQSGYqu5GzVUSI3aOdOx89-eS0QT8o",
+      authDomain: "lore-2d7f1.firebaseapp.com",
+      projectId: "lore-2d7f1",
+      storageBucket: "lore-2d7f1.firebasestorage.app",
+      messagingSenderId: "82837994691",
+      appId: "1:82837994691:android:ac17a6203a32e97ce4b676"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function sha256(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    window.releaseAccount = async function() {
+      const btn = document.getElementById('release-btn');
+      const errEl = document.getElementById('error-msg');
+      const code = document.getElementById('code-input').value.trim().toUpperCase();
+      const pin = document.getElementById('pin-input').value.trim();
+
+      errEl.style.display = 'none';
+
+      if (!code || !pin) {
+        errEl.textContent = 'Please enter both your unique code and PIN.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'VERIFYING...';
+
+      try {
+        const userRef = doc(db, 'users', code);
+        const snap = await getDoc(userRef);
+
+        if (!snap.exists()) {
+          errEl.textContent = 'Code not found.';
+          errEl.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'RELEASE ACCOUNT';
+          return;
+        }
+
+        const data = snap.data();
+        const storedHash = data.pinHash;
+
+        if (!storedHash) {
+          errEl.textContent = 'No PIN is set on this account. Use your unique code directly in the app.';
+          errEl.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'RELEASE ACCOUNT';
+          return;
+        }
+
+        const enteredHash = await sha256(pin);
+
+        if (enteredHash !== storedHash) {
+          errEl.textContent = 'Incorrect PIN.';
+          errEl.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'RELEASE ACCOUNT';
+          return;
+        }
+
+        // Release the device lock
+        await updateDoc(userRef, {
+          deviceLocked: false,
+          transferRequestedAt: new Date(),
+        });
+
+        document.getElementById('form-view').style.display = 'none';
+        document.getElementById('success-view').style.display = 'block';
+
+      } catch (e) {
+        errEl.textContent = 'Something went wrong. Please try again.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'RELEASE ACCOUNT';
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+{
+  "hosting": {
+    "site": "loretherpapp",
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|html)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "lore-2d7f1",
+          "appId": "1:82837994691:android:ac17a6203a32e97ce4b676",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "lore-2d7f1",
+          "configurations": {
+            "android": "1:82837994691:android:ac17a6203a32e97ce4b676",
+            "web": "1:82837994691:web:d42482a4d3560580e4b676"
+          }
+        }
+      }
+    }
+  }
+}

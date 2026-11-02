@@ -1,0 +1,81 @@
+name: lore
+description: "A private, intimate roleplay platform."
+publish_to: 'none'
+version: 7.0.0+7
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  local_auth: ^2.3.0
+  url_launcher: ^6.3.0
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^5.1.1
+  image_picker: ^1.1.2
+  flutter_image_compress: ^2.3.0
+  firebase_storage: ^12.3.0
+  path_provider: ^2.1.4
+  reorderables: ^0.6.0
+
+  # Firebase
+  firebase_core: ^3.13.0
+  firebase_auth: ^5.5.2
+  cloud_firestore: ^5.6.5
+  firebase_messaging: ^15.2.4
+
+  # Utilities
+  shared_preferences: ^2.5.3
+  uuid: ^4.5.1
+  crypto: ^3.0.6
+  dart_sentiment: ^0.0.9
+  pointycastle: ^3.9.1
+  cryptography: ^2.9.0
+  cryptography_flutter: ^2.3.4
+  flutter_secure_storage: ^9.2.4
+  flutter_quill: ^11.5.1
+  flutter_local_notifications: ^18.0.1
+  flutter_colorpicker: ^1.1.0
+
+  # Localizations (required by flutter_quill)
+  flutter_localizations:
+    sdk: flutter
+
+  # Audio
+  audioplayers: ^6.1.0
+  holotilt: ^1.0.0
+  perspective_space: ^0.1.2
+  flutter_physics: ^0.2.3
+  springster: ^1.0.2
+  particle_core: ^0.3.1
+  particle_fx: ^0.1.2
+  liquid_glass_widgets: ^1.16.1
+  shader_theme_switcher: ^0.0.12
+  flutter_shaders_ui: ^1.3.0
+  animated_reorderable: ^2.10.1
+  flutter_reorderable_grid_view: ^5.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/lore_wordmark.jpg
+    - assets/images/1234.png
+    - assets/images/bigcard1.png
+    - assets/images/smallcard1.png
+    - assets/images/profileicon1.png
+    - assets/images/settingsicon1.png
+    - assets/sounds/chime.mp3
+    - assets/sounds/chime2.mp3
+    - assets/sounds/echoes_of_the_deep.mp3
+    - assets/sounds/folding_paper.mp3
+    - assets/sounds/page_turn.mp3
+    - assets/sounds/stamp.mp3
+    - assets/sounds/writing_on_parchment.mp3
