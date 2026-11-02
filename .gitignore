@@ -43,3 +43,17 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+# Build artifacts in subfolders
+**/build/
+
+# Firebase hosting cache
+.firebase/
+
+# IDE noise
+.idea/
+*.iml
+.vscode/
+
+# OS noise
+Thumbs.db
+.DS_Store
