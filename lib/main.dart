@@ -1569,14 +1569,14 @@ class _HomeScreenState extends State<HomeScreen>
     final isDesktop = width >= 900;
     final inSplitMode = isDesktop && _activeBlock != null;
 
-    return Scaffold(
+        return Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: RadialGradient(
             center: const Alignment(1.0, -1.0),
-            radius: 1.4,
+            radius: isDesktop ? 0.8 : 1.4, // Tighter glow on big screens
             colors: [
-              Color.lerp(appSettings.bgColor, appSettings.bgGlowColor, 0.5)!,
+              Color.lerp(appSettings.bgColor, appSettings.bgGlowColor, isDesktop ? 0.15 : 0.5)!,
               appSettings.bgColor,
             ],
           ),
@@ -1646,7 +1646,7 @@ class _HomeScreenState extends State<HomeScreen>
                     stats: _computeStats(),
                     onTap: _openProfile,
                     onLongPress: () => ProfileStyleSheet.show(context),
-                    fillHeight: true,
+                    fillHeight: !isDesktop,
                   ),
                 ),
                 Container(
@@ -7414,11 +7414,10 @@ class _ContinueCard extends StatelessWidget {
   const _ContinueCard({
     required this.session,
     required this.mode,
-    this.isLoading = false,
     required this.onOpen,
     required this.onLongPress,
     required this.onFindPartner,
-  });
+  }) : isLoading = false;
 
   String _modeLabel() {
     switch (mode) {

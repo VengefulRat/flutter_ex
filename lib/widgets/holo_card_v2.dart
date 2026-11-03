@@ -1,7 +1,9 @@
+import 'package:flutter/gestures.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'holo_parallax.dart';
 import '../services/gyro_service.dart';
+import 'package:flutter/foundation.dart' show kIsWeb; 
 
 class HoloCardV2 extends StatefulWidget {
   final Widget child;
@@ -73,7 +75,7 @@ class _HoloCardV2State extends State<HoloCardV2>
       duration: const Duration(seconds: 1),
     );
     _loadShader();
-    if (widget.gyroEnabled) {
+    if (widget.gyroEnabled && !kIsWeb) {
       GyroService.instance.acquire();
       GyroService.instance.tilt.addListener(_onGyroUpdate);
     }
@@ -104,9 +106,10 @@ class _HoloCardV2State extends State<HoloCardV2>
     _updateRotation();
   }
 
-  void _handlePointer(PointerEvent e) {
+    void _handlePointer(PointerEvent e) {
     final box = context.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize) return;
+    if (kIsWeb && e is PointerMoveEvent && e.buttons == 0) return;
     final local = e.localPosition;
     final nx = (local.dx / box.size.width).clamp(0.0, 1.0);
     final ny = (local.dy / box.size.height).clamp(0.0, 1.0);
@@ -119,6 +122,24 @@ class _HoloCardV2State extends State<HoloCardV2>
     _isReleasing = false;
     _updateRotation();
 
+    _activeCtrl.value = 1.0;
+    if (!_timeCtrl.isAnimating) _timeCtrl.repeat();
+  } // <--- THIS BRACKET CLOSES _handlePointer
+
+  // THIS IS THE NEW METHOD, IT MUST BE OUTSIDE ^
+    void _handleHover(PointerHoverEvent e) {
+    if (_fingerActive) return;
+    
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    final local = e.localPosition;
+    final nx = (local.dx / box.size.width).clamp(0.0, 1.0);
+    final ny = (local.dy / box.size.height).clamp(0.0, 1.0);
+    
+    // Only update the light position for the shader and parallax
+    _light.value = Offset(nx, ny);
+
+    // Turn the glow on, but DO NOT change the rotation.
     _activeCtrl.value = 1.0;
     if (!_timeCtrl.isAnimating) _timeCtrl.repeat();
   }
@@ -150,7 +171,7 @@ class _HoloCardV2State extends State<HoloCardV2>
 
   @override
   void dispose() {
-    if (widget.gyroEnabled) {
+    if (widget.gyroEnabled && !kIsWeb) {
       GyroService.instance.tilt.removeListener(_onGyroUpdate);
       GyroService.instance.release();
     }
@@ -165,70 +186,78 @@ class _HoloCardV2State extends State<HoloCardV2>
   Widget build(BuildContext context) {
     if (!widget.enabled || _shader == null) return widget.child;
 
-    return Listener(
-      behavior: HitTestBehavior.translucent,
-      onPointerDown: _handlePointer,
-      onPointerMove: _handlePointer,
-      onPointerUp: (_) => _release(),
-      onPointerCancel: (_) => _release(),
-      child: ValueListenableBuilder<_RotState>(
-        valueListenable: _rot,
-        builder: (_, r, _) {
-          return AnimatedContainer(
-            duration: _isReleasing
-                ? const Duration(milliseconds: 550)
-                : Duration.zero,
-            curve: Curves.easeOutBack,
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.0015)
-              ..rotateX(r.rotateX)
-              ..rotateY(r.rotateY),
-            transformAlignment: Alignment.center,
-            child: Stack(
-              children: [
-                HoloCardScope(
-                  touch: _light,
-                  maxParallaxOffset: widget.parallaxStrength,
-                  child: widget.child,
-                ),
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: AnimatedBuilder(
-                      animation: Listenable.merge(
-                        [_activeCtrl, _timeCtrl, _light],
-                      ),
-                      builder: (_, _) {
-                        final bgLum = widget.bgColor.computeLuminance();
-                        final isBright = bgLum > 0.35;
-                        final effectiveIntensity =
-                            widget.intensity * (1.0 - bgLum * 0.85);
-                        return CustomPaint(
-                          painter: _FoilPainter(
-                            shader: _shader!,
-                            light: _light.value,
-                            active: _activeCtrl.value,
-                            time: DateTime.now().millisecondsSinceEpoch /
-                                1000.0,
-                            intensity: effectiveIntensity,
-                            accent: widget.accent,
-                            seed: widget.seed.toDouble(),
-                            blendMode: isBright
-                                ? BlendMode.softLight
-                                : BlendMode.plus,
-                          ),
-                        );
-                      },
+    return RepaintBoundary(
+      child: MouseRegion(
+        onHover: _handleHover,
+        onExit: (_) => _release(),
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: _handlePointer,
+          onPointerMove: _handlePointer,
+          onPointerUp: (_) => _release(),
+          onPointerCancel: (_) => _release(),
+          child: ValueListenableBuilder<_RotState>(
+            valueListenable: _rot,
+            builder: (_, r, _) {
+              return AnimatedContainer(
+                duration: _isReleasing
+                    ? const Duration(milliseconds: 550)
+                    : Duration.zero,
+                curve: Curves.easeOutBack,
+                transform: Matrix4.identity()
+                  ..setEntry(3, 2, 0.0015)
+                  ..rotateX(r.rotateX)
+                  ..rotateY(r.rotateY),
+                transformAlignment: Alignment.center,
+                child: Stack(
+                  children: [
+                    HoloCardScope(
+                      touch: _light,
+                      maxParallaxOffset: widget.parallaxStrength,
+                      child: widget.child,
                     ),
-                  ),
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: RepaintBoundary(
+                          child: AnimatedBuilder(
+                            animation: Listenable.merge(
+                              [_activeCtrl, _timeCtrl, _light],
+                            ),
+                            builder: (_, _) {
+                              final bgLum = widget.bgColor.computeLuminance();
+                              final isBright = bgLum > 0.35;
+                              final effectiveIntensity =
+                                  widget.intensity * (1.0 - bgLum * 0.85);
+                              return CustomPaint(
+                                painter: _FoilPainter(
+                                  shader: _shader!,
+                                  light: _light.value,
+                                  active: _activeCtrl.value,
+                                  time: DateTime.now().millisecondsSinceEpoch /
+                                      1000.0,
+                                  intensity: effectiveIntensity,
+                                  accent: widget.accent,
+                                  seed: widget.seed.toDouble(),
+                                  blendMode: isBright
+                                      ? BlendMode.softLight
+                                      : BlendMode.plus,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        },
+              );
+            },
+          ),
+        ),
       ),
     );
   }
-}
+    }
 
 class _FoilPainter extends CustomPainter {
   final ui.FragmentShader shader;

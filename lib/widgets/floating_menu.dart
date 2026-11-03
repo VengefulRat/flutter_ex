@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../settings.dart';
 import 'holo_card_v2.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FloatingMenuItem {
   final String blockKey;
@@ -46,6 +47,7 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
   Offset _dragStartPos = Offset.zero;
   Offset _dragStartTouch = Offset.zero;
   bool _menuOpen = false;
+  SharedPreferences? _prefs;
 
   late final AnimationController _menuCtrl;
 
@@ -62,6 +64,7 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
       vsync: this,
       duration: const Duration(milliseconds: 450),
     );
+    _loadPosition();
   }
 
   @override
@@ -76,7 +79,22 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
         screen.height - widget.buttonSize - 200,   // was -130
       );
 
-  Offset _currentPos(Size screen) => _position ?? _defaultPosition(screen);
+  Offset _currentPos(Size screen) {
+    final pos = _position ?? _defaultPosition(screen);
+    // Clamp to screen bounds in case window resized
+    final safeX = pos.dx.clamp(-widget.buttonSize * 0.5, screen.width - widget.buttonSize * 0.5);
+    final safeY = pos.dy.clamp(0.0, screen.height - widget.buttonSize);
+    return Offset(safeX, safeY);
+  }
+
+    Future<void> _loadPosition() async {
+    _prefs = await SharedPreferences.getInstance();
+    final dx = _prefs?.getDouble('float_menu_dx');
+    final dy = _prefs?.getDouble('float_menu_dy');
+    if (dx != null && dy != null && mounted) {
+      setState(() => _position = Offset(dx, dy));
+    }
+  }
 
   // ── Safe radius: shrink the arc if cards would clip off-screen ──
   double _getRadius(Offset origin, Size screen, double baseAngle) {
@@ -130,8 +148,7 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
       'bottom': screen.height - center.dy,
     };
     final minDist = distances.values.reduce(math.min);
-    final edge =
-        distances.entries.firstWhere((e) => e.value == minDist).key;
+    final edge = distances.entries.firstWhere((e) => e.value == minDist).key;
 
     if (minDist < 70) {
       final sz = widget.buttonSize;
@@ -151,6 +168,12 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
       }
     }
     setState(() {});
+
+    // SAVE TO MEMORY
+    if (_position != null) {
+      _prefs?.setDouble('float_menu_dx', _position!.dx);
+      _prefs?.setDouble('float_menu_dy', _position!.dy);
+    }
   }
 
   // ── Menu ──
@@ -183,74 +206,75 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
     Future.delayed(const Duration(milliseconds: 220), item.onLongPress);
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
-    final screen = MediaQuery.sizeOf(context);
-    final pos = _currentPos(screen);
-    final buttonCenter =
-        pos + Offset(widget.buttonSize / 2, widget.buttonSize / 2);
+    return LayoutBuilder(builder: (context, constraints) {
+      final screen = Size(constraints.maxWidth, constraints.maxHeight);
+      final pos = _currentPos(screen);
+      final buttonCenter = pos + Offset(widget.buttonSize / 2, widget.buttonSize / 2);
 
-    return Stack(
-      children: [
-        if (_menuOpen)
-          Positioned.fill(
+      return Stack(
+        children: [
+          if (_menuOpen)
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: _closeMenu,
+                child: Container(color: Colors.black.withValues(alpha: 0.6)),
+              ),
+            ),
+
+          if (_menuOpen) ..._buildRadialItems(buttonCenter, screen),
+
+          Positioned(
+            left: pos.dx,
+            top: pos.dy,
             child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: _closeMenu,
-              child: Container(color: Colors.black.withValues(alpha: 0.6)),
-            ),
-          ),
-
-        if (_menuOpen) ..._buildRadialItems(buttonCenter, screen),
-
-        Positioned(
-          left: pos.dx,
-          top: pos.dy,
-          child: GestureDetector(
-            onTap: _toggleMenu,
-            onPanStart: (d) => _onPanStart(d, screen),
-            onPanUpdate: (d) => _onPanUpdate(d, screen),
-            onPanEnd: (_) => _onPanEnd(screen),
-            child: Container(
-              width: widget.buttonSize,
-              height: widget.buttonSize,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: cInk,
-                border: Border.all(
-                  color: cGold.withValues(alpha: 0.7),
-                  width: 1.5,
+              onTap: _toggleMenu,
+              onPanStart: (d) => _onPanStart(d, screen),
+              onPanUpdate: (d) => _onPanUpdate(d, screen),
+              onPanEnd: (_) => _onPanEnd(screen),
+              child: Container(
+                width: widget.buttonSize,
+                height: widget.buttonSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: cInk,
+                  border: Border.all(
+                    color: cGold.withValues(alpha: 0.7),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: cGold.withValues(alpha: 0.3),
+                      blurRadius: 22,
+                      spreadRadius: 2,
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: cGold.withValues(alpha: 0.3),
-                    blurRadius: 22,
-                    spreadRadius: 2,
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.6),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: AnimatedRotation(
-                  turns: _menuOpen ? 0.125 : 0,
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeOutCubic,
-                  child: Icon(
-                    _menuOpen ? Icons.close : widget.menuIcon,
-                    color: cGold,
-                    size: 24,
+                child: Center(
+                  child: AnimatedRotation(
+                    turns: _menuOpen ? 0.125 : 0,
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOutCubic,
+                    child: Icon(
+                      _menuOpen ? Icons.close : widget.menuIcon,
+                      color: cGold,
+                      size: 24,
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
+    });
   }
 
   List<Widget> _buildRadialItems(Offset origin, Size screen) {

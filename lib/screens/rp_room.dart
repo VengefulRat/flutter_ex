@@ -19,6 +19,7 @@ import '../services/auth_service.dart';
 import '../services/crypto_service.dart';
 import '../services/sound_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:ui' as ui;
 
 // ─────────────────────────────────────────
 // DISPLAY MODE
@@ -373,6 +374,18 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   final List<RPPost> _posts = [];
   final List<OOCMessage> _oocMessages = [];
 
+    ui.FragmentShader? _moodShader;
+  late AnimationController _shaderTimeCtrl;
+
+  Future<void> _loadMoodShader() async {
+    try {
+      final program = await ui.FragmentProgram.fromAsset('shaders/rp_mood.frag');
+      if (mounted) setState(() => _moodShader = program.fragmentShader());
+    } catch (e) {
+      debugPrint('Failed to load mood shader: $e');
+    }
+  }
+
   Future<String?> _promptForMediaUrl() async {
     final ctrl = TextEditingController();
     final result = await showDialog<String>(
@@ -600,7 +613,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   SessionLog get _log => SessionLog.forSession(
       widget.sessionId.isEmpty ? 'default' : widget.sessionId);
 
-  @override
+    @override
   void initState() {
     super.initState();
     _sessionTitle = widget.title;
@@ -622,6 +635,11 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       ..addListener(_onParticleTick)
       ..repeat();
 
+    _shaderTimeCtrl = AnimationController(
+      vsync: this, duration: const Duration(seconds: 10),
+    )..repeat();
+
+    _loadMoodShader();
     _initParticles();
     _loadDraft();
     _editorCtrl.addListener(_onEditorChanged);
@@ -632,6 +650,28 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       _log.load();
     }
     _loadSandboxData();
+  }
+
+  @override
+  void dispose() {
+    appSettings.removeListener(_onSettingsChanged);
+    _selectionDebounce?.cancel();
+    _editorCtrl.removeListener(_onEditorChanged);
+    _postsSub?.cancel();
+    _oocSub?.cancel();
+    _statsSub?.cancel();
+    _statsSaveDebounce?.cancel();
+    _partnerStatsN.dispose();
+    _moodCtrl.dispose();
+    _particleCtrl.dispose();
+    _shaderTimeCtrl.dispose();
+    _particleTick.dispose();
+    _editorCtrl.dispose();
+    _scrollCtrl.dispose();
+    _editorFocus.dispose();
+    _oocCtrl.dispose();
+    _oocScrollCtrl.dispose();
+    super.dispose();
   }
 
   void _subscribeToFirestore() {
@@ -1309,27 +1349,6 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   @override
-  void dispose() {
-    appSettings.removeListener(_onSettingsChanged);
-    _selectionDebounce?.cancel();
-    _editorCtrl.removeListener(_onEditorChanged);
-    _postsSub?.cancel();
-    _oocSub?.cancel();
-    _statsSub?.cancel();
-    _statsSaveDebounce?.cancel();
-    _partnerStatsN.dispose();
-    _moodCtrl.dispose();
-    _particleCtrl.dispose();
-    _particleTick.dispose();
-    _editorCtrl.dispose();
-    _scrollCtrl.dispose();
-    _editorFocus.dispose();
-    _oocCtrl.dispose();
-    _oocScrollCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.sizeOf(context).width >= 900;
     if (isDesktop) {
@@ -1505,29 +1524,51 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     );
   }
 
-  Widget _buildMobileLayout() {
+    Widget _buildMobileLayout() {
     return AnimatedBuilder(
       animation: _moodCtrl,
       builder: (_, child) {
-        final bg = _bgAnim.value ?? cVoid;
+        final moodColor = MoodEngine.bgColor(_currentMood);
         return Scaffold(
-          backgroundColor: bg,
+          backgroundColor: cVoid,
           body: Stack(children: [
+            // ── BACKGROUND: Shader + Particles ──
             Positioned.fill(
               child: LayoutBuilder(builder: (_, constraints) {
-                _canvasSize =
-                    Size(constraints.maxWidth, constraints.maxHeight);
-                return RepaintBoundary(
-                  child: ValueListenableBuilder<int>(
-                    valueListenable: _particleTick,
-                    builder: (_, _, _) => CustomPaint(
-                      painter:
-                          MoodParticlePainter(_particles, _currentMood),
-                    ),
-                  ),
+                _canvasSize = Size(constraints.maxWidth, constraints.maxHeight);
+                
+                return AnimatedBuilder(
+                  animation: _shaderTimeCtrl,
+                  builder: (_, _) {
+                    return Stack(
+                      children: [
+                        if (_moodShader != null)
+                          Positioned.fill(
+                            child: CustomPaint(
+                              painter: _MoodShaderPainter(
+                                shader: _moodShader!,
+                                time: _shaderTimeCtrl.value * 10.0,
+                                moodColor: moodColor,
+                                intensity: _moodIntensity,
+                              ),
+                            ),
+                          ),
+                        Positioned.fill(
+                          child: ValueListenableBuilder<int>(
+                            valueListenable: _particleTick,
+                            builder: (_, _, _) => CustomPaint(
+                              painter: MoodParticlePainter(_particles, _currentMood),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 );
               }),
             ),
+            
+            // ── FOREGROUND: The actual room UI ──
             SafeArea(
               child: Column(children: [
                 _buildTopBar(),
@@ -1538,6 +1579,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   _buildCollapsedEditor(),
               ]),
             ),
+            
+            // ── OVERLAYS (OOC, Settings, Selection) ──
             if (!_oocOpen)
               Positioned(
                 right: 16,
@@ -3854,4 +3897,36 @@ class _PostCardState extends State<_PostCard>
       ),
     );
   }
+}
+
+class _MoodShaderPainter extends CustomPainter {
+  final ui.FragmentShader shader;
+  final double time;
+  final Color moodColor;
+  final double intensity;
+
+  _MoodShaderPainter({
+    required this.shader,
+    required this.time,
+    required this.moodColor,
+    required this.intensity,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    shader.setFloat(0, size.width);
+    shader.setFloat(1, size.height);
+    shader.setFloat(2, time);
+    shader.setFloat(3, moodColor.r);
+    shader.setFloat(4, moodColor.g);
+    shader.setFloat(5, moodColor.b);
+    shader.setFloat(6, intensity * 1.5); // Scale up a bit so it's visible
+
+    final paint = Paint()..shader = shader;
+    canvas.drawRect(Offset.zero & size, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MoodShaderPainter old) =>
+      old.time != time || old.moodColor != moodColor || old.intensity != intensity;
 }

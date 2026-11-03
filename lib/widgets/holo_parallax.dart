@@ -43,7 +43,7 @@ class HoloParallaxLayer extends StatelessWidget {
     required this.child,
   });
 
-  @override
+    @override
   Widget build(BuildContext context) {
     final scope = HoloCardScope.maybeOf(context);
     if (scope == null || depth == 0) return child;
@@ -55,9 +55,12 @@ class HoloParallaxLayer extends StatelessWidget {
         final factor = scope.maxParallaxOffset * depth * 2.0;
         final dx = (touch.dx - 0.5) * factor;
         final dy = (touch.dy - 0.5) * factor;
-        return Transform.translate(
-          offset: Offset(dx, dy),
-          child: child,
+        
+        return RepaintBoundary( // <--- ADD THIS
+          child: Transform.translate(
+            offset: Offset(dx, dy),
+            child: child,
+          ),
         );
       },
     );

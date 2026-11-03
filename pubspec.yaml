@@ -67,6 +67,7 @@ flutter:
   uses-material-design: true
   shaders:
   - shaders/foil_overlay.frag
+  - shaders/rp_mood.frag
 
   assets:
     - assets/images/lore_wordmark.jpg
