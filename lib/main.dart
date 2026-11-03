@@ -938,18 +938,18 @@ class _HomeScreenState extends State<HomeScreen>
   bool _loadingData = true;
 
   String _buildProfileSubtitle() {
-  final profile = _profile;
-  if (profile == null) return '';
-  final tags = (profile['tags'] as List<dynamic>? ?? [])
-      .map((t) => (t as Map)['label'] as String? ?? '')
-      .where((s) => s.isNotEmpty)
-      .toList();
-  if (tags.isNotEmpty) return tags.join(' · ');
-  final style = profile['writingStyle'] as String? ?? '';
-  if (style.isNotEmpty) return style;
-  final genre = profile['genre'] as String? ?? '';
-  return genre;
-}
+    final profile = _profile;
+    if (profile == null) return '';
+    final tags = (profile['tags'] as List<dynamic>? ?? [])
+        .map((t) => (t as Map)['label'] as String? ?? '')
+        .where((s) => s.isNotEmpty)
+        .toList();
+    if (tags.isNotEmpty) return tags.join(' · ');
+    final style = profile['writingStyle'] as String? ?? '';
+    if (style.isNotEmpty) return style;
+    final genre = profile['genre'] as String? ?? '';
+    return genre;
+  }
 
   // ── Desktop layout state ──
   // null  → the "Overview" view (mobile-style, centered on wide screens)
@@ -1563,7 +1563,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-    @override
+  @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final isDesktop = width >= 900;
@@ -1584,35 +1584,37 @@ class _HomeScreenState extends State<HomeScreen>
         child: SafeArea(
           child: FadeTransition(
             opacity: _fade,
-            child: Column(children: [
-              LoreTopBar(
-                onLogoTap: () {
-                  if (inSplitMode) setState(() => _activeBlock = null);
-                },
-                trailing: null, // EDIT button removed
-              ),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
-                  child: !isDesktop
-                      ? KeyedSubtree(
-                          key: const ValueKey('mobile'),
-                          child: _buildMobileBody(),
-                        )
-                      : inSplitMode
-                          ? KeyedSubtree(
-                              key: const ValueKey('desktop-split'),
-                              child: _buildDesktopSplitBody(),
-                            )
-                          : KeyedSubtree(
-                              key: const ValueKey('desktop-full'),
-                              child: _buildDesktopFullBody(),
-                            ),
+            child: Column(
+              children: [
+                LoreTopBar(
+                  onLogoTap: () {
+                    if (inSplitMode) setState(() => _activeBlock = null);
+                  },
+                  trailing: null, // EDIT button removed
                 ),
-              ),
-            ]),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    switchInCurve: Curves.easeOut,
+                    switchOutCurve: Curves.easeIn,
+                    child: !isDesktop
+                        ? KeyedSubtree(
+                            key: const ValueKey('mobile'),
+                            child: _buildMobileBody(),
+                          )
+                        : inSplitMode
+                        ? KeyedSubtree(
+                            key: const ValueKey('desktop-split'),
+                            child: _buildDesktopSplitBody(),
+                          )
+                        : KeyedSubtree(
+                            key: const ValueKey('desktop-full'),
+                            child: _buildDesktopFullBody(),
+                          ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -3106,7 +3108,7 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
   List<_CardData> _allCards = [];
   Set<String> _hiddenCodes = {}; // blocked by me + blocked me
   bool _loading = true;
-    late PageController _pageController;
+  late PageController _pageController;
   int _currentIndex = 0;
 
   void _resetPage() {
@@ -3133,7 +3135,9 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 0.88); // Shows a sliver of the next card
+    _pageController = PageController(
+      viewportFraction: 0.88,
+    ); // Shows a sliver of the next card
     appSettings.addListener(_onSettingsChanged);
     _loadAndListen();
   }
@@ -3336,14 +3340,16 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
     );
   }
 
-    @override
+  @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: appSettings.bgColor,
     body: SafeArea(
       child: Column(
         children: [
           LoreTopBar(
-            onLogoTap: () => Navigator.of(context).pushAndRemoveUntil(fadeRoute(const HomeScreen()), (_) => false),
+            onLogoTap: () => Navigator.of(
+              context,
+            ).pushAndRemoveUntil(fadeRoute(const HomeScreen()), (_) => false),
             trailing: LoreTap(
               onTap: () => Navigator.of(context).pop(),
               child: const Text(
@@ -3363,7 +3369,11 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
               style: const TextStyle(fontSize: 14, color: cParchment),
               decoration: InputDecoration(
                 hintText: 'Search by name, genre or keywords...',
-                hintStyle: const TextStyle(fontSize: 13, color: cSmoke, fontStyle: FontStyle.italic),
+                hintStyle: const TextStyle(
+                  fontSize: 13,
+                  color: cSmoke,
+                  fontStyle: FontStyle.italic,
+                ),
                 prefixIcon: const Icon(Icons.search, color: cSmoke, size: 18),
                 suffixIcon: _search.isNotEmpty
                     ? LoreTap(
@@ -3375,8 +3385,12 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
                         child: const Icon(Icons.close, color: cSmoke, size: 16),
                       )
                     : null,
-                enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: cAsh)),
-                focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: cSmoke)),
+                enabledBorder: const OutlineInputBorder(
+                  borderSide: BorderSide(color: cAsh),
+                ),
+                focusedBorder: const OutlineInputBorder(
+                  borderSide: BorderSide(color: cSmoke),
+                ),
                 filled: true,
                 fillColor: cInk,
                 contentPadding: const EdgeInsets.symmetric(vertical: 10),
@@ -3402,32 +3416,45 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
             },
           ),
           const SizedBox(height: 12),
-          
+
           // ── THE NEW CARD PAGE VIEW ──
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: cGold, strokeWidth: 1))
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: cGold,
+                      strokeWidth: 1,
+                    ),
+                  )
                 : _filtered.isEmpty
-                    ? const Center(
-                        child: Text('No cards found.', style: TextStyle(fontSize: 14, color: cSmoke, fontStyle: FontStyle.italic)),
-                      )
-                    : PageView.builder(
-                        controller: _pageController,
-                        physics: const NeverScrollableScrollPhysics(), // Card handles its own touch
-                        itemCount: _filtered.length,
-                        onPageChanged: (i) => setState(() => _currentIndex = i),
-                        itemBuilder: (_, i) {
-                          return Center(
-                            child: _DiscoveryCard(
-                              key: ValueKey('${_filtered[i].code}_$i'),
-                              data: _filtered[i],
-                              onTap: () => _openCardSheet(_filtered[i]),
-                            ),
-                          );
-                        },
+                ? const Center(
+                    child: Text(
+                      'No cards found.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: cSmoke,
+                        fontStyle: FontStyle.italic,
                       ),
+                    ),
+                  )
+                : PageView.builder(
+                    controller: _pageController,
+                    physics:
+                        const NeverScrollableScrollPhysics(), // Card handles its own touch
+                    itemCount: _filtered.length,
+                    onPageChanged: (i) => setState(() => _currentIndex = i),
+                    itemBuilder: (_, i) {
+                      return Center(
+                        child: _DiscoveryCard(
+                          key: ValueKey('${_filtered[i].code}_$i'),
+                          data: _filtered[i],
+                          onTap: () => _openCardSheet(_filtered[i]),
+                        ),
+                      );
+                    },
+                  ),
           ),
-          
+
           // ── THE NEW SCRUBBER ──
           if (!_loading && _filtered.isNotEmpty) _buildScrubber(),
         ],
@@ -3435,9 +3462,9 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
     ),
   );
 
-    Widget _buildScrubber() {
+  Widget _buildScrubber() {
     final total = _filtered.length;
-    
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       decoration: const BoxDecoration(
@@ -3479,9 +3506,9 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
               GestureDetector(
                 onTap: _currentIndex > 0
                     ? () => _pageController.previousPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeOut,
-                        )
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                      )
                     : null,
                 child: Icon(
                   Icons.arrow_back_ios,
@@ -3493,8 +3520,12 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
                 child: SliderTheme(
                   data: SliderTheme.of(context).copyWith(
                     trackHeight: 2,
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 6,
+                    ),
+                    overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 16,
+                    ),
                     activeTrackColor: cGold,
                     inactiveTrackColor: cAsh,
                     thumbColor: cGold,
@@ -3513,9 +3544,9 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
               GestureDetector(
                 onTap: _currentIndex < total - 1
                     ? () => _pageController.nextPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeOut,
-                        )
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                      )
                     : null,
                 child: Icon(
                   Icons.arrow_forward_ios,
@@ -3589,11 +3620,7 @@ class _DiscoveryCard extends StatelessWidget {
   final _CardData data;
   final VoidCallback onTap;
 
-  const _DiscoveryCard({
-    super.key,
-    required this.data,
-    required this.onTap,
-  });
+  const _DiscoveryCard({super.key, required this.data, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -4778,333 +4805,197 @@ class _NotificationsContentState extends State<_NotificationsContent> {
               ),
               alignment: Alignment.centerRight,
               padding: const EdgeInsets.only(right: 20),
-              child: const Icon(
-                Icons.delete_outline,
-                color: cParchment,
-                size: 24,
-              ),
+              child: const Icon(Icons.delete_outline, color: cParchment, size: 24),
             ),
             onDismissed: (_) {
               _fs.deleteNotification(n.id);
             },
             child: LoreTap(
-              onTap: (isRpPost || isBrainstorm || isOoc)
-                  ? () async {
-                      await _markRead(n.id);
-                      setState(() => n.read = true);
-                      final sessionId = n.data['sessionId'] as String? ?? '';
-                      if (!context.mounted || sessionId.isEmpty) return;
-                      final session = _roleplays.firstWhere(
-                        (r) => r.id == sessionId,
-                        orElse: () => _brainstorms.firstWhere(
-                          (b) => b.id == sessionId,
-                          orElse: () => const _RPData('', '', '', 0, false),
-                        ),
-                      );
-                      if (isRpPost || isOoc) {
-                        Navigator.of(context).push(
-                          fadeRoute(
-                            RPRoomScreen(
-                              partnerName: session.partner,
-                              partnerCode: session.partnerCode,
-                              genre: session.genre,
-                              sessionId: sessionId,
-                            ),
-                          ),
-                        );
-                      } else {
-                        Navigator.of(context).push(
-                          fadeRoute(
-                            BrainstormRoomScreen(
-                              partnerName: session.partner,
-                              partnerCode: session.partnerCode,
-                              genre: session.genre,
-                              sessionId: sessionId,
-                            ),
-                          ),
-                        );
-                      }
-                    }
-                  : null,
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: !n.read && isAccepted
-                        ? cGold.withValues(alpha: 0.5)
-                        : !n.read && isInterest
-                        ? cIce.withValues(alpha: 0.5)
-                        : !n.read && isRpPost
-                        ? cEmber.withValues(alpha: 0.4)
-                        : !n.read && isBrainstorm
-                        ? cMagic.withValues(alpha: 0.4)
-                        : !n.read && isOoc
-                        ? cSmoke.withValues(alpha: 0.5)
-                        : !n.read && isSecurityWarning
-                        ? cEmber.withValues(alpha: 0.7)
-                        : n.read
-                        ? cAsh
-                        : cSmoke,
-                  ),
-                  color: !n.read && isAccepted
-                      ? cGold.withValues(alpha: 0.12)
-                      : !n.read && isInterest
-                      ? cIce.withValues(alpha: 0.12)
-                      : !n.read && isRpPost
-                      ? cEmber.withValues(alpha: 0.12)
-                      : !n.read && isBrainstorm
-                      ? cMagic.withValues(alpha: 0.12)
-                      : !n.read && isOoc
-                      ? cAsh.withValues(alpha: 0.12)
-                      : !n.read && isInviteRequest
-                      ? cVine.withValues(alpha: 0.12)
-                      : !n.read && isSecurityWarning
-                      ? cEmber.withValues(alpha: 0.15)
-                      : n.read
-                      ? Colors.transparent
-                      : cInk,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        if (isAccepted)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 10),
-                            child: Icon(
-                              Icons.check_circle_outline,
-                              size: 16,
-                              color: n.read ? cSmoke : cGold,
-                            ),
-                          ),
-                        if (isInterest)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 10),
-                            child: Icon(
-                              Icons.mail_outline,
-                              size: 16,
-                              color: n.read ? cSmoke : cIce,
-                            ),
-                          ),
-                        if (isRpPost)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 10),
-                            child: Icon(
-                              Icons.edit_outlined,
-                              size: 16,
-                              color: n.read ? cSmoke : cEmber,
-                            ),
-                          ),
-                        if (isOoc)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 10),
-                            child: Icon(
-                              Icons.chat_bubble_outline,
-                              size: 16,
-                              color: n.read ? cSmoke : cMist,
-                            ),
-                          ),
-                        if (isInviteRequest)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 10),
-                            child: Icon(
-                              Icons.card_giftcard_outlined,
-                              size: 16,
-                              color: n.read ? cSmoke : cVine,
-                            ),
-                          ),
-                        if (isSecurityWarning)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 10),
-                            child: Icon(
-                              Icons.shield_outlined,
-                              size: 16,
-                              color: n.read ? cSmoke : cEmber,
-                            ),
-                          ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                n.title,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: n.read
-                                      ? cSmoke
-                                      : isAccepted
-                                      ? cGold
-                                      : isInterest
-                                      ? cIce
-                                      : isRpPost
-                                      ? cEmber
-                                      : isBrainstorm
-                                      ? cMagic
-                                      : isOoc
-                                      ? cMist
-                                      : isInviteRequest
-                                      ? cVine
-                                      : isSecurityWarning
-                                      ? cEmber
-                                      : cParchment,
-                                  fontWeight: FontWeight.w300,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                n.subtitle,
-                                style: const TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 10,
-                                  color: cSmoke,
-                                  letterSpacing: 1,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        LoreTap(
-                          onTap: () async {
-                            await _markRead(n.id);
-                            setState(() => n.read = true);
-                          },
-                          behavior: HitTestBehavior.opaque,
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Icon(
-                              Icons.close,
-                              size: 18,
-                              color: n.read ? cAsh : cSmoke,
-                            ),
-                          ),
-                        ),
-                      ],
+              onTap: (isRpPost || isBrainstorm || isOoc) ? () async {
+                await _markRead(n.id);
+                setState(() => n.read = true);
+                final sessionId = n.data['sessionId'] as String? ?? '';
+                if (!context.mounted || sessionId.isEmpty) return;
+                final session = _roleplays.firstWhere((r) => r.id == sessionId,
+                    orElse: () => _brainstorms.firstWhere((b) => b.id == sessionId,
+                        orElse: () => const _RPData('', '', '', 0, false)));
+                if (isRpPost || isOoc) {
+                  Navigator.of(context).push(fadeRoute(RPRoomScreen(
+                    partnerName: session.partner,
+                    partnerCode: session.partnerCode,
+                    genre: session.genre,
+                    sessionId: sessionId,
+                  )));
+                } else {
+                  Navigator.of(context).push(fadeRoute(BrainstormRoomScreen(
+                    partnerName: session.partner,
+                    partnerCode: session.partnerCode,
+                    genre: session.genre,
+                    sessionId: sessionId,
+                  )));
+                }
+              } : null,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: HoloCardV2(
+                  accent: !n.read && isAccepted ? cGold
+                      : !n.read && isInterest ? cIce
+                      : !n.read && isRpPost ? cEmber
+                      : !n.read && isBrainstorm ? cMagic
+                      : !n.read && isSecurityWarning ? cEmber
+                      : cSmoke,
+                  intensity: 0.3,
+                  seed: n.id.hashCode,
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: n.read ? cInk.withValues(alpha: 0.6) : cInk,
+                      border: Border.all(
+                        color: !n.read && isAccepted ? cGold.withValues(alpha: 0.5)
+                            : !n.read && isInterest ? cIce.withValues(alpha: 0.5)
+                            : !n.read && isRpPost ? cEmber.withValues(alpha: 0.4)
+                            : !n.read && isBrainstorm ? cMagic.withValues(alpha: 0.4)
+                            : !n.read && isOoc ? cSmoke.withValues(alpha: 0.5)
+                            : !n.read && isSecurityWarning ? cEmber.withValues(alpha: 0.7)
+                            : n.read ? cAsh : cSmoke,
+                      ),
                     ),
-
-                    if (isInterest && !n.read) ...[
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: LoreTap(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            if (isAccepted)
+                              Padding(padding: const EdgeInsets.only(right: 10),
+                                child: Icon(Icons.check_circle_outline, size: 16,
+                                    color: n.read ? cSmoke : cGold)),
+                            if (isInterest)
+                              Padding(padding: const EdgeInsets.only(right: 10),
+                                child: Icon(Icons.mail_outline, size: 16,
+                                    color: n.read ? cSmoke : cIce)),
+                            if (isRpPost)
+                              Padding(padding: const EdgeInsets.only(right: 10),
+                                child: Icon(Icons.edit_outlined, size: 16,
+                                    color: n.read ? cSmoke : cEmber)),
+                            if (isOoc)
+                              Padding(padding: const EdgeInsets.only(right: 10),
+                                child: Icon(Icons.chat_bubble_outline, size: 16,
+                                    color: n.read ? cSmoke : cMist)),
+                            if (isInviteRequest)
+                              Padding(padding: const EdgeInsets.only(right: 10),
+                                child: Icon(Icons.card_giftcard_outlined, size: 16,
+                                    color: n.read ? cSmoke : cVine)),
+                            if (isSecurityWarning)
+                              Padding(padding: const EdgeInsets.only(right: 10),
+                                child: Icon(Icons.shield_outlined, size: 16,
+                                    color: n.read ? cSmoke : cEmber)),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(n.title, style: TextStyle(fontSize: 13,
+                                      color: n.read ? cSmoke
+                                          : isAccepted ? cGold
+                                          : isInterest ? cIce
+                                          : isRpPost ? cEmber
+                                          : isBrainstorm ? cMagic
+                                          : isOoc ? cMist
+                                          : isInviteRequest ? cVine
+                                          : isSecurityWarning ? cEmber
+                                          : cParchment,
+                                      fontWeight: FontWeight.w300)),
+                                  const SizedBox(height: 4),
+                                  Text(n.subtitle, style: const TextStyle(
+                                      fontFamily: 'monospace', fontSize: 10,
+                                      color: cSmoke, letterSpacing: 1)),
+                                ],
+                              ),
+                            ),
+                            LoreTap(
+                              onTap: () async {
+                                await _markRead(n.id);
+                                setState(() => n.read = true);
+                              },
+                              behavior: HitTestBehavior.opaque,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: Icon(Icons.close, size: 18,
+                                    color: n.read ? cAsh : cSmoke),
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        if (isInterest && !n.read) ...[
+                          const SizedBox(height: 12),
+                          Row(children: [
+                            Expanded(child: LoreTap(
                               onTap: () async {
                                 await _respond(n, false);
                                 setState(() => n.read = true);
                               },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: cAsh),
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    'Decline',
-                                    style: TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 9,
-                                      color: cSmoke,
-                                      letterSpacing: 2,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: LoreTap(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(border: Border.all(color: cAsh)),
+                                child: const Center(child: Text('Decline',
+                                    style: TextStyle(fontFamily: 'monospace',
+                                        fontSize: 9, color: cSmoke, letterSpacing: 2)))),
+                            )),
+                            const SizedBox(width: 8),
+                            Expanded(child: LoreTap(
                               onTap: () async {
                                 final sessionId = await _respond(n, true);
                                 setState(() => n.read = true);
                                 if (context.mounted) {
                                   showSessionStartChoice(
                                     context,
-                                    partnerName:
-                                        n.data['fromCode'] as String? ?? '?',
-                                    partnerCode:
-                                        n.data['fromCode'] as String? ?? '',
+                                    partnerName: n.data['fromCode'] as String? ?? '?',
+                                    partnerCode: n.data['fromCode'] as String? ?? '',
                                     genre: n.data['genre'] as String? ?? '',
                                     sessionId: sessionId,
                                   );
                                 }
                               },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 10,
-                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
                                 color: cParchment,
-                                child: const Center(
-                                  child: Text(
-                                    'Accept',
-                                    style: TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 9,
-                                      color: cVoid,
-                                      letterSpacing: 2,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
+                                child: const Center(child: Text('Accept',
+                                    style: TextStyle(fontFamily: 'monospace',
+                                        fontSize: 9, color: cVoid, letterSpacing: 2)))),
+                            )),
+                          ]),
                         ],
-                      ),
-                    ],
 
-                    if (isInviteRequest && !n.read) ...[
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: LoreTap(
+                        if (isInviteRequest && !n.read) ...[
+                          const SizedBox(height: 12),
+                          Row(children: [
+                            Expanded(child: LoreTap(
                               onTap: () async {
                                 await _markRead(n.id);
                                 setState(() => n.read = true);
                               },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: cAsh),
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    'Decline',
-                                    style: TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 9,
-                                      color: cSmoke,
-                                      letterSpacing: 2,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: LoreTap(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(border: Border.all(color: cAsh)),
+                                child: const Center(child: Text('Decline',
+                                    style: TextStyle(fontFamily: 'monospace',
+                                        fontSize: 9, color: cSmoke, letterSpacing: 2)))),
+                            )),
+                            const SizedBox(width: 8),
+                            Expanded(child: LoreTap(
                               onTap: () async {
-                                final fromCode =
-                                    n.data['fromCode'] as String? ?? '';
-                                final fromName =
-                                    n.data['fromName'] as String? ?? fromCode;
+                                final fromCode = n.data['fromCode'] as String? ?? '';
+                                final fromName = n.data['fromName'] as String? ?? fromCode;
                                 final genre = n.data['genre'] as String? ?? '';
                                 await _markRead(n.id);
                                 setState(() => n.read = true);
-                                final sessionId = await FirestoreService()
-                                    .respondToInterest(
-                                      interestId: n.id,
-                                      fromCode: fromCode,
-                                      fromName: fromName,
-                                      genre: genre,
-                                      accepted: true,
-                                    );
+                                final sessionId = await FirestoreService().respondToInterest(
+                                  interestId: n.id,
+                                  fromCode: fromCode,
+                                  fromName: fromName,
+                                  genre: genre,
+                                  accepted: true,
+                                );
                                 if (context.mounted && sessionId.isNotEmpty) {
                                   showSessionStartChoice(
                                     context,
@@ -5116,81 +5007,53 @@ class _NotificationsContentState extends State<_NotificationsContent> {
                                 }
                               },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 10,
-                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
                                 color: cVine.withValues(alpha: 0.8),
-                                child: const Center(
-                                  child: Text(
-                                    'Accept',
-                                    style: TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 9,
-                                      color: cParchment,
-                                      letterSpacing: 2,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                                child: const Center(child: Text('Accept',
+                                    style: TextStyle(fontFamily: 'monospace',
+                                        fontSize: 9, color: cParchment, letterSpacing: 2)))),
+                            )),
+                          ]),
+                        ],
+
+                        if (isAccepted && !n.read) ...[
+                          const SizedBox(height: 8),
+                          LoreTap(
+                            onTap: () async {
+                              await _markRead(n.id);
+                              setState(() => n.read = true);
+                              if (context.mounted) {
+                                final sessionId = n.data['sessionId'] as String? ?? '';
+                                showSessionStartChoice(
+                                  context,
+                                  partnerName: n.subtitle.split(' · ').first,
+                                  partnerCode: n.data['partnerCode'] as String? ?? '',
+                                  genre: n.data['genre'] as String? ?? '',
+                                  sessionId: sessionId,
+                                );
+                              }
+                            },
+                            child: const Text('Tap to choose how to begin →',
+                                style: TextStyle(fontFamily: 'monospace', fontSize: 9,
+                                    color: cGold, letterSpacing: 1)),
                           ),
                         ],
-                      ),
-                    ],
-
-                    if (isAccepted && !n.read) ...[
-                      const SizedBox(height: 8),
-                      LoreTap(
-                        onTap: () async {
-                          await _markRead(n.id);
-                          setState(() => n.read = true);
-                          if (context.mounted) {
-                            final sessionId =
-                                n.data['sessionId'] as String? ?? '';
-                            showSessionStartChoice(
-                              context,
-                              partnerName: n.subtitle.split(' · ').first,
-                              partnerCode:
-                                  n.data['partnerCode'] as String? ?? '',
-                              genre: n.data['genre'] as String? ?? '',
-                              sessionId: sessionId,
-                            );
-                          }
-                        },
-                        child: const Text(
-                          'Tap to choose how to begin →',
-                          style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 9,
-                            color: cGold,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ),
-                    ],
-                    if ((isRpPost || isBrainstorm || isOoc) && !n.read) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        isRpPost
-                            ? 'Tap to enter the RP room →'
-                            : isBrainstorm
-                            ? 'Tap to enter prelude →'
-                            : 'Tap to open OOC →',
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 9,
-                          color: isRpPost
-                              ? cEmber
-                              : isBrainstorm
-                              ? cMagic
-                              : cMist,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ],
-                  ],
-                ), // Column
-              ), // Container
+                        if ((isRpPost || isBrainstorm || isOoc) && !n.read) ...[
+                          const SizedBox(height: 8),
+                          Text(isRpPost ? 'Tap to enter the RP room →'
+                              : isBrainstorm ? 'Tap to enter prelude →'
+                              : 'Tap to open OOC →',
+                              style: TextStyle(fontFamily: 'monospace', fontSize: 9,
+                                  color: isRpPost ? cEmber
+                                      : isBrainstorm ? cMagic
+                                      : cMist,
+                                  letterSpacing: 1)),
+                        ],
+                      ], // Column children
+                    ), // Column
+                  ), // Container
+                ), // HoloCardV2
+              ), // Padding
             ), // LoreTap
           ); // Dismissible
         }), // map function
@@ -5547,97 +5410,105 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
               behavior: HitTestBehavior.opaque,
               child: Opacity(
                 opacity: rp.isArchived ? 0.55 : 1.0,
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: rp.isArchived ? cAsh : cAsh),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (rp.hasTitle) ...[
-                              Text(
-                                rp.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w300,
-                                  fontStyle: FontStyle.italic,
-                                  color: cParchment,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: HoloCardV2(
+                    accent: cGold,
+                    intensity: 0.3,
+                    seed: rp.id.hashCode,
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: cInk,
+                        border: Border.all(color: cAsh),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (rp.hasTitle) ...[
+                                  Text(
+                                    rp.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w300,
+                                      fontStyle: FontStyle.italic,
+                                      color: cParchment,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    rp.partner,
+                                    style: const TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 10,
+                                      color: cSmoke,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                ] else
+                                  Text(
+                                    rp.partner,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w300,
+                                      fontStyle: FontStyle.italic,
+                                      color: cParchment,
+                                    ),
+                                  ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  rp.isArchived
+                                      ? '${rp.genre} · archived'
+                                      : '${rp.genre} · ${rp.posts} posts',
+                                  style: const TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 10,
+                                    color: cSmoke,
+                                    letterSpacing: 1,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                rp.partner,
-                                style: const TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 10,
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if (!rp.isArchived && rp.yourTurn)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  color: cGold,
+                                  child: const Text(
+                                    'YOUR TURN',
+                                    style: TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 8,
+                                      color: cVoid,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Enter →',
+                                style: TextStyle(
+                                  fontSize: 11,
                                   color: cSmoke,
                                   letterSpacing: 1,
                                 ),
                               ),
-                            ] else
-                              Text(
-                                rp.partner,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w300,
-                                  fontStyle: FontStyle.italic,
-                                  color: cParchment,
-                                ),
-                              ),
-                            const SizedBox(height: 4),
-                            Text(
-                              rp.isArchived
-                                  ? '${rp.genre} · archived'
-                                  : '${rp.genre} · ${rp.posts} posts',
-                              style: const TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 10,
-                                color: cSmoke,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          if (!rp.isArchived && rp.yourTurn)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              color: cGold,
-                              child: const Text(
-                                'YOUR TURN',
-                                style: TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 8,
-                                  color: cVoid,
-                                  letterSpacing: 1,
-                                ),
-                              ),
-                            ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Enter →',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: cSmoke,
-                              letterSpacing: 1,
-                            ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -5680,70 +5551,80 @@ class _BrainstormContent extends StatelessWidget {
               .map(
                 (b) => LoreTap(
                   onTap: () => onEnter(b),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(border: Border.all(color: cAsh)),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                b.partner,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w300,
-                                  fontStyle: FontStyle.italic,
-                                  color: cParchment,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                b.genre,
-                                style: const TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 10,
-                                  color: cSmoke,
-                                  letterSpacing: 1,
-                                ),
-                              ),
-                            ],
-                          ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: HoloCardV2(
+                      accent: cIce,
+                      intensity: 0.3,
+                      seed: b.id.hashCode,
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: cInk,
+                          border: Border.all(color: cAsh),
                         ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                        child: Row(
                           children: [
-                            if (b.yourTurn)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                color: cIce,
-                                child: const Text(
-                                  'WAITING',
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    b.partner,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w300,
+                                      fontStyle: FontStyle.italic,
+                                      color: cParchment,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    b.genre,
+                                    style: const TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 10,
+                                      color: cSmoke,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                if (b.yourTurn)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    color: cIce,
+                                    child: const Text(
+                                      'WAITING',
+                                      style: TextStyle(
+                                        fontFamily: 'monospace',
+                                        fontSize: 8,
+                                        color: cVoid,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                                  ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Enter →',
                                   style: TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 8,
-                                    color: cVoid,
+                                    fontSize: 11,
+                                    color: cSmoke,
                                     letterSpacing: 1,
                                   ),
                                 ),
-                              ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Enter →',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: cSmoke,
-                                letterSpacing: 1,
-                              ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
