@@ -21,6 +21,7 @@ class RequestCardView extends StatelessWidget {
   final List<String> tags;
   final Color accent;
   final Color bgTint;
+  final String? avatarUrl;
 
   // Kept for API compatibility — the HoloCardV2 wrapper now owns foil.
   final CardFrameSpec? frame;
@@ -41,6 +42,7 @@ class RequestCardView extends StatelessWidget {
     required this.tags,
     required this.accent,
     this.bgTint = Colors.transparent,
+    this.avatarUrl,
     this.frame,
     this.foilEnabled = true,
     this.foilSeed = 0,
@@ -68,6 +70,7 @@ class RequestCardView extends StatelessWidget {
               seed: _seed,
               accent: accent,
               fillHeight: true,
+              backgroundImageUrl: avatarUrl,
               art: _buildArt(),
               statsStrip: _buildInfoStrip(),
               footer: _buildFooter(),

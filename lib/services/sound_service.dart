@@ -87,10 +87,11 @@ class SoundService {
       // ── THE FIX ──
       // Tell Android this is a notification sound, not media, 
       // and do NOT request audio focus from other apps.
-      await player.setAudioContext(AudioContext(
+            await player.setAudioContext(AudioContext(
         android: AudioContextAndroid(
-          usageType: AndroidUsageType.notification,
-          audioFocus: AndroidAudioFocus.none,
+          contentType: AndroidContentType.sonification,
+          usageType: AndroidUsageType.game, // <-- Changed from notification
+          audioFocus: AndroidAudioFocus.none, // <-- Keeps it from ducking other apps
         ),
         iOS: AudioContextIOS(
           category: AVAudioSessionCategory.ambient,

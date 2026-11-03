@@ -26,6 +26,7 @@ class HomeProfileCard extends StatefulWidget {
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final bool fillHeight;
+  final String? avatarUrl;
 
   const HomeProfileCard({
     super.key,
@@ -37,6 +38,7 @@ class HomeProfileCard extends StatefulWidget {
     this.subtitle = '',
     this.onLongPress,
     this.fillHeight = false,
+    this.avatarUrl,
   });
 
   @override
@@ -124,13 +126,14 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
                 child: Padding(
                   padding: const EdgeInsets.all(6),
                   child: LoreCardFace(
-                    title: widget.name,
-                    code: widget.code,
-                    subtitle: widget.subtitle,
-                    seed: seed,
-                    accent: appSettings.profileBorderColor,
-                    fillHeight: widget.fillHeight,
-                    art: _buildBioText(),
+                title: widget.name,
+                code: widget.code,
+                subtitle: widget.subtitle,
+                seed: seed,
+                accent: appSettings.profileBorderColor,
+                fillHeight: widget.fillHeight,
+                backgroundImageUrl: widget.avatarUrl, // <--- Add this
+                art: _buildBioText(),
                     statsStrip:
                         widget.stats.isEmpty ? null : _buildStatsRow(),
                     footer: _buildFooterRow(),
@@ -149,7 +152,9 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 15,
-          color: widget.bio.isEmpty ? cSmoke : cMist,
+          color: widget.bio.isEmpty 
+              ? cSmoke 
+              : (appSettings.textColourFor('profile_bio') ?? cMist), // <-- Wired up!
           fontStyle: FontStyle.italic,
           height: 1.9,
         ),
@@ -173,24 +178,29 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
   Widget _statCell(ProfileStat s) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(s.value,
-              style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w300,
-                  color: cParchment,
-                  height: 1.1)),
+          Text(
+            s.value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w300,
+              color: appSettings.textColourFor('profile_name') ?? cParchment, // <-- Wired up!
+              height: 1.1,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(s.label.toUpperCase(),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 7.5,
-                letterSpacing: 1.5,
-                color: appSettings.profileBorderColor
-                    .withValues(alpha: 0.7),
-              )),
+          Text(
+            s.label.toUpperCase(),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 7.5,
+              letterSpacing: 1.5,
+              color: appSettings.textColourFor('profile_bio') ?? 
+                     appSettings.profileBorderColor.withValues(alpha: 0.7), // <-- Wired up!
+            ),
+          ),
         ],
       );
 

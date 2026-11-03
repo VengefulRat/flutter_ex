@@ -186,9 +186,8 @@ class _SplashScreenState extends State<SplashScreen>
       await _player.setAudioContext(
         AudioContext(
           android: AudioContextAndroid(
-            usageType: AndroidUsageType.media,
-            audioFocus: AndroidAudioFocus
-                .gainTransientMayDuck, // Allows other apps to play over it
+            usageType: AndroidUsageType.game,
+            audioFocus: AndroidAudioFocus.none,
           ),
         ),
       );
@@ -1165,6 +1164,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     if (profile != null) {
       _CardState.bio = profile['bio'] as String? ?? '';
+      _CardState.avatarUrl = profile['avatarUrl'] as String?;
       _CardState.writingStyle = profile['writingStyle'] as String? ?? '';
       _CardState.frequency = profile['postFrequency'] as String? ?? '';
       final tagList = profile['tags'] as List<dynamic>?;
@@ -1274,11 +1274,22 @@ class _HomeScreenState extends State<HomeScreen>
     if (mounted) setState(() {});
   }
 
-  Future<void> _refreshProfile() async {
+    Future<void> _refreshProfile() async {
     final code = _auth.currentCode;
     if (code == null) return;
     final profile = await _fs.getProfile(code);
-    if (mounted) setState(() => _profile = profile);
+    if (mounted) {
+      setState(() {
+        _profile = profile;
+        // UPDATE THE REQUEST CARD STATE HERE
+        if (profile != null) {
+          _CardState.avatarUrl = profile['avatarUrl'] as String?;
+          _CardState.bio = profile['bio'] as String? ?? '';
+          _CardState.writingStyle = profile['writingStyle'] as String? ?? '';
+          _CardState.frequency = profile['postFrequency'] as String? ?? '';
+        }
+      });
+    }
   }
 
   String _humanAgo(DateTime t) {
@@ -1301,7 +1312,7 @@ class _HomeScreenState extends State<HomeScreen>
       setState(() => _activeBlock = 'profile');
       return;
     }
-    _pushPanel('Profile', _ProfileContent(profile: _profile));
+    _pushPanel('Profile', _ProfileContent(profile: _profile, onRefresh: _refreshProfile));
   }
 
   void _openNotifications() {
@@ -1625,7 +1636,7 @@ class _HomeScreenState extends State<HomeScreen>
   // The same layout as before, just extracted into its own method so
   // the outer build can decide what to show. Nothing inside this
   // method changed.
-  Widget _buildMobileBody() {
+    Widget _buildMobileBody() {
     final isDesktop = MediaQuery.sizeOf(context).width >= 900;
 
     return Center(
@@ -1638,99 +1649,133 @@ class _HomeScreenState extends State<HomeScreen>
             Column(
               children: [
                 Expanded(
-                  child: HomeProfileCard(
-                    name: _auth.currentName ?? '—',
-                    code: _auth.currentCode ?? '—',
-                    bio: _profile?['bio'] as String? ?? '',
-                    subtitle: _buildProfileSubtitle(),
-                    stats: _computeStats(),
-                    onTap: _openProfile,
-                    onLongPress: () => ProfileStyleSheet.show(context),
-                    fillHeight: !isDesktop,
-                  ),
+                  child: isDesktop
+                      ? Center(
+                          child: HomeProfileCard(
+                            name: _auth.currentName ?? '—',
+                            code: _auth.currentCode ?? '—',
+                            bio: _profile?['bio'] as String? ?? '',
+                            subtitle: _buildProfileSubtitle(),
+                            stats: _computeStats(),
+                            avatarUrl: _profile?['avatarUrl'] as String?, // <-- New Avatar Image
+                            onTap: _openProfile,
+                            onLongPress: () => ProfileStyleSheet.show(context),
+                            fillHeight: false,
+                          ),
+                        )
+                      : HomeProfileCard(
+                          name: _auth.currentName ?? '—',
+                          code: _auth.currentCode ?? '—',
+                          bio: _profile?['bio'] as String? ?? '',
+                          subtitle: _buildProfileSubtitle(),
+                          stats: _computeStats(),
+                          avatarUrl: _profile?['avatarUrl'] as String?, // <-- New Avatar Image
+                          onTap: _openProfile,
+                          onLongPress: () => ProfileStyleSheet.show(context),
+                          fillHeight: true,
+                        ),
                 ),
+                
+                // ── FLOATING BOTTOM BAR ──
                 Container(
-                  decoration: const BoxDecoration(
-                    border: Border(top: BorderSide(color: cAsh)),
-                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: Stack(
                     clipBehavior: Clip.none,
-                    alignment: Alignment.topCenter,
+                    alignment: Alignment.bottomCenter,
                     children: [
                       Row(
                         children: [
                           Expanded(
-                            child: LoreTap(
-                              onTap: () async {
-                                await Navigator.of(
-                                  context,
-                                ).push(fadeRoute(const SandboxScreen()));
-                                if (mounted) await _refreshProfile();
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 18,
-                                ),
-                                decoration: const BoxDecoration(
-                                  border: Border(
-                                    right: BorderSide(color: cAsh),
-                                  ),
-                                ),
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.public_outlined,
-                                      size: 16,
-                                      color: cSmoke,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Sandbox',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: cSmoke,
-                                        letterSpacing: 2,
-                                        fontWeight: FontWeight.w300,
+                            child: HoloCardV2(
+                              accent: cSmoke,
+                              intensity: 0.35,
+                              seed: 'sandbox_btn'.hashCode,
+                              bgColor: appSettings.surfaceColor,
+                              child: LoreTap(
+                                onTap: () async {
+                                  await Navigator.of(context).push(fadeRoute(const SandboxScreen()));
+                                  if (mounted) await _refreshProfile();
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  decoration: BoxDecoration(
+                                    color: appSettings.surfaceColor,
+                                    border: Border.all(color: cAsh, width: 1.5),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.6),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 6),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.public_outlined, size: 16, color: cSmoke),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Sandbox',
+                                        style: TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 11,
+                                          color: cSmoke,
+                                          letterSpacing: 1,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 90),
                           Expanded(
-                            child: LoreTap(
-                              onTap: () => Navigator.of(
-                                context,
-                              ).push(fadeRoute(const CardDiscoveryScreen())),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 18,
-                                ),
-                                decoration: const BoxDecoration(
-                                  border: Border(left: BorderSide(color: cAsh)),
-                                ),
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.explore_outlined,
-                                      size: 16,
-                                      color: cGold,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Find Partners',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: cGold,
-                                        letterSpacing: 2,
-                                        fontWeight: FontWeight.w300,
+                            child: HoloCardV2(
+                              accent: cGold,
+                              intensity: 0.4,
+                              seed: 'find_btn'.hashCode,
+                              bgColor: appSettings.surfaceColor,
+                              child: LoreTap(
+                                onTap: () => Navigator.of(context).push(fadeRoute(const CardDiscoveryScreen())),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  decoration: BoxDecoration(
+                                    color: appSettings.surfaceColor,
+                                    border: Border.all(color: cGold.withValues(alpha: 0.5), width: 1.5),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.6),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 6),
                                       ),
-                                    ),
-                                  ],
+                                      BoxShadow(
+                                        color: cGold.withValues(alpha: 0.15),
+                                        blurRadius: 20,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.explore_outlined, size: 16, color: cGold),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Find Partners',
+                                        style: TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 11,
+                                          color: cGold,
+                                          letterSpacing: 1,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -1738,42 +1783,53 @@ class _HomeScreenState extends State<HomeScreen>
                         ],
                       ),
                       Positioned(
-                        top: -22,
-                        child: LoreTap(
-                          onTap: () => Navigator.of(
-                            context,
-                          ).push(fadeRoute(const DiaryScreen())),
-                          child: Container(
-                            width: 90,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            decoration: BoxDecoration(
-                              color: appSettings.bgColor,
-                              border: Border.all(
-                                color: cGold.withValues(alpha: 0.6),
-                              ),
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(8),
-                              ),
-                            ),
-                            child: const Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.menu_book_outlined,
-                                  size: 16,
-                                  color: cGold,
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Diary',
-                                  style: TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 10,
-                                    color: cGold,
-                                    letterSpacing: 2,
+                        bottom: 0,
+                        child: HoloCardV2(
+                          accent: cGold,
+                          intensity: 0.6,
+                          seed: 'diary_btn'.hashCode,
+                          bgColor: appSettings.bgColor,
+                          maxTiltDegrees: 15,
+                          child: LoreTap(
+                            onTap: () => Navigator.of(context).push(fadeRoute(const DiaryScreen())),
+                            child: Container(
+                              width: 82,
+                              height: 82,
+                              decoration: BoxDecoration(
+                                color: appSettings.bgColor,
+                                border: Border.all(color: cGold.withValues(alpha: 0.7), width: 1.5),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.8),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 8),
                                   ),
-                                ),
-                              ],
+                                  BoxShadow(
+                                    color: cGold.withValues(alpha: 0.25),
+                                    blurRadius: 30,
+                                    offset: const Offset(0, 12),
+                                    spreadRadius: -2,
+                                  ),
+                                ],
+                              ),
+                              child: const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.menu_book_outlined, size: 24, color: cGold),
+                                  SizedBox(height: 6),
+                                  Text(
+                                    'Diary',
+                                    style: TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 10,
+                                      color: cGold,
+                                      letterSpacing: 2,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -1783,7 +1839,12 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ],
             ),
-            FloatingMenuButton(items: _buildMenuItems()),
+            
+            // ── THE FLOATING MENU BUTTON ──
+            // This must be the last child in the Stack so it floats above everything else
+            FloatingMenuButton(
+              items: _buildMenuItems(),
+            ),
           ],
         ),
       ),
@@ -2110,10 +2171,10 @@ class _HomeScreenState extends State<HomeScreen>
       case 'settings':
         return _panel(title: 'Settings', child: const _SettingsContent());
       case 'profile':
-        return _panel(
-          title: 'Profile',
-          child: _ProfileContent(profile: _profile),
-        );
+    return _panel(
+      title: 'Profile',
+      child: _ProfileContent(profile: _profile, onRefresh: _refreshProfile), // <--- Add onRefresh
+    );
       default:
         return const SizedBox.shrink();
     }
@@ -3003,6 +3064,7 @@ class _CardData {
   final bool frameGlow, frameOrnate, frameDense;
   final bool foilEnabled;
   final double foilIntensity;
+  final String? avatarUrl;
   const _CardData({
     required this.code,
     required this.name,
@@ -3022,6 +3084,7 @@ class _CardData {
     this.frameDense = false,
     this.foilEnabled = true,
     this.foilIntensity = 0.6,
+    this.avatarUrl,
   });
 }
 
@@ -3045,12 +3108,10 @@ _CardData _cardFromFirestore(Map<String, dynamic> d) {
       .map((t) => t['label'] as String? ?? '')
       .toList();
   final code = d['code'] as String? ?? '';
+  
   return _CardData(
     code: code,
-    name:
-        d['displayNameOriginal'] as String? ??
-        d['displayName'] as String? ??
-        '?',
+    name: d['displayNameOriginal'] as String? ?? d['displayName'] as String? ?? '?',
     genre: tags.isNotEmpty ? tags.first : 'Freeform',
     seeking: d['bio'] as String? ?? '',
     writingStyle: d['writingStyle'] as String? ?? '',
@@ -3075,6 +3136,7 @@ _CardData _cardFromFirestore(Map<String, dynamic> d) {
     frameDense: d['requestCardDense'] as bool? ?? false,
     foilEnabled: d['requestCardFoil'] as bool? ?? true,
     foilIntensity: (d['requestCardFoilLevel'] as num?)?.toDouble() ?? 0.6,
+    avatarUrl: d['avatarUrl'] as String?, // <--- Now it parses cleanly
   );
 }
 
@@ -3648,6 +3710,7 @@ class _DiscoveryCard extends StatelessWidget {
                 tags: data.extraTags,
                 accent: data.accentColor,
                 bgTint: data.bgTint,
+                avatarUrl: data.avatarUrl,
                 frame: CardFrameSpec(
                   seed: data.frameSeed,
                   accent: data.accentColor,
@@ -3670,7 +3733,8 @@ class _DiscoveryCard extends StatelessWidget {
 // ── STRIP CONTENTS ──
 class _ProfileContent extends StatefulWidget {
   final Map<String, dynamic>? profile;
-  const _ProfileContent({this.profile});
+  const _ProfileContent({this.profile, this.onRefresh});
+  final VoidCallback? onRefresh;
   @override
   State<_ProfileContent> createState() => _ProfileContentState();
 }
@@ -3683,6 +3747,7 @@ class _ProfileContentState extends State<_ProfileContent> {
   bool _editingBio = false;
   bool _codeRevealed = false;
   Uint8List? _localAvatarBytes;
+  String? _localAvatarUrl;
 
   Future<void> _pickAvatar() async {
     final picker = ImagePicker();
@@ -3690,7 +3755,33 @@ class _ProfileContentState extends State<_ProfileContent> {
     if (image == null) return;
 
     final bytes = await image.readAsBytes();
-    setState(() => _localAvatarBytes = bytes); // Show immediately
+    
+    // 1. Show locally immediately
+    setState(() => _localAvatarBytes = bytes); 
+
+    if (!mounted) return;
+
+    // 2. SHOW THE WAITER (Blocking Modal)
+    showDialog(
+      context: context,
+      barrierDismissible: false, 
+      builder: (ctx) => const PopScope(
+        canPop: false, 
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: cGold, strokeWidth: 2),
+              SizedBox(height: 16),
+              Text(
+                'Uploading image...',
+                style: TextStyle(color: cParchment, fontFamily: 'monospace', fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
 
     try {
       final ref = FirebaseStorage.instance.ref().child(
@@ -3698,9 +3789,24 @@ class _ProfileContentState extends State<_ProfileContent> {
       );
       await ref.putData(bytes);
       final url = await ref.getDownloadURL();
-      await _fs.updateProfile({'avatarUrl': url});
+      
+      final freshUrl = '$url?v=${DateTime.now().millisecondsSinceEpoch}';
+      await NetworkImage(url).evict();
 
+      await _fs.updateProfile({'avatarUrl': freshUrl});
+      
       if (mounted) {
+        widget.onRefresh?.call(); 
+        
+        // 3. CLOSE THE WAITER
+        Navigator.of(context, rootNavigator: true).pop(); 
+        
+        // 4. UPDATE LOCAL STATE (This is where freshUrl belongs)
+        setState(() {
+          _localAvatarBytes = null; 
+          _localAvatarUrl = freshUrl; 
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: cInk,
@@ -3713,6 +3819,8 @@ class _ProfileContentState extends State<_ProfileContent> {
       }
     } catch (e) {
       if (mounted) {
+        // CLOSE THE WAITER ON ERROR TOO
+        Navigator.of(context, rootNavigator: true).pop(); 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: cInk,
@@ -3745,6 +3853,7 @@ class _ProfileContentState extends State<_ProfileContent> {
 
   Future<void> _saveBio() async {
     await _fs.updateProfile({'bio': _bioCtrl.text.trim()});
+    widget.onRefresh?.call();
     setState(() => _editingBio = false);
   }
 
@@ -3777,16 +3886,19 @@ class _ProfileContentState extends State<_ProfileContent> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: cAsh),
-                  image: _localAvatarBytes != null
-                      ? DecorationImage(
-                          image: MemoryImage(_localAvatarBytes!),
-                          fit: BoxFit.cover,
-                        )
-                      : (widget.profile?['avatarUrl'] != null
+                                  image: _localAvatarBytes != null
+                    ? DecorationImage(
+                        image: MemoryImage(_localAvatarBytes!),
+                        fit: BoxFit.cover,
+                      )
+                    : _localAvatarUrl != null
+                        ? DecorationImage(
+                            image: NetworkImage(_localAvatarUrl!),
+                            fit: BoxFit.cover,
+                          )
+                        : (widget.profile?['avatarUrl'] != null
                             ? DecorationImage(
-                                image: NetworkImage(
-                                  widget.profile!['avatarUrl'],
-                                ),
+                                image: NetworkImage(widget.profile!['avatarUrl']),
                                 fit: BoxFit.cover,
                               )
                             : null),
@@ -6074,6 +6186,7 @@ class _RequestCardContentState extends State<_RequestCardContent> {
 class _CardState {
   static String bio =
       'I write long, immersive posts and expect the same in return. My stories tend toward the dark and morally complex.';
+      static String? avatarUrl;
   static List<_TagData> tags = [
     _TagData('Historical', cGold),
     _TagData('18+', cEmber),
@@ -6164,6 +6277,7 @@ class _CardPreviewState extends State<_CardPreview> {
             genre: genre,
             foilEnabled: false,
             bio: _CardState.bio,
+            avatarUrl: _CardState.avatarUrl,
             writingStyle: _CardState.writingStyle,
             frequency: _CardState.frequency,
             ageRating: ageRating,
@@ -6963,6 +7077,7 @@ class _RequestCardEditorState extends State<_RequestCardEditor>
             tags: tagLabels,
             accent: _CardState.accentColor,
             bgTint: _CardState.bgTint,
+            avatarUrl: _CardState.avatarUrl,
             frame: CardFrameSpec(
               seed: _CardState.frameSeed,
               accent: _CardState.accentColor,

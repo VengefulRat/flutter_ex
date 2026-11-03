@@ -90,44 +90,144 @@ class MoodEngine {
 
   static const _genreWeights = <StoryMood, Map<String, int>>{
     StoryMood.rain: {
-      'rain': 3, 'storm': 3, 'downpour': 4, 'drizzle': 3, 'thunder': 3,
-      'lightning': 3, 'puddle': 2, 'soaked': 2, 'drenched': 3, 'grey sky': 4,
-      'gray sky': 4, 'overcast': 3, 'monsoon': 4, 'torrent': 3, 'flood': 3,
+      'rain': 3,
+      'storm': 3,
+      'downpour': 4,
+      'drizzle': 3,
+      'thunder': 3,
+      'lightning': 3,
+      'puddle': 2,
+      'soaked': 2,
+      'drenched': 3,
+      'grey sky': 4,
+      'gray sky': 4,
+      'overcast': 3,
+      'monsoon': 4,
+      'torrent': 3,
+      'flood': 3,
     },
     StoryMood.snow: {
-      'snow': 3, 'blizzard': 4, 'frost': 3, 'frozen': 3, 'bleak': 2,
-      'tundra': 4, 'glacier': 4, 'ice storm': 5, 'snowfall': 3, 'frostbite': 4,
-      'bitter cold': 4, 'freezing': 3, 'white out': 4, 'avalanche': 4,
+      'snow': 3,
+      'blizzard': 4,
+      'frost': 3,
+      'frozen': 3,
+      'bleak': 2,
+      'tundra': 4,
+      'glacier': 4,
+      'ice storm': 5,
+      'snowfall': 3,
+      'frostbite': 4,
+      'bitter cold': 4,
+      'freezing': 3,
+      'white out': 4,
+      'avalanche': 4,
     },
     StoryMood.battle: {
-      'battle': 4, 'war': 3, 'sword': 3, 'blood': 3, 'clash': 3,
-      'combat': 4, 'wound': 3, 'blade': 2, 'charge': 2, 'siege': 4,
-      'skirmish': 4, 'slaughter': 4, 'carnage': 5, 'armor': 2, 'arrow': 2,
-      'gunshot': 4, 'explosion': 4, 'sniper': 4, 'ambush': 4, 'rifle': 3,
+      'battle': 4,
+      'war': 3,
+      'sword': 3,
+      'blood': 3,
+      'clash': 3,
+      'combat': 4,
+      'wound': 3,
+      'blade': 2,
+      'charge': 2,
+      'siege': 4,
+      'skirmish': 4,
+      'slaughter': 4,
+      'carnage': 5,
+      'armor': 2,
+      'arrow': 2,
+      'gunshot': 4,
+      'explosion': 4,
+      'sniper': 4,
+      'ambush': 4,
+      'rifle': 3,
     },
     StoryMood.eerie: {
-      'ghost': 4, 'haunt': 4, 'horror': 4, 'terror': 4, 'sinister': 4,
-      'whisper': 2, 'shadow moved': 5, 'pale': 2, 'hollow': 3, 'void': 3,
-      'cursed': 4, 'wrongness': 4, 'unnatural': 4, 'grinned': 2,
-      'crawled': 2, 'crept': 2, 'vanished': 2, 'shapeless': 4, 'ritual': 3,
+      'ghost': 4,
+      'haunt': 4,
+      'horror': 4,
+      'terror': 4,
+      'sinister': 4,
+      'whisper': 2,
+      'shadow moved': 5,
+      'pale': 2,
+      'hollow': 3,
+      'void': 3,
+      'cursed': 4,
+      'wrongness': 4,
+      'unnatural': 4,
+      'grinned': 2,
+      'crawled': 2,
+      'crept': 2,
+      'vanished': 2,
+      'shapeless': 4,
+      'ritual': 3,
     },
     StoryMood.dark: {
-      'death': 4, 'dead': 3, 'grave': 3, 'mourning': 4, 'despair': 5,
-      'loss': 2, 'grief': 4, 'hollow': 3, 'hopeless': 5, 'forsaken': 4,
-      'doomed': 4, 'shattered': 3, 'broken': 2, 'ruin': 3, 'ash': 2,
-      'wept': 3, 'wept silently': 5, 'no way out': 5, 'resigned': 3,
+      'death': 4,
+      'dead': 3,
+      'grave': 3,
+      'mourning': 4,
+      'despair': 5,
+      'loss': 2,
+      'grief': 4,
+      'hollow': 3,
+      'hopeless': 5,
+      'forsaken': 4,
+      'doomed': 4,
+      'shattered': 3,
+      'broken': 2,
+      'ruin': 3,
+      'ash': 2,
+      'wept': 3,
+      'wept silently': 5,
+      'no way out': 5,
+      'resigned': 3,
     },
     StoryMood.tense: {
-      'danger': 3, 'escape': 3, 'chase': 4, 'urgent': 3, 'panic': 4,
-      'trap': 3, 'cornered': 4, 'heartbeat': 3, 'sweat': 2, 'breathless': 4,
-      'raced': 3, 'sprinted': 3, 'alarm': 3, 'timer': 3, 'seconds left': 5,
-      'no time': 4, 'closing in': 5, 'locked': 2, 'ticking': 3,
+      'danger': 3,
+      'escape': 3,
+      'chase': 4,
+      'urgent': 3,
+      'panic': 4,
+      'trap': 3,
+      'cornered': 4,
+      'heartbeat': 3,
+      'sweat': 2,
+      'breathless': 4,
+      'raced': 3,
+      'sprinted': 3,
+      'alarm': 3,
+      'timer': 3,
+      'seconds left': 5,
+      'no time': 4,
+      'closing in': 5,
+      'locked': 2,
+      'ticking': 3,
     },
     StoryMood.warm: {
-      'love': 3, 'smile': 2, 'laugh': 2, 'hope': 3, 'joy': 3,
-      'warmth': 3, 'embrace': 3, 'tender': 3, 'gentle': 2, 'soft light': 4,
-      'firelight': 4, 'safe': 3, 'peace': 3, 'grateful': 3, 'cherish': 4,
-      'comfort': 3, 'together': 2, 'home': 2, 'laughter': 3, 'relief': 3,
+      'love': 3,
+      'smile': 2,
+      'laugh': 2,
+      'hope': 3,
+      'joy': 3,
+      'warmth': 3,
+      'embrace': 3,
+      'tender': 3,
+      'gentle': 2,
+      'soft light': 4,
+      'firelight': 4,
+      'safe': 3,
+      'peace': 3,
+      'grateful': 3,
+      'cherish': 4,
+      'comfort': 3,
+      'together': 2,
+      'home': 2,
+      'laughter': 3,
+      'relief': 3,
     },
   };
 
@@ -156,10 +256,14 @@ class MoodEngine {
     if (genreScore >= 4) return genreMood;
 
     if (genreScore >= 1) {
-      if (genreMood == StoryMood.warm && comparative > 0.3) return StoryMood.warm;
-      if (genreMood == StoryMood.dark && comparative < -0.3) return StoryMood.dark;
-      if (genreMood == StoryMood.tense && comparative < -0.1) return StoryMood.tense;
-      if (genreMood == StoryMood.eerie && comparative < -0.2) return StoryMood.eerie;
+      if (genreMood == StoryMood.warm && comparative > 0.3)
+        return StoryMood.warm;
+      if (genreMood == StoryMood.dark && comparative < -0.3)
+        return StoryMood.dark;
+      if (genreMood == StoryMood.tense && comparative < -0.1)
+        return StoryMood.tense;
+      if (genreMood == StoryMood.eerie && comparative < -0.2)
+        return StoryMood.eerie;
       if (genreScore >= 2) return genreMood;
     }
 
@@ -174,27 +278,43 @@ class MoodEngine {
 
   static Color bgColor(StoryMood mood) {
     switch (mood) {
-      case StoryMood.dark:    return const Color(0xFF06060E);
-      case StoryMood.tense:   return const Color(0xFF0C0606);
-      case StoryMood.warm:    return const Color(0xFF0C0904);
-      case StoryMood.eerie:   return const Color(0xFF050806);
-      case StoryMood.battle:  return const Color(0xFF0C0505);
-      case StoryMood.rain:    return const Color(0xFF050810);
-      case StoryMood.snow:    return const Color(0xFF060810);
-      case StoryMood.neutral: return cVoid;
+      case StoryMood.dark:
+        return const Color(0xFF06060E);
+      case StoryMood.tense:
+        return const Color(0xFF0C0606);
+      case StoryMood.warm:
+        return const Color(0xFF0C0904);
+      case StoryMood.eerie:
+        return const Color(0xFF050806);
+      case StoryMood.battle:
+        return const Color(0xFF0C0505);
+      case StoryMood.rain:
+        return const Color(0xFF050810);
+      case StoryMood.snow:
+        return const Color(0xFF060810);
+      case StoryMood.neutral:
+        return cVoid;
     }
   }
 
   static String moodLabel(StoryMood mood) {
     switch (mood) {
-      case StoryMood.dark:    return 'Dark';
-      case StoryMood.tense:   return 'Tense';
-      case StoryMood.warm:    return 'Warm';
-      case StoryMood.eerie:   return 'Eerie';
-      case StoryMood.battle:  return 'Battle';
-      case StoryMood.rain:    return 'Rain';
-      case StoryMood.snow:    return 'Snow';
-      case StoryMood.neutral: return 'Neutral';
+      case StoryMood.dark:
+        return 'Dark';
+      case StoryMood.tense:
+        return 'Tense';
+      case StoryMood.warm:
+        return 'Warm';
+      case StoryMood.eerie:
+        return 'Eerie';
+      case StoryMood.battle:
+        return 'Battle';
+      case StoryMood.rain:
+        return 'Rain';
+      case StoryMood.snow:
+        return 'Snow';
+      case StoryMood.neutral:
+        return 'Neutral';
     }
   }
 }
@@ -207,7 +327,12 @@ class Particle {
   final StoryMood type;
 
   Particle(this.type, double width, double height)
-      : x = 0, y = 0, vx = 0, vy = 0, size = 1, opacity = 0 {
+    : x = 0,
+      y = 0,
+      vx = 0,
+      vy = 0,
+      size = 1,
+      opacity = 0 {
     reset(width, height);
   }
 
@@ -281,7 +406,8 @@ class Particle {
   }
 
   bool update(double w, double h) {
-    x += vx; y += vy;
+    x += vx;
+    y += vy;
     return y > h + 10 || x < -10 || x > w + 10;
   }
 }
@@ -293,14 +419,22 @@ class MoodParticlePainter extends CustomPainter {
 
   Color get _particleColor {
     switch (mood) {
-      case StoryMood.rain:   return const Color(0xFF7AB8D4);
-      case StoryMood.snow:   return Colors.white;
-      case StoryMood.battle: return const Color(0xFFD4614A);
-      case StoryMood.eerie:  return const Color(0xFF6aff8a);
-      case StoryMood.warm:   return const Color(0xFFC9A96E);
-      case StoryMood.dark:   return const Color(0xFF7060C0);
-      case StoryMood.tense:  return const Color(0xFFCC3030);
-      default:               return const Color(0xFF5a5a5a);
+      case StoryMood.rain:
+        return const Color(0xFF7AB8D4);
+      case StoryMood.snow:
+        return Colors.white;
+      case StoryMood.battle:
+        return const Color(0xFFD4614A);
+      case StoryMood.eerie:
+        return const Color(0xFF6aff8a);
+      case StoryMood.warm:
+        return const Color(0xFFC9A96E);
+      case StoryMood.dark:
+        return const Color(0xFF7060C0);
+      case StoryMood.tense:
+        return const Color(0xFFCC3030);
+      default:
+        return const Color(0xFF5a5a5a);
     }
   }
 
@@ -311,22 +445,31 @@ class MoodParticlePainter extends CustomPainter {
       paint.color = _particleColor.withValues(alpha: p.opacity * 0.5);
       if (mood == StoryMood.rain) {
         paint.strokeWidth = p.size;
-        canvas.drawLine(Offset(p.x, p.y),
-            Offset(p.x + p.vx * 2, p.y + p.vy * 1.5),
-            paint..style = PaintingStyle.stroke);
+        canvas.drawLine(
+          Offset(p.x, p.y),
+          Offset(p.x + p.vx * 2, p.y + p.vy * 1.5),
+          paint..style = PaintingStyle.stroke,
+        );
       } else if (mood == StoryMood.tense) {
         paint.strokeWidth = p.size;
-        canvas.drawLine(Offset(p.x, p.y),
-            Offset(p.x - p.vx * 6, p.y),
-            paint..style = PaintingStyle.stroke);
+        canvas.drawLine(
+          Offset(p.x, p.y),
+          Offset(p.x - p.vx * 6, p.y),
+          paint..style = PaintingStyle.stroke,
+        );
       } else if (mood == StoryMood.battle) {
         paint.strokeWidth = p.size * 0.6;
-        canvas.drawLine(Offset(p.x, p.y),
-            Offset(p.x - p.vx, p.y - p.vy),
-            paint..style = PaintingStyle.stroke);
+        canvas.drawLine(
+          Offset(p.x, p.y),
+          Offset(p.x - p.vx, p.y - p.vy),
+          paint..style = PaintingStyle.stroke,
+        );
       } else {
-        canvas.drawCircle(Offset(p.x, p.y), p.size,
-            paint..style = PaintingStyle.fill);
+        canvas.drawCircle(
+          Offset(p.x, p.y),
+          p.size,
+          paint..style = PaintingStyle.fill,
+        );
       }
     }
   }
@@ -374,12 +517,14 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   final List<RPPost> _posts = [];
   final List<OOCMessage> _oocMessages = [];
 
-    ui.FragmentShader? _moodShader;
+  ui.FragmentShader? _moodShader;
   late AnimationController _shaderTimeCtrl;
 
   Future<void> _loadMoodShader() async {
     try {
-      final program = await ui.FragmentProgram.fromAsset('shaders/rp_mood.frag');
+      final program = await ui.FragmentProgram.fromAsset(
+        'shaders/rp_mood.frag',
+      );
       if (mounted) setState(() => _moodShader = program.fragmentShader());
     } catch (e) {
       debugPrint('Failed to load mood shader: $e');
@@ -399,14 +544,24 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('ATTACH MEDIA', style: TextStyle(
-                  fontFamily: 'monospace', fontSize: 9,
-                  color: cGold, letterSpacing: 4)),
+              const Text(
+                'ATTACH MEDIA',
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 9,
+                  color: cGold,
+                  letterSpacing: 4,
+                ),
+              ),
               const SizedBox(height: 12),
               const Text(
                 'Paste a link to an Image, GIF, Video (YouTube), or Audio track.',
-                style: TextStyle(fontSize: 13, color: cMist,
-                    fontStyle: FontStyle.italic, height: 1.6),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: cMist,
+                  fontStyle: FontStyle.italic,
+                  height: 1.6,
+                ),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -417,37 +572,64 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   hintText: 'https://...',
                   hintStyle: TextStyle(color: cSmoke),
                   enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: cAsh)),
+                    borderSide: BorderSide(color: cAsh),
+                  ),
                   focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: cGold)),
-                  filled: true, fillColor: cVoid,
+                    borderSide: BorderSide(color: cGold),
+                  ),
+                  filled: true,
+                  fillColor: cVoid,
                 ),
                 cursorColor: cGold,
               ),
               const SizedBox(height: 20),
-              Row(children: [
-                Expanded(child: GestureDetector(
-                  onTap: () => Navigator.pop(ctx),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(border: Border.all(color: cAsh)),
-                    child: const Center(child: Text('Cancel',
-                        style: TextStyle(fontFamily: 'monospace',
-                            fontSize: 9, color: cSmoke, letterSpacing: 2))),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: cAsh),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 9,
+                              color: cSmoke,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                )),
-                const SizedBox(width: 8),
-                Expanded(child: GestureDetector(
-                  onTap: () => Navigator.pop(ctx, ctrl.text.trim()),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    color: cGold,
-                    child: const Center(child: Text('Attach',
-                        style: TextStyle(fontFamily: 'monospace',
-                            fontSize: 9, color: cVoid, letterSpacing: 2))),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx, ctrl.text.trim()),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        color: cGold,
+                        child: const Center(
+                          child: Text(
+                            'Attach',
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 9,
+                              color: cVoid,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                )),
-              ]),
+                ],
+              ),
             ],
           ),
         ),
@@ -458,14 +640,16 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   Future<void> _sendEncryptedMediaUrl(String url) async {
     setState(() {
-      _oocMessages.add(OOCMessage(
-        author: _auth.currentName ?? 'You',
-        content: '',
-        isUser: true,
-        timestamp: DateTime.now(),
-        mediaUrl: url,
-        isEncryptedMedia: false,
-      ));
+      _oocMessages.add(
+        OOCMessage(
+          author: _auth.currentName ?? 'You',
+          content: '',
+          isUser: true,
+          timestamp: DateTime.now(),
+          mediaUrl: url,
+          isEncryptedMedia: false,
+        ),
+      );
     });
     _scrollOocToBottom();
   }
@@ -476,15 +660,21 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     if (image == null) return;
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      backgroundColor: cInk,
-      content: Text('Compressing and encrypting...', style: TextStyle(color: cGold)),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: cInk,
+        content: Text(
+          'Compressing and encrypting...',
+          style: TextStyle(color: cGold),
+        ),
+      ),
+    );
 
     try {
       final dir = await getTemporaryDirectory();
-      final targetPath = '${dir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      
+      final targetPath =
+          '${dir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
       final compressedFile = await FlutterImageCompress.compressAndGetFile(
         image.path,
         targetPath,
@@ -498,10 +688,15 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
       if (bytes.length > 5 * 1024 * 1024) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
               backgroundColor: cInk,
-              content: Text('Image is too large (Max 5MB).',
-                  style: TextStyle(color: cEmber))));
+              content: Text(
+                'Image is too large (Max 5MB).',
+                style: TextStyle(color: cEmber),
+              ),
+            ),
+          );
         }
         return;
       }
@@ -509,27 +704,38 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       final sessionKey = await _fs.getSessionKeyForMedia(widget.sessionId);
       if (sessionKey == null) throw 'Could not get session key';
 
-      final encryptedData = await CryptoService().encryptBytes(bytes, sessionKey);
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('sessions/${widget.sessionId}/media/${DateTime.now().millisecondsSinceEpoch}.enc');
-      
-      final uploadBytes = Uint8List.fromList(encryptedData['iv']! + encryptedData['cipher']!);
+      final encryptedData = await CryptoService().encryptBytes(
+        bytes,
+        sessionKey,
+      );
+      final storageRef = FirebaseStorage.instance.ref().child(
+        'sessions/${widget.sessionId}/media/${DateTime.now().millisecondsSinceEpoch}.enc',
+      );
+
+      final uploadBytes = Uint8List.fromList(
+        encryptedData['iv']! + encryptedData['cipher']!,
+      );
       await storageRef.putData(uploadBytes);
 
       await _fs.sendEncryptedOocMedia(
         sessionId: widget.sessionId,
         storagePath: storageRef.fullPath,
       );
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
             backgroundColor: cInk,
-            content: Text('Upload failed: $e', style: const TextStyle(color: cEmber))));
+            content: Text(
+              'Upload failed: $e',
+              style: const TextStyle(color: cEmber),
+            ),
+          ),
+        );
       }
     }
   }
@@ -611,9 +817,10 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   String _selectedText = '';
 
   SessionLog get _log => SessionLog.forSession(
-      widget.sessionId.isEmpty ? 'default' : widget.sessionId);
+    widget.sessionId.isEmpty ? 'default' : widget.sessionId,
+  );
 
-    @override
+  @override
   void initState() {
     super.initState();
     _sessionTitle = widget.title;
@@ -624,19 +831,27 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     }
 
     _moodCtrl = AnimationController(
-        vsync: this, duration: const Duration(seconds: 3));
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    );
     final toColor = MoodEngine.bgColor(_currentMood);
     _fromColor = toColor;
-    _bgAnim = ColorTween(begin: _fromColor, end: toColor)
-        .animate(CurvedAnimation(parent: _moodCtrl, curve: Curves.easeInOut));
+    _bgAnim = ColorTween(
+      begin: _fromColor,
+      end: toColor,
+    ).animate(CurvedAnimation(parent: _moodCtrl, curve: Curves.easeInOut));
 
-    _particleCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 50))
-      ..addListener(_onParticleTick)
-      ..repeat();
+    _particleCtrl =
+        AnimationController(
+            vsync: this,
+            duration: const Duration(milliseconds: 50),
+          )
+          ..addListener(_onParticleTick)
+          ..repeat();
 
     _shaderTimeCtrl = AnimationController(
-      vsync: this, duration: const Duration(seconds: 10),
+      vsync: this,
+      duration: const Duration(seconds: 10),
     )..repeat();
 
     _loadMoodShader();
@@ -675,77 +890,75 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   void _subscribeToFirestore() {
-    _postsSub = _fs.sessionPosts(widget.sessionId).listen(
-      (data) {
-        final myCode = _auth.currentCode ?? '';
+    _postsSub = _fs.sessionPosts(widget.sessionId).listen((data) {
+      final myCode = _auth.currentCode ?? '';
 
-        final wasAtBottom = !_scrollCtrl.hasClients ||
-            (_scrollCtrl.position.maxScrollExtent -
-                    _scrollCtrl.position.pixels) <
-                100;
+      final wasAtBottom =
+          !_scrollCtrl.hasClients ||
+          (_scrollCtrl.position.maxScrollExtent - _scrollCtrl.position.pixels) <
+              100;
 
-        final posts = data.map((d) {
-          final isUser = d['authorCode'] == myCode;
-          return RPPost(
-            id: d['id'] as String,
-            author: d['authorName'] as String? ?? '?',
-            isUser: isUser,
-            content: d['content'] as String? ?? '',
-            timestamp: (d['createdAt'] != null)
-                ? (d['createdAt'] as dynamic).toDate()
-                : DateTime.now(),
-            quotedContent: d['quotedContent'] as String?,
-            quotedAuthor: d['quotedAuthor'] as String?,
-            characterName: d['characterName'] as String?,
-            locationName: d['locationName'] as String?,
-          );
-        }).toList();
+      final posts = data.map((d) {
+        final isUser = d['authorCode'] == myCode;
+        return RPPost(
+          id: d['id'] as String,
+          author: d['authorName'] as String? ?? '?',
+          isUser: isUser,
+          content: d['content'] as String? ?? '',
+          timestamp: (d['createdAt'] != null)
+              ? (d['createdAt'] as dynamic).toDate()
+              : DateTime.now(),
+          quotedContent: d['quotedContent'] as String?,
+          quotedAuthor: d['quotedAuthor'] as String?,
+          characterName: d['characterName'] as String?,
+          locationName: d['locationName'] as String?,
+        );
+      }).toList();
 
-        if (!mounted) return;
-        setState(() {
-          _posts
-            ..clear()
-            ..addAll(posts);
-          _loadingPosts = false;
-        });
-
-        if (wasAtBottom && appSettings.autoScroll) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_scrollCtrl.hasClients) {
-              _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOut);
-            }
-          });
-        }
-      },
-      onError: _handleStreamError,
-    );
-
-    _oocSub = _fs.oocMessages(widget.sessionId).listen(
-      (data) {
-        final myCode = _auth.currentCode ?? '';
-        final msgs = data.map((d) {
-          final isUser = d['authorCode'] == myCode;
-          return OOCMessage(
-            author: d['authorName'] as String? ?? '?',
-            content: d['content'] as String? ?? '',
-            isUser: isUser,
-            timestamp: (d['createdAt'] != null)
-                ? (d['createdAt'] as dynamic).toDate()
-                : DateTime.now(),
-            mediaUrl: d['mediaUrl'] as String?,
-            isEncryptedMedia: d['isEncryptedMedia'] as bool? ?? false,
-          );
-        }).toList();
-        if (mounted) {
-          setState(() => _oocMessages
+      if (!mounted) return;
+      setState(() {
+        _posts
           ..clear()
-          ..addAll(msgs));
-        }
-      },
-      onError: _handleStreamError,
-    );
+          ..addAll(posts);
+        _loadingPosts = false;
+      });
+
+      if (wasAtBottom && appSettings.autoScroll) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollCtrl.hasClients) {
+            _scrollCtrl.animateTo(
+              _scrollCtrl.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
+    }, onError: _handleStreamError);
+
+    _oocSub = _fs.oocMessages(widget.sessionId).listen((data) {
+      final myCode = _auth.currentCode ?? '';
+      final msgs = data.map((d) {
+        final isUser = d['authorCode'] == myCode;
+        return OOCMessage(
+          author: d['authorName'] as String? ?? '?',
+          content: d['content'] as String? ?? '',
+          isUser: isUser,
+          timestamp: (d['createdAt'] != null)
+              ? (d['createdAt'] as dynamic).toDate()
+              : DateTime.now(),
+          mediaUrl: d['mediaUrl'] as String?,
+          isEncryptedMedia: d['isEncryptedMedia'] as bool? ?? false,
+        );
+      }).toList();
+      if (mounted) {
+        setState(
+          () => _oocMessages
+            ..clear()
+            ..addAll(msgs),
+        );
+      }
+    }, onError: _handleStreamError);
   }
 
   void _handleStreamError(Object e) {
@@ -754,17 +967,18 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     final msg = e.toString().contains('permission-denied')
         ? 'Lost access to this session.'
         : 'Could not load session.';
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      backgroundColor: cInk,
-      behavior: SnackBarBehavior.floating,
-      content: Text(msg, style: const TextStyle(color: cParchment)),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: cInk,
+        behavior: SnackBarBehavior.floating,
+        content: Text(msg, style: const TextStyle(color: cParchment)),
+      ),
+    );
   }
 
   void _subscribeToStats() {
-    _statsSub = _fs.sessionStats(widget.sessionId).listen(
-      (statsMap) {
-        if (!mounted) return;
+    _statsSub = _fs.sessionStats(widget.sessionId).listen((statsMap) {
+      if (!mounted) return;
       final myCode = _auth.currentCode ?? '';
 
       if (_myStats == null && statsMap.containsKey(myCode)) {
@@ -779,9 +993,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         }
       }
       _partnerStatsN.value = partner;
-      },
-      onError: (e) => print('[stats] STREAM ERROR: $e'),
-    );
+    }, onError: (e) => print('[stats] STREAM ERROR: $e'));
   }
 
   void _saveMyStats(StatBlock? block) {
@@ -866,19 +1078,29 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         _oocCtrl.clear();
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
               backgroundColor: cInk,
-              content: Text('Send failed: $e',
-                  style: const TextStyle(color: cParchment))));
+              content: Text(
+                'Send failed: $e',
+                style: const TextStyle(color: cParchment),
+              ),
+            ),
+          );
         }
       }
     } else {
       _oocCtrl.clear();
-      setState(() => _oocMessages.add(OOCMessage(
-          author: _auth.currentName ?? 'You',
-          content: text,
-          isUser: true,
-          timestamp: DateTime.now())));
+      setState(
+        () => _oocMessages.add(
+          OOCMessage(
+            author: _auth.currentName ?? 'You',
+            content: text,
+            isUser: true,
+            timestamp: DateTime.now(),
+          ),
+        ),
+      );
     }
     _scrollOocToBottom();
   }
@@ -929,8 +1151,10 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       _fromColor = _bgAnim.value ?? _fromColor;
       _currentMood = mood;
       final toColor = MoodEngine.bgColor(mood);
-      _bgAnim = ColorTween(begin: _fromColor, end: toColor)
-          .animate(CurvedAnimation(parent: _moodCtrl, curve: Curves.easeInOut));
+      _bgAnim = ColorTween(
+        begin: _fromColor,
+        end: toColor,
+      ).animate(CurvedAnimation(parent: _moodCtrl, curve: Curves.easeInOut));
       _moodCtrl.forward(from: 0);
       _initParticles();
     });
@@ -968,8 +1192,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     for (final m in _moodHistory) {
       counts[m] = (counts[m] ?? 0) + 1;
     }
-    final dominant =
-        counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+    final dominant = counts.entries
+        .reduce((a, b) => a.value >= b.value ? a : b)
+        .key;
 
     _setMood(dominant);
   }
@@ -989,11 +1214,15 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           );
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              backgroundColor: cInk,
-              content: Text('Save failed: $e',
-                  style: const TextStyle(color: cParchment)),
-            ));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: cInk,
+                content: Text(
+                  'Save failed: $e',
+                  style: const TextStyle(color: cParchment),
+                ),
+              ),
+            );
           }
           return;
         }
@@ -1042,8 +1271,10 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         await _fs.addPost(
           sessionId: widget.sessionId,
           content: text,
-          quotedContent: quotedPost?.content
-                  .substring(0, min(100, quotedPost.content.length)),
+          quotedContent: quotedPost?.content.substring(
+            0,
+            min(100, quotedPost.content.length),
+          ),
           quotedAuthor: quotedPost != null
               ? (quotedPost.characterName ?? quotedPost.author)
               : null,
@@ -1052,11 +1283,15 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         );
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            backgroundColor: cInk,
-            content: Text('Post failed: $e',
-                style: const TextStyle(color: cParchment)),
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: cInk,
+              content: Text(
+                'Post failed: $e',
+                style: const TextStyle(color: cParchment),
+              ),
+            ),
+          );
         }
         return;
       }
@@ -1076,23 +1311,26 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           ? _activeCharacter!.accentColor
           : _fontColor;
       setState(() {
-        _posts.add(RPPost(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          author: displayName,
-          isUser: true,
-          content: text,
-          timestamp: DateTime.now(),
-          quotedContent: quotedPost?.content
-                  .substring(0, min(100, quotedPost.content.length)),
-          quotedAuthor:
-              quotedPost?.characterName ?? quotedPost?.author,
-          textColor: postColor,
-          fontSize: _fontSize,
-          bold: _bold,
-          italic: _italic,
-          characterName: _activeCharacter?.name,
-          locationName: _activeLocation,
-        ));
+        _posts.add(
+          RPPost(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            author: displayName,
+            isUser: true,
+            content: text,
+            timestamp: DateTime.now(),
+            quotedContent: quotedPost?.content.substring(
+              0,
+              min(100, quotedPost.content.length),
+            ),
+            quotedAuthor: quotedPost?.characterName ?? quotedPost?.author,
+            textColor: postColor,
+            fontSize: _fontSize,
+            bold: _bold,
+            italic: _italic,
+            characterName: _activeCharacter?.name,
+            locationName: _activeLocation,
+          ),
+        );
         _editorCtrl.text = '';
         _quotingPostId = null;
         _editorExpanded = false;
@@ -1109,16 +1347,19 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
     if (widget.sessionId.isNotEmpty) {
       try {
-        await _fs.deletePost(
-            sessionId: widget.sessionId, postId: id);
+        await _fs.deletePost(sessionId: widget.sessionId, postId: id);
       } catch (e) {
         if (mounted) {
           setState(() => _posts.insert(i, original));
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            backgroundColor: cInk,
-            content: Text('Delete failed: $e',
-                style: const TextStyle(color: cParchment)),
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: cInk,
+              content: Text(
+                'Delete failed: $e',
+                style: const TextStyle(color: cParchment),
+              ),
+            ),
+          );
         }
       }
     }
@@ -1166,62 +1407,101 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('SESSION TITLE',
-                  style: TextStyle(
-                      fontFamily: 'monospace', fontSize: 9,
-                      color: cGold, letterSpacing: 4)),
+              const Text(
+                'SESSION TITLE',
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 9,
+                  color: cGold,
+                  letterSpacing: 4,
+                ),
+              ),
               const SizedBox(height: 6),
               const Text(
                 'Give this story a name. Both of you can see and change it.',
-                style: TextStyle(fontSize: 12, color: cSmoke,
-                    fontStyle: FontStyle.italic, height: 1.5),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: cSmoke,
+                  fontStyle: FontStyle.italic,
+                  height: 1.5,
+                ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: ctrl,
                 autofocus: true,
                 style: const TextStyle(
-                    fontSize: 15, color: cParchment,
-                    fontStyle: FontStyle.italic),
+                  fontSize: 15,
+                  color: cParchment,
+                  fontStyle: FontStyle.italic,
+                ),
                 decoration: const InputDecoration(
                   hintText: 'The Whitethorn Heist...',
-                  hintStyle: TextStyle(color: cSmoke,
-                      fontStyle: FontStyle.italic),
-                  filled: true, fillColor: cVoid,
+                  hintStyle: TextStyle(
+                    color: cSmoke,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  filled: true,
+                  fillColor: cVoid,
                   enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: cAsh),
-                      borderRadius: BorderRadius.zero),
+                    borderSide: BorderSide(color: cAsh),
+                    borderRadius: BorderRadius.zero,
+                  ),
                   focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: cGold),
-                      borderRadius: BorderRadius.zero),
+                    borderSide: BorderSide(color: cGold),
+                    borderRadius: BorderRadius.zero,
+                  ),
                 ),
                 cursorColor: cGold,
               ),
               const SizedBox(height: 20),
-              Row(children: [
-                Expanded(child: GestureDetector(
-                  onTap: () => Navigator.pop(ctx),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                        border: Border.all(color: cAsh)),
-                    child: const Center(child: Text('Cancel',
-                        style: TextStyle(fontFamily: 'monospace',
-                            fontSize: 10, color: cSmoke, letterSpacing: 2))),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: cAsh),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 10,
+                              color: cSmoke,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                )),
-                const SizedBox(width: 10),
-                Expanded(child: GestureDetector(
-                  onTap: () => Navigator.pop(ctx, ctrl.text),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    color: cParchment,
-                    child: const Center(child: Text('Save',
-                        style: TextStyle(fontFamily: 'monospace',
-                            fontSize: 10, color: cVoid, letterSpacing: 2))),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx, ctrl.text),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        color: cParchment,
+                        child: const Center(
+                          child: Text(
+                            'Save',
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 10,
+                              color: cVoid,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                )),
-              ]),
+                ],
+              ),
             ],
           ),
         ),
@@ -1242,11 +1522,15 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   void _openLog() {
     if (widget.sessionId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        backgroundColor: cInk,
-        content: Text('The log is available in shared rooms.',
-            style: TextStyle(color: cParchment)),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: cInk,
+          content: Text(
+            'The log is available in shared rooms.',
+            style: TextStyle(color: cParchment),
+          ),
+        ),
+      );
       return;
     }
     SessionLogSheet.show(context, widget.sessionId);
@@ -1302,48 +1586,62 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           border: Border.all(color: cGold.withValues(alpha: 0.5)),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
-                blurRadius: 12,
-                spreadRadius: 1),
+              color: Colors.black.withValues(alpha: 0.4),
+              blurRadius: 12,
+              spreadRadius: 1,
+            ),
           ],
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(children: [
-          const Icon(Icons.text_fields, size: 14, color: cSmoke),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text('"$preview"',
+        child: Row(
+          children: [
+            const Icon(Icons.text_fields, size: 14, color: cSmoke),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '"$preview"',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    fontSize: 12, color: cMist,
-                    fontStyle: FontStyle.italic)),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: _addSelectionToLog,
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 6),
-              color: cGold,
-              child: const Text('Add to log',
+                  fontSize: 12,
+                  color: cMist,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: _addSelectionToLog,
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                color: cGold,
+                child: const Text(
+                  'Add to log',
                   style: TextStyle(
-                      fontFamily: 'monospace', fontSize: 9,
-                      color: cVoid, letterSpacing: 1,
-                      fontWeight: FontWeight.w600)),
+                    fontFamily: 'monospace',
+                    fontSize: 9,
+                    color: cVoid,
+                    letterSpacing: 1,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(width: 4),
-          GestureDetector(
-            onTap: _dismissSelection,
-            behavior: HitTestBehavior.opaque,
-            child: const Padding(
-              padding: EdgeInsets.all(4),
-              child: Icon(Icons.close, size: 14, color: cSmoke),
+            const SizedBox(width: 4),
+            GestureDetector(
+              onTap: _dismissSelection,
+              behavior: HitTestBehavior.opaque,
+              child: const Padding(
+                padding: EdgeInsets.all(4),
+                child: Icon(Icons.close, size: 14, color: cSmoke),
+              ),
             ),
-          ),
-        ]),
+          ],
+        ),
       ),
     );
   }
@@ -1364,390 +1662,530 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         final bg = _bgAnim.value ?? cVoid;
         return Scaffold(
           backgroundColor: bg,
-          body: Stack(children: [
-            Positioned.fill(
-              child: LayoutBuilder(builder: (_, constraints) {
-                _canvasSize = Size(constraints.maxWidth, constraints.maxHeight);
-                return RepaintBoundary(
-                  child: ValueListenableBuilder<int>(
-                    valueListenable: _particleTick,
-                    builder: (_, _, _) => CustomPaint(
-                      painter: MoodParticlePainter(_particles, _currentMood),
-                    ),
-                  ),
-                );
-              }),
-            ),
-            SafeArea(
-              child: Column(children: [
-                _buildTopBar(),
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(
-                        width: 300,
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            color: Colors.black12,
-                            border: Border(right: BorderSide(color: cAsh)),
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: LayoutBuilder(
+                  builder: (_, constraints) {
+                    _canvasSize = Size(
+                      constraints.maxWidth,
+                      constraints.maxHeight,
+                    );
+                    return RepaintBoundary(
+                      child: ValueListenableBuilder<int>(
+                        valueListenable: _particleTick,
+                        builder: (_, _, _) => CustomPaint(
+                          painter: MoodParticlePainter(
+                            _particles,
+                            _currentMood,
                           ),
-                          child: SessionLogView(log: _log, isSidebar: true),
                         ),
                       ),
-
-                      Expanded(
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 800),
-                            child: Column(
-                              children: [
-                                Expanded(child: _buildPostList()),
-                                _buildFullEditor(),
-                              ],
+                    );
+                  },
+                ),
+              ),
+              SafeArea(
+                child: Column(
+                  children: [
+                    _buildTopBar(),
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(
+                            width: 300,
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.black12,
+                                border: Border(right: BorderSide(color: cAsh)),
+                              ),
+                              child: SessionLogView(log: _log, isSidebar: true),
                             ),
                           ),
-                        ),
-                      ),
 
-                      SizedBox(
-                        width: 320,
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            color: Colors.black12,
-                            border: Border(left: BorderSide(color: cAsh)),
-                          ),
-                          child: Column(
-                            children: [
-                              Expanded(
-                                child: RPToolsPanel(
-                                  isSidebar: true,
-                                  notes: _notes,
-                                  myStats: _myStats,
-                                  partnerStats: _partnerStatsN.value,
-                                  partnerName: widget.partnerName,
-                                  importedWorlds: _importedWorlds,
-                                  importedCharacters: _importedCharacters,
-                                  availableWorlds: _sandboxWorlds,
-                                  availableCharacters: _sandboxCharacters,
-                                  onDiceRolled: (msg) {
-                                    if (widget.sessionId.isNotEmpty) {
-                                      _fs.addOocMessage(sessionId: widget.sessionId, content: msg, isSystem: true);
-                                      _log.addEvent(title: 'Dice roll', body: msg, source: 'dice');
-                                    }
-                                  },
-                                  onMyStatsChanged: (block) => _saveMyStats(block),
-                                  onImportWorld: (w) {
-                                    setState(() {
-                                      if (!_importedWorlds.any((x) => x.id == w.id)) _importedWorlds.add(w);
-                                    });
-                                    if (widget.sessionId.isNotEmpty) _log.addWorldEntry(w);
-                                  },
-                                  onImportCharacter: (c) {
-                                    setState(() {
-                                      if (!_importedCharacters.any((x) => x.id == c.id)) _importedCharacters.add(c);
-                                    });
-                                    if (widget.sessionId.isNotEmpty) _log.addCharacterEntry(c);
-                                  },
-                                  onRemoveWorld: (w) => setState(() => _importedWorlds.removeWhere((x) => x.id == w.id)),
-                                  onRemoveCharacter: (c) => setState(() => _importedCharacters.removeWhere((x) => x.id == c.id)),
+                          Expanded(
+                            child: Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 800,
                                 ),
-                              ),
-                              const Divider(color: cAsh, height: 1),
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 250),
-                                curve: Curves.easeInOut,
-                                height: _desktopOOCExpanded ? 300 : 50,
                                 child: Column(
                                   children: [
-                                    Material(
-                                      color: cInk,
-                                      child: InkWell(
-                                        onTap: () {
-                                          setState(() => _desktopOOCExpanded = !_desktopOOCExpanded);
-                                          if (_desktopOOCExpanded) _scrollOocToBottom();
-                                        },
-                                        child: Container(
-                                          height: 50,
-                                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                                          decoration: const BoxDecoration(
-                                            border: Border(bottom: BorderSide(color: cAsh)),
-                                          ),
-                                          child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              const Text('OOC CHAT', style: TextStyle(
-                                                  fontFamily: 'monospace', fontSize: 11, color: cIce, letterSpacing: 4)),
-                                              Icon(
-                                                _desktopOOCExpanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up,
-                                                size: 16,
-                                                color: cSmoke,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    if (_desktopOOCExpanded)
-                                      Expanded(child: _buildOOCDesktopWidget()),
+                                    Expanded(child: _buildPostList()),
+                                    _buildFullEditor(),
                                   ],
                                 ),
                               ),
-                            ],
+                            ),
                           ),
-                        ),
+
+                          SizedBox(
+                            width: 320,
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.black12,
+                                border: Border(left: BorderSide(color: cAsh)),
+                              ),
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                    child: RPToolsPanel(
+                                      isSidebar: true,
+                                      notes: _notes,
+                                      myStats: _myStats,
+                                      partnerStats: _partnerStatsN.value,
+                                      partnerName: widget.partnerName,
+                                      importedWorlds: _importedWorlds,
+                                      importedCharacters: _importedCharacters,
+                                      availableWorlds: _sandboxWorlds,
+                                      availableCharacters: _sandboxCharacters,
+                                      onDiceRolled: (msg) {
+                                        if (widget.sessionId.isNotEmpty) {
+                                          _fs.addOocMessage(
+                                            sessionId: widget.sessionId,
+                                            content: msg,
+                                            isSystem: true,
+                                          );
+                                          _log.addEvent(
+                                            title: 'Dice roll',
+                                            body: msg,
+                                            source: 'dice',
+                                          );
+                                        }
+                                      },
+                                      onMyStatsChanged: (block) =>
+                                          _saveMyStats(block),
+                                      onImportWorld: (w) {
+                                        setState(() {
+                                          if (!_importedWorlds.any(
+                                            (x) => x.id == w.id,
+                                          ))
+                                            _importedWorlds.add(w);
+                                        });
+                                        if (widget.sessionId.isNotEmpty)
+                                          _log.addWorldEntry(w);
+                                      },
+                                      onImportCharacter: (c) {
+                                        setState(() {
+                                          if (!_importedCharacters.any(
+                                            (x) => x.id == c.id,
+                                          ))
+                                            _importedCharacters.add(c);
+                                        });
+                                        if (widget.sessionId.isNotEmpty)
+                                          _log.addCharacterEntry(c);
+                                      },
+                                      onRemoveWorld: (w) => setState(
+                                        () => _importedWorlds.removeWhere(
+                                          (x) => x.id == w.id,
+                                        ),
+                                      ),
+                                      onRemoveCharacter: (c) => setState(
+                                        () => _importedCharacters.removeWhere(
+                                          (x) => x.id == c.id,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const Divider(color: cAsh, height: 1),
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 250),
+                                    curve: Curves.easeInOut,
+                                    height: _desktopOOCExpanded ? 300 : 50,
+                                    child: Column(
+                                      children: [
+                                        Material(
+                                          color: cInk,
+                                          child: InkWell(
+                                            onTap: () {
+                                              setState(
+                                                () => _desktopOOCExpanded =
+                                                    !_desktopOOCExpanded,
+                                              );
+                                              if (_desktopOOCExpanded)
+                                                _scrollOocToBottom();
+                                            },
+                                            child: Container(
+                                              height: 50,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 16,
+                                                  ),
+                                              decoration: const BoxDecoration(
+                                                border: Border(
+                                                  bottom: BorderSide(
+                                                    color: cAsh,
+                                                  ),
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  const Text(
+                                                    'OOC CHAT',
+                                                    style: TextStyle(
+                                                      fontFamily: 'monospace',
+                                                      fontSize: 11,
+                                                      color: cIce,
+                                                      letterSpacing: 4,
+                                                    ),
+                                                  ),
+                                                  Icon(
+                                                    _desktopOOCExpanded
+                                                        ? Icons
+                                                              .keyboard_arrow_down
+                                                        : Icons
+                                                              .keyboard_arrow_up,
+                                                    size: 16,
+                                                    color: cSmoke,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        if (_desktopOOCExpanded)
+                                          Expanded(
+                                            child: _buildOOCDesktopWidget(),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ]),
-            ),
-            if (!kIsWeb && _selectedText.isNotEmpty && !_desktopOOCExpanded && !_settingsOpen)
-              Positioned(
-                left: 300,
-                right: 320,
-                bottom: 100,
-                child: _buildSelectionPill(),
               ),
-            
-            // ── SETTINGS PANEL OVERLAY ──
-            if (_settingsOpen) 
-              Positioned(
-                right: 0,
-                top: 60,
-                bottom: 0,
-                child: _buildSettingsPanel(),
-              ),
-          ]),
+              if (!kIsWeb &&
+                  _selectedText.isNotEmpty &&
+                  !_desktopOOCExpanded &&
+                  !_settingsOpen)
+                Positioned(
+                  left: 300,
+                  right: 320,
+                  bottom: 100,
+                  child: _buildSelectionPill(),
+                ),
+
+              // ── SETTINGS PANEL OVERLAY ──
+              if (_settingsOpen)
+                Positioned(
+                  right: 0,
+                  top: 60,
+                  bottom: 0,
+                  child: _buildSettingsPanel(),
+                ),
+            ],
+          ),
         );
       },
     );
   }
 
-    Widget _buildMobileLayout() {
+  Widget _buildMobileLayout() {
     return AnimatedBuilder(
       animation: _moodCtrl,
       builder: (_, child) {
         final moodColor = MoodEngine.bgColor(_currentMood);
         return Scaffold(
           backgroundColor: cVoid,
-          body: Stack(children: [
-            // ── BACKGROUND: Shader + Particles ──
-            Positioned.fill(
-              child: LayoutBuilder(builder: (_, constraints) {
-                _canvasSize = Size(constraints.maxWidth, constraints.maxHeight);
-                
-                return AnimatedBuilder(
-                  animation: _shaderTimeCtrl,
-                  builder: (_, _) {
-                    return Stack(
-                      children: [
-                        if (_moodShader != null)
-                          Positioned.fill(
-                            child: CustomPaint(
-                              painter: _MoodShaderPainter(
-                                shader: _moodShader!,
-                                time: _shaderTimeCtrl.value * 10.0,
-                                moodColor: moodColor,
-                                intensity: _moodIntensity,
+          body: Stack(
+            children: [
+              // ── BACKGROUND: Shader + Particles ──
+              Positioned.fill(
+                child: LayoutBuilder(
+                  builder: (_, constraints) {
+                    _canvasSize = Size(
+                      constraints.maxWidth,
+                      constraints.maxHeight,
+                    );
+
+                    return AnimatedBuilder(
+                      animation: _shaderTimeCtrl,
+                      builder: (_, _) {
+                        return Stack(
+                          children: [
+                            if (_moodShader != null)
+                              Positioned.fill(
+                                child: CustomPaint(
+                                  painter: _MoodShaderPainter(
+                                    shader: _moodShader!,
+                                    time: _shaderTimeCtrl.value * 10.0,
+                                    moodColor: moodColor,
+                                    intensity: _moodIntensity,
+                                  ),
+                                ),
+                              ),
+                            Positioned.fill(
+                              child: ValueListenableBuilder<int>(
+                                valueListenable: _particleTick,
+                                builder: (_, _, _) => CustomPaint(
+                                  painter: MoodParticlePainter(
+                                    _particles,
+                                    _currentMood,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        Positioned.fill(
-                          child: ValueListenableBuilder<int>(
-                            valueListenable: _particleTick,
-                            builder: (_, _, _) => CustomPaint(
-                              painter: MoodParticlePainter(_particles, _currentMood),
-                            ),
-                          ),
-                        ),
-                      ],
+                          ],
+                        );
+                      },
                     );
                   },
-                );
-              }),
-            ),
-            
-            // ── FOREGROUND: The actual room UI ──
-            SafeArea(
-              child: Column(children: [
-                _buildTopBar(),
-                Expanded(child: _buildPostList()),
-                if (_editorExpanded)
-                  _buildFullEditor()
-                else
-                  _buildCollapsedEditor(),
-              ]),
-            ),
-            
-            // ── OVERLAYS (OOC, Settings, Selection) ──
-            if (!_oocOpen)
-              Positioned(
-                right: 16,
-                bottom: _editorExpanded ? 320 : 90,
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() => _oocOpen = true);
-                    _scrollOocToBottom();
-                  },
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                        color: cInk,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: cAsh)),
-                    child: const Icon(Icons.chat_bubble_outline,
-                        color: cSmoke, size: 20),
-                  ),
                 ),
               ),
-            if (_oocOpen) _buildOOCPanel(),
-            if (_settingsOpen) _buildSettingsPanel(),
-            if (!kIsWeb && _selectedText.isNotEmpty && !_oocOpen && !_settingsOpen)
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: _editorExpanded ? 340 : 100,
-                child: _buildSelectionPill(),
+
+              // ── FOREGROUND: The actual room UI ──
+              SafeArea(
+                child: Column(
+                  children: [
+                    _buildTopBar(),
+                    Expanded(child: _buildPostList()),
+                    if (_editorExpanded)
+                      _buildFullEditor()
+                    else
+                      _buildCollapsedEditor(),
+                  ],
+                ),
               ),
-          ]),
+
+              // ── OVERLAYS (OOC, Settings, Selection) ──
+              if (!_oocOpen)
+                Positioned(
+                  right: 16,
+                  bottom: _editorExpanded ? 320 : 90,
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() => _oocOpen = true);
+                      _scrollOocToBottom();
+                    },
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: cInk,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: cAsh),
+                      ),
+                      child: const Icon(
+                        Icons.chat_bubble_outline,
+                        color: cSmoke,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+              if (_oocOpen) _buildOOCPanel(),
+              if (_settingsOpen) _buildSettingsPanel(),
+              if (!kIsWeb &&
+                  _selectedText.isNotEmpty &&
+                  !_oocOpen &&
+                  !_settingsOpen)
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: _editorExpanded ? 340 : 100,
+                  child: _buildSelectionPill(),
+                ),
+            ],
+          ),
         );
       },
     );
   }
 
-    Widget _buildTopBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.3),
-          border: const Border(bottom: BorderSide(color: cAsh))),
-      child: Row(children: [
-        LoreTap(
-          onTap: () => Navigator.of(context).pop(),
-          child: const Icon(Icons.arrow_back_ios, color: cSmoke, size: 16),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: LoreTap(
-            onTap: _editSessionTitle,
-            behavior: HitTestBehavior.opaque,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-              if (_sessionTitle.isNotEmpty)
-                Text(_sessionTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w300,
-                        fontStyle: FontStyle.italic,
-                        color: cParchment))
-              else
-                Text(widget.partnerName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w300,
-                        fontStyle: FontStyle.italic,
-                        color: cParchment)),
-              Text(
-                _sessionTitle.isNotEmpty
-                    ? '${widget.partnerName} · ${widget.genre}'
-                    : widget.genre,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 9,
-                    color: cSmoke,
-                    letterSpacing: 2),
-              ),
-            ]),
+  Widget _buildTopBar() {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(
+          sigmaX: 8,
+          sigmaY: 8,
+        ), // <-- The frosted glass blur
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.4), // More transparent
+            border: const Border(bottom: BorderSide(color: cAsh)),
           ),
-        ),
-        const SizedBox(width: 8),
-        if (_aiMoodEnabled)
-          LoreTap(
-            onTap: _moodLockedByUser ? _unlockMood : null,
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                border: Border.all(
-                    color: _moodLockedByUser
-                        ? cSmoke
-                        : cMagic.withValues(alpha: 0.5)),
-                color: Colors.black.withValues(alpha: 0.3),
+          child: Row(
+            children: [
+              LoreTap(
+                onTap: () => Navigator.of(context).pop(),
+                child: const Icon(
+                  Icons.arrow_back_ios,
+                  color: cSmoke,
+                  size: 16,
+                ),
               ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                if (_moodLockedByUser) ...[
-                  const Icon(Icons.lock_outline, size: 9, color: cSmoke),
-                  const SizedBox(width: 4),
-                  Text(MoodEngine.moodLabel(_currentMood),
-                      style: const TextStyle(
+              const SizedBox(width: 12),
+              Expanded(
+                child: LoreTap(
+                  onTap: _editSessionTitle,
+                  behavior: HitTestBehavior.opaque,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_sessionTitle.isNotEmpty)
+                        Text(
+                          _sessionTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w300,
+                            fontStyle: FontStyle.italic,
+                            color: cParchment,
+                          ),
+                        )
+                      else
+                        Text(
+                          widget.partnerName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w300,
+                            fontStyle: FontStyle.italic,
+                            color: cParchment,
+                          ),
+                        ),
+                      Text(
+                        _sessionTitle.isNotEmpty
+                            ? '${widget.partnerName} · ${widget.genre}'
+                            : widget.genre,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
                           fontFamily: 'monospace',
                           fontSize: 9,
                           color: cSmoke,
-                          letterSpacing: 2)),
-                ] else ...[
-                  const Text('✦',
-                      style: TextStyle(fontSize: 9, color: cMagic)),
-                  const SizedBox(width: 4),
-                  Text(MoodEngine.moodLabel(_currentMood).toUpperCase(),
-                      style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 9,
-                          color: cMagic,
-                          letterSpacing: 2)),
-                ],
-              ]),
-            ),
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (_aiMoodEnabled)
+                LoreTap(
+                  onTap: _moodLockedByUser ? _unlockMood : null,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: _moodLockedByUser
+                            ? cSmoke
+                            : cMagic.withValues(alpha: 0.5),
+                      ),
+                      color: Colors.black.withValues(alpha: 0.3),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_moodLockedByUser) ...[
+                          const Icon(
+                            Icons.lock_outline,
+                            size: 9,
+                            color: cSmoke,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            MoodEngine.moodLabel(_currentMood),
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 9,
+                              color: cSmoke,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ] else ...[
+                          const Text(
+                            '✦',
+                            style: TextStyle(fontSize: 9, color: cMagic),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            MoodEngine.moodLabel(_currentMood).toUpperCase(),
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 9,
+                              color: cMagic,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(width: 8),
+              LoreTap(
+                onTap: _openLog,
+                child: const Icon(
+                  Icons.menu_book_outlined,
+                  color: cSmoke,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              LoreTap(
+                onTap: _openToolsPanel,
+                child: const Icon(
+                  Icons.construction_outlined,
+                  color: cSmoke,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              LoreTap(
+                onTap: () => setState(() => _settingsOpen = !_settingsOpen),
+                child: const Icon(Icons.tune, color: cSmoke, size: 18),
+              ),
+            ],
           ),
-        const SizedBox(width: 8),
-        LoreTap(
-          onTap: _openLog,
-          child: const Icon(Icons.menu_book_outlined,
-              color: cSmoke, size: 18),
         ),
-        const SizedBox(width: 12),
-        LoreTap(
-          onTap: _openToolsPanel,
-          child: const Icon(Icons.construction_outlined,
-              color: cSmoke, size: 18),
-        ),
-        const SizedBox(width: 12),
-        LoreTap(
-          onTap: () => setState(() => _settingsOpen = !_settingsOpen),
-          child: const Icon(Icons.tune, color: cSmoke, size: 18),
-        ),
-      ]),
+      ),
     );
   }
 
   Widget _buildPostList() {
     if (_loadingPosts && widget.sessionId.isNotEmpty) {
       return const Center(
-          child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                  strokeWidth: 1.5, color: cSmoke)));
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 1.5, color: cSmoke),
+        ),
+      );
     }
     if (_posts.isEmpty) {
       return Center(
-          child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Text('The story begins here.\nWrite the first post.',
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(
+            'The story begins here.\nWrite the first post.',
             textAlign: TextAlign.center,
             style: const TextStyle(
-                fontSize: 13,
-                color: cSmoke,
-                fontStyle: FontStyle.italic,
-                height: 1.8)),
-      ));
+              fontSize: 13,
+              color: cSmoke,
+              fontStyle: FontStyle.italic,
+              height: 1.8,
+            ),
+          ),
+        ),
+      );
     }
     switch (_displayMode) {
       case RPDisplayMode.cards:
@@ -1761,7 +2199,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   Widget _buildCardsView() {
     return SelectionArea(
-      onSelectionChanged: (value) => _onSelectionChanged(value?.plainText ?? ''),
+      onSelectionChanged: (value) =>
+          _onSelectionChanged(value?.plainText ?? ''),
       contextMenuBuilder: (context, state) {
         return AdaptiveTextSelectionToolbar.buttonItems(
           anchors: state.contextMenuAnchors,
@@ -1786,8 +2225,11 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           itemBuilder: (_, i) => _PostCard(
             post: _posts[i],
             isExpanded: _expandedPostId == _posts[i].id,
-            onTap: () => setState(() => _expandedPostId =
-                _expandedPostId == _posts[i].id ? null : _posts[i].id),
+            onTap: () => setState(
+              () => _expandedPostId = _expandedPostId == _posts[i].id
+                  ? null
+                  : _posts[i].id,
+            ),
             onLongPress: () => _showPostActions(_posts[i]),
             onAddToLog: _addToLogFromText,
             onSelectionChanged: _onSelectionChanged,
@@ -1799,7 +2241,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   Widget _buildBubblesView() {
     return SelectionArea(
-      onSelectionChanged: (value) => _onSelectionChanged(value?.plainText ?? ''),
+      onSelectionChanged: (value) =>
+          _onSelectionChanged(value?.plainText ?? ''),
       contextMenuBuilder: (context, state) {
         return AdaptiveTextSelectionToolbar.buttonItems(
           anchors: state.contextMenuAnchors,
@@ -1827,8 +2270,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: Row(
-                mainAxisAlignment:
-                    isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+                mainAxisAlignment: isUser
+                    ? MainAxisAlignment.end
+                    : MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (!isUser) ...[
@@ -1837,25 +2281,29 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                       height: 28,
                       margin: const EdgeInsets.only(right: 8, top: 2),
                       decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: cAsh,
-                          border: Border.all(color: cSmoke)),
+                        shape: BoxShape.circle,
+                        color: cAsh,
+                        border: Border.all(color: cSmoke),
+                      ),
                       child: Center(
-                          child: Text(
-                              post.author.isNotEmpty
-                                  ? post.author[0].toUpperCase()
-                                  : '?',
-                              style: const TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 11,
-                                  color: cMist))),
+                        child: Text(
+                          post.author.isNotEmpty
+                              ? post.author[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                            color: cMist,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                   Flexible(
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
-                          maxWidth:
-                              MediaQuery.of(context).size.width * 0.72),
+                        maxWidth: MediaQuery.of(context).size.width * 0.72,
+                      ),
                       child: Column(
                         crossAxisAlignment: isUser
                             ? CrossAxisAlignment.end
@@ -1866,7 +2314,10 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                             behavior: HitTestBehavior.opaque,
                             child: Padding(
                               padding: const EdgeInsets.only(
-                                  bottom: 4, left: 2, right: 2),
+                                bottom: 4,
+                                left: 2,
+                                right: 2,
+                              ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -1878,30 +2329,39 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                       letterSpacing: 2,
                                       color: isUser
                                           ? (appSettings.textColourFor(
-                                                  'char_name') ??
-                                              (post.textColor == cParchment
-                                                  ? cGold
-                                                  : post.textColor))
+                                                  'char_name',
+                                                ) ??
+                                                (post.textColor == cParchment
+                                                    ? cGold
+                                                    : post.textColor))
                                           : (appSettings.textColourFor(
-                                                  'partner_name') ??
-                                              cMist),
+                                                  'partner_name',
+                                                ) ??
+                                                cMist),
                                     ),
                                   ),
                                   if (post.locationName != null) ...[
-                                    const Text(' · ',
-                                        style: TextStyle(
-                                            fontFamily: 'monospace',
-                                            fontSize: 9,
-                                            color: cSmoke)),
-                                    Text(post.locationName!,
-                                        style: TextStyle(
-                                            fontFamily: 'monospace',
-                                            fontSize: 9,
-                                            color: appSettings
-                                                    .textColourFor(
-                                                        'location_name') ??
-                                                cSmoke,
-                                            letterSpacing: 1)),
+                                    const Text(
+                                      ' · ',
+                                      style: TextStyle(
+                                        fontFamily: 'monospace',
+                                        fontSize: 9,
+                                        color: cSmoke,
+                                      ),
+                                    ),
+                                    Text(
+                                      post.locationName!,
+                                      style: TextStyle(
+                                        fontFamily: 'monospace',
+                                        fontSize: 9,
+                                        color:
+                                            appSettings.textColourFor(
+                                              'location_name',
+                                            ) ??
+                                            cSmoke,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
                                   ],
                                 ],
                               ),
@@ -1909,17 +2369,24 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 12),
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
                             decoration: BoxDecoration(
                               color: isUser
-                                  ? Color.lerp(cVoid, cGold, 0.15)!
-                                      .withValues(alpha: 0.85)
-                                  : const Color(0xFF08080A)
-                                      .withValues(alpha: 0.82),
+                                  ? Color.lerp(
+                                      cVoid,
+                                      cGold,
+                                      0.15,
+                                    )!.withValues(alpha: 0.85)
+                                  : const Color(
+                                      0xFF08080A,
+                                    ).withValues(alpha: 0.82),
                               border: Border.all(
-                                  color: isUser
-                                      ? cGold.withValues(alpha: 0.3)
-                                      : cAsh),
+                                color: isUser
+                                    ? cGold.withValues(alpha: 0.3)
+                                    : cAsh,
+                              ),
                               borderRadius: BorderRadius.only(
                                 topLeft: const Radius.circular(2),
                                 topRight: const Radius.circular(2),
@@ -1931,8 +2398,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                               text: post.content,
                               style: TextStyle(
                                 fontSize: post.fontSize,
-                                color: appSettings
-                                        .textColourFor('post_content') ??
+                                color:
+                                    appSettings.textColourFor('post_content') ??
                                     post.textColor,
                                 fontStyle: post.italic
                                     ? FontStyle.italic
@@ -1948,13 +2415,19 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                           ),
                           Padding(
                             padding: const EdgeInsets.only(
-                                top: 4, left: 2, right: 2),
-                            child: Text('${post.wordCount}w',
-                                style: const TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 8,
-                                    color: cSmoke,
-                                    letterSpacing: 1)),
+                              top: 4,
+                              left: 2,
+                              right: 2,
+                            ),
+                            child: Text(
+                              '${post.wordCount}w',
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 8,
+                                color: cSmoke,
+                                letterSpacing: 1,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -1972,7 +2445,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   Widget _buildClassicalView() {
     return SelectionArea(
-      onSelectionChanged: (value) => _onSelectionChanged(value?.plainText ?? ''),
+      onSelectionChanged: (value) =>
+          _onSelectionChanged(value?.plainText ?? ''),
       contextMenuBuilder: (context, state) {
         return AdaptiveTextSelectionToolbar.buttonItems(
           anchors: state.contextMenuAnchors,
@@ -1999,12 +2473,13 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             return Padding(
               padding: const EdgeInsets.only(bottom: 28),
               child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    GestureDetector(
-                      onLongPress: () => _showPostActions(post),
-                      behavior: HitTestBehavior.opaque,
-                      child: Row(children: [
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GestureDetector(
+                    onLongPress: () => _showPostActions(post),
+                    behavior: HitTestBehavior.opaque,
+                    child: Row(
+                      children: [
                         Text(
                           (post.characterName ?? post.author).toUpperCase(),
                           style: TextStyle(
@@ -2013,85 +2488,99 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                             letterSpacing: 4,
                             color: post.isUser
                                 ? (appSettings.textColourFor('char_name') ??
-                                    (post.textColor == cParchment
-                                        ? cGold
-                                        : post.textColor.withValues(alpha: 0.9)))
-                                : (appSettings.textColourFor(
-                                        'partner_name') ??
-                                    cMist),
+                                      (post.textColor == cParchment
+                                          ? cGold
+                                          : post.textColor.withValues(
+                                              alpha: 0.9,
+                                            )))
+                                : (appSettings.textColourFor('partner_name') ??
+                                      cMist),
                           ),
                         ),
                         if (post.locationName != null) ...[
-                          const Text('  ·  ',
-                              style: TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 10,
-                                  color: cSmoke)),
-                          Text(post.locationName!.toUpperCase(),
-                              style: TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 10,
-                                  letterSpacing: 2,
-                                  color: appSettings.textColourFor(
-                                          'location_name') ??
-                                      cSmoke)),
+                          const Text(
+                            '  ·  ',
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 10,
+                              color: cSmoke,
+                            ),
+                          ),
+                          Text(
+                            post.locationName!.toUpperCase(),
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 10,
+                              letterSpacing: 2,
+                              color:
+                                  appSettings.textColourFor('location_name') ??
+                                  cSmoke,
+                            ),
+                          ),
                         ],
-                      ]),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    if (post.quotedContent != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: const BoxDecoration(
-                              border: Border(
-                                  left:
-                                      BorderSide(color: cSmoke, width: 2))),
-                          child: Text(
-                              '${post.quotedAuthor ?? ""}: ${post.quotedContent}...',
-                              style: const TextStyle(
-                                  fontSize: 11,
-                                  color: cSmoke,
-                                  fontStyle: FontStyle.italic)),
+                  ),
+                  const SizedBox(height: 8),
+                  if (post.quotedContent != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(
+                          border: Border(
+                            left: BorderSide(color: cSmoke, width: 2),
+                          ),
+                        ),
+                        child: Text(
+                          '${post.quotedAuthor ?? ""}: ${post.quotedContent}...',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: cSmoke,
+                            fontStyle: FontStyle.italic,
+                          ),
                         ),
                       ),
-                    _selectablePostText(
-                      text: post.content,
-                      style: TextStyle(
-                        fontSize: post.fontSize,
-                        color: appSettings.textColourFor('post_content') ??
-                            post.textColor,
-                        fontStyle: post.italic
-                            ? FontStyle.italic
-                            : FontStyle.normal,
-                        fontWeight: post.bold
-                            ? FontWeight.bold
-                            : FontWeight.w300,
-                        height: 2.0,
-                      ),
-                      onAddToLog: _addToLogFromText,
-                      onSelectionChanged: _onSelectionChanged,
                     ),
-                    const SizedBox(height: 10),
-                    Row(children: [
-                      const Expanded(
-                          child: Divider(color: cAsh, height: 1)),
+                  _selectablePostText(
+                    text: post.content,
+                    style: TextStyle(
+                      fontSize: post.fontSize,
+                      color:
+                          appSettings.textColourFor('post_content') ??
+                          post.textColor,
+                      fontStyle: post.italic
+                          ? FontStyle.italic
+                          : FontStyle.normal,
+                      fontWeight: post.bold ? FontWeight.bold : FontWeight.w300,
+                      height: 2.0,
+                    ),
+                    onAddToLog: _addToLogFromText,
+                    onSelectionChanged: _onSelectionChanged,
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Expanded(child: Divider(color: cAsh, height: 1)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Text('${post.wordCount}w',
-                            style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 8,
-                                color: appSettings.textColourFor(
-                                        'timestamp') ??
-                                    cSmoke,
-                                letterSpacing: 1)),
+                        child: Text(
+                          '${post.wordCount}w',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 8,
+                            color:
+                                appSettings.textColourFor('timestamp') ??
+                                cSmoke,
+                            letterSpacing: 1,
+                          ),
+                        ),
                       ),
-                      const Expanded(
-                          child: Divider(color: cAsh, height: 1)),
-                    ]),
-                  ]),
+                      const Expanded(child: Divider(color: cAsh, height: 1)),
+                    ],
+                  ),
+                ],
+              ),
             );
           },
         ),
@@ -2202,61 +2691,79 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       backgroundColor: cInk,
       builder: (_) => Container(
         padding: const EdgeInsets.all(24),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
               width: 32,
               height: 3,
               decoration: BoxDecoration(
-                  color: cAsh, borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 20),
-          _actionTile(Icons.format_quote, 'Quote this post', () {
-            Navigator.pop(context);
-            _quotePost(post.id);
-          }),
-          _actionTile(Icons.menu_book_outlined, 'Add to log', () {
-            Navigator.pop(context);
-            _addToLogFromText(post.content);
-          }),
-          if (post.isUser) ...[
-            _actionTile(Icons.edit_outlined, 'Edit post', () {
+                color: cAsh,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            _actionTile(Icons.format_quote, 'Quote this post', () {
               Navigator.pop(context);
-              _editPost(post);
+              _quotePost(post.id);
             }),
-            _actionTile(Icons.delete_outline, 'Delete post', () {
+            _actionTile(Icons.menu_book_outlined, 'Add to log', () {
               Navigator.pop(context);
-              _deletePost(post.id);
-            }, color: cEmber),
+              _addToLogFromText(post.content);
+            }),
+            if (post.isUser) ...[
+              _actionTile(Icons.edit_outlined, 'Edit post', () {
+                Navigator.pop(context);
+                _editPost(post);
+              }),
+              _actionTile(Icons.delete_outline, 'Delete post', () {
+                Navigator.pop(context);
+                _deletePost(post.id);
+              }, color: cEmber),
+            ],
+            _actionTile(Icons.copy, 'Copy text', () {
+              Clipboard.setData(ClipboardData(text: post.content));
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  backgroundColor: cInk,
+                  content: Text('Copied', style: TextStyle(color: cParchment)),
+                ),
+              );
+            }),
           ],
-          _actionTile(Icons.copy, 'Copy text', () {
-            Clipboard.setData(ClipboardData(text: post.content));
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                backgroundColor: cInk,
-                content: Text('Copied',
-                    style: TextStyle(color: cParchment))));
-          }),
-        ]),
+        ),
       ),
     );
   }
 
-  Widget _actionTile(IconData icon, String label, VoidCallback onTap,
-      {Color color = cMist}) {
+  Widget _actionTile(
+    IconData icon,
+    String label,
+    VoidCallback onTap, {
+    Color color = cMist,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: cAsh))),
-        child: Row(children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 16),
-          Text(label,
+          border: Border(bottom: BorderSide(color: cAsh)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 16),
+            Text(
+              label,
               style: TextStyle(
-                  fontSize: 14,
-                  color: color,
-                  fontWeight: FontWeight.w300)),
-        ]),
+                fontSize: 14,
+                color: color,
+                fontWeight: FontWeight.w300,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2269,23 +2776,29 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       builder: (_) => Container(
         padding: const EdgeInsets.all(24),
         child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                  width: 32,
-                  height: 3,
-                  margin: const EdgeInsets.only(bottom: 20, left: 0),
-                  decoration: BoxDecoration(
-                      color: cAsh,
-                      borderRadius: BorderRadius.circular(2))),
-              Row(children: [
-                const Text('WRITING AS',
-                    style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 9,
-                        color: cSmoke,
-                        letterSpacing: 3)),
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 32,
+              height: 3,
+              margin: const EdgeInsets.only(bottom: 20, left: 0),
+              decoration: BoxDecoration(
+                color: cAsh,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Row(
+              children: [
+                const Text(
+                  'WRITING AS',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 9,
+                    color: cSmoke,
+                    letterSpacing: 3,
+                  ),
+                ),
                 const Spacer(),
                 if (_activeCharacter != null)
                   GestureDetector(
@@ -2293,421 +2806,543 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                       setState(() => _activeCharacter = null);
                       Navigator.pop(context);
                     },
-                    child: const Text('Reset to self',
-                        style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 9,
-                            color: cSmoke,
-                            decoration: TextDecoration.underline)),
-                  ),
-              ]),
-              const SizedBox(height: 16),
-              if (characters.length == 1)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 16),
-                  child: Text(
-                      'Import characters from the Tools panel first to use character switching.',
+                    child: const Text(
+                      'Reset to self',
                       style: TextStyle(
-                          fontSize: 13,
-                          color: cSmoke,
-                          fontStyle: FontStyle.italic,
-                          height: 1.6)),
-                ),
-              ...characters.map((c) {
-                final isSelected = c == null
-                    ? _activeCharacter == null
-                    : _activeCharacter?.id == c.id;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() => _activeCharacter = c);
-                    Navigator.pop(context);
-                    if (c != null && widget.sessionId.isNotEmpty) {
-                      _log.addEvent(
-                        title: 'Writing as ${c.name}',
-                        body: 'Switched to ${c.name}.',
-                        source: 'character',
-                        meta: {
-                          'characterId': c.id,
-                          'characterName': c.name,
-                        },
-                      );
-                    }
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                          color: isSelected
-                              ? (c?.accentColor ?? cGold)
-                              : cAsh),
-                      color: isSelected
-                          ? (c?.accentColor ?? cGold).withValues(alpha: 0.06)
-                          : Colors.transparent,
+                        fontFamily: 'monospace',
+                        fontSize: 9,
+                        color: cSmoke,
+                        decoration: TextDecoration.underline,
+                      ),
                     ),
-                    child: Row(children: [
-                      Container(
-                          width: 10,
-                          height: 10,
-                          margin: const EdgeInsets.only(right: 12),
-                          decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: c?.accentColor ?? cParchment,
-                              border: Border.all(color: cAsh))),
-                      Expanded(
-                          child: Text(c?.name ?? 'Myself',
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w300,
-                                  fontStyle: c != null
-                                      ? FontStyle.italic
-                                      : FontStyle.normal,
-                                  color: isSelected
-                                      ? (c?.accentColor ?? cGold)
-                                      : cMist))),
-                      if (isSelected)
-                        Icon(Icons.check,
-                            size: 14, color: c?.accentColor ?? cGold),
-                    ]),
                   ),
-                );
-              }),
-            ]),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (characters.length == 1)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 16),
+                child: Text(
+                  'Import characters from the Tools panel first to use character switching.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: cSmoke,
+                    fontStyle: FontStyle.italic,
+                    height: 1.6,
+                  ),
+                ),
+              ),
+            ...characters.map((c) {
+              final isSelected = c == null
+                  ? _activeCharacter == null
+                  : _activeCharacter?.id == c.id;
+              return GestureDetector(
+                onTap: () {
+                  setState(() => _activeCharacter = c);
+                  Navigator.pop(context);
+                  if (c != null && widget.sessionId.isNotEmpty) {
+                    _log.addEvent(
+                      title: 'Writing as ${c.name}',
+                      body: 'Switched to ${c.name}.',
+                      source: 'character',
+                      meta: {'characterId': c.id, 'characterName': c.name},
+                    );
+                  }
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: isSelected ? (c?.accentColor ?? cGold) : cAsh,
+                    ),
+                    color: isSelected
+                        ? (c?.accentColor ?? cGold).withValues(alpha: 0.06)
+                        : Colors.transparent,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: c?.accentColor ?? cParchment,
+                          border: Border.all(color: cAsh),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          c?.name ?? 'Myself',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w300,
+                            fontStyle: c != null
+                                ? FontStyle.italic
+                                : FontStyle.normal,
+                            color: isSelected
+                                ? (c?.accentColor ?? cGold)
+                                : cMist,
+                          ),
+                        ),
+                      ),
+                      if (isSelected)
+                        Icon(
+                          Icons.check,
+                          size: 14,
+                          color: c?.accentColor ?? cGold,
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildCollapsedEditor() {
     final charColor = _activeCharacter?.accentColor ?? cGold;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.4),
-          border: const Border(top: BorderSide(color: cAsh))),
-      child: Row(children: [
-        Expanded(
-          child: GestureDetector(
-            onTap: () => setState(() => _editorExpanded = true),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                  border: Border.all(color: cAsh), color: cInk),
-              child: Text(
-                _draftSaved ? 'Draft restored...' : 'Continue the story...',
-                style: TextStyle(
-                    fontSize: 14,
-                    color: _draftSaved
-                        ? charColor.withValues(alpha: 0.6)
-                        : cSmoke,
-                    fontStyle: FontStyle.italic),
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.4),
+            border: const Border(top: BorderSide(color: cAsh)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _editorExpanded = true),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: cAsh),
+                      color: cInk,
+                    ),
+                    child: Text(
+                      _draftSaved
+                          ? 'Draft restored...'
+                          : 'Continue the story...',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: _draftSaved
+                            ? charColor.withValues(alpha: 0.6)
+                            : cSmoke,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
+              GestureDetector(
+                onTap: _showCharacterSwitcher,
+                child: Container(
+                  margin: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: _activeCharacter != null
+                          ? charColor.withValues(alpha: 0.5)
+                          : cAsh,
+                    ),
+                    color: _activeCharacter != null
+                        ? charColor.withValues(alpha: 0.08)
+                        : Colors.transparent,
+                  ),
+                  child: Icon(
+                    Icons.person_outline,
+                    size: 16,
+                    color: _activeCharacter != null ? charColor : cSmoke,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        GestureDetector(
-          onTap: _showCharacterSwitcher,
-          child: Container(
-            margin: const EdgeInsets.only(left: 8),
-            padding: const EdgeInsets.symmetric(
-                horizontal: 10, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border.all(
-                  color: _activeCharacter != null
-                      ? charColor.withValues(alpha: 0.5)
-                      : cAsh),
-              color: _activeCharacter != null
-                  ? charColor.withValues(alpha: 0.08)
-                  : Colors.transparent,
-            ),
-            child: Icon(Icons.person_outline,
-                size: 16,
-                color:
-                    _activeCharacter != null ? charColor : cSmoke),
-          ),
-        ),
-      ]),
+      ),
     );
   }
 
   Widget _buildFullEditor() {
     final charColor = _activeCharacter?.accentColor ?? _fontColor;
     final displayName = _activeCharacter?.name ?? 'You';
-    return Container(
-      decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.5),
-          border: const Border(top: BorderSide(color: cAsh))),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        if (_editingPostId != null)
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            decoration: BoxDecoration(
-              color: cIce.withValues(alpha: 0.06),
-              border: Border(
-                  bottom: BorderSide(color: cIce.withValues(alpha: 0.2))),
-            ),
-            child: Row(children: [
-              const Icon(Icons.edit_outlined, size: 12, color: cIce),
-              const SizedBox(width: 8),
-              const Text('editing post',
-                  style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 9,
-                      color: cIce,
-                      letterSpacing: 2)),
-              const Spacer(),
-              LoreTap(
-                onTap: () => setState(() {
-                  _editingPostId = null;
-                  _editorCtrl.text = '';
-                }),
-                child: const Text('cancel',
-                    style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 8,
-                        color: cSmoke,
-                        letterSpacing: 1)),
-              ),
-            ]),
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(
+              alpha: 0.6,
+            ), // Slightly darker for typing contrast
+            border: const Border(top: BorderSide(color: cAsh)),
           ),
-        if (_activeCharacter != null)
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            decoration: BoxDecoration(
-              color: charColor.withValues(alpha: 0.06),
-              border: Border(
-                  bottom:
-                      BorderSide(color: charColor.withValues(alpha: 0.2))),
-            ),
-            child: Row(children: [
-              Container(
-                  width: 8,
-                  height: 8,
-                  margin: const EdgeInsets.only(right: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_editingPostId != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                      shape: BoxShape.circle, color: charColor)),
-              Text(displayName,
-                  style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 9,
-                      color: charColor,
-                      letterSpacing: 2)),
-              const Spacer(),
-              GestureDetector(
-                onTap: () => setState(() => _activeCharacter = null),
-                child: const Text('exit character',
-                    style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 8,
-                        color: cSmoke,
-                        letterSpacing: 1)),
-              ),
-            ]),
-          ),
-        if (_availableLocations.isNotEmpty)
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: cAsh))),
-            child: Row(children: [
-              const Icon(Icons.location_on_outlined,
-                  size: 12, color: cSmoke),
-              const SizedBox(width: 6),
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(children: [
-                    GestureDetector(
-                      onTap: () => setState(() => _activeLocation = null),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 6),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: _activeLocation == null
-                              ? cSmoke.withValues(alpha: 0.2)
-                              : Colors.transparent,
-                          border: Border.all(
-                              color: _activeLocation == null
-                                  ? cSmoke
-                                  : cAsh),
-                          borderRadius: BorderRadius.circular(2),
+                    color: cIce.withValues(alpha: 0.06),
+                    border: Border(
+                      bottom: BorderSide(color: cIce.withValues(alpha: 0.2)),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.edit_outlined, size: 12, color: cIce),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'editing post',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 9,
+                          color: cIce,
+                          letterSpacing: 2,
                         ),
-                        child: const Text('none',
-                            style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 8,
-                                color: cSmoke,
-                                letterSpacing: 1)),
+                      ),
+                      const Spacer(),
+                      LoreTap(
+                        onTap: () => setState(() {
+                          _editingPostId = null;
+                          _editorCtrl.text = '';
+                        }),
+                        child: const Text(
+                          'cancel',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 8,
+                            color: cSmoke,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (_activeCharacter != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: charColor.withValues(alpha: 0.06),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: charColor.withValues(alpha: 0.2),
                       ),
                     ),
-                    ..._availableLocations.map((loc) => GestureDetector(
-                          onTap: () {
-                            setState(() => _activeLocation = loc);
-                            if (widget.sessionId.isNotEmpty) {
-                              _log.addEvent(
-                                title: 'Location · $loc',
-                                body: 'The scene moved to $loc.',
-                                source: 'location',
-                                meta: {'locationName': loc},
-                              );
-                            }
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 6),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: _activeLocation == loc
-                                  ? cGold.withValues(alpha: 0.15)
-                                  : Colors.transparent,
-                              border: Border.all(
-                                  color: _activeLocation == loc
-                                      ? cGold.withValues(alpha: 0.5)
-                                      : cAsh),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                            child: Text(loc,
-                                style: TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 8,
-                                    color: _activeLocation == loc
-                                        ? cGold
-                                        : cSmoke,
-                                    letterSpacing: 1)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: charColor,
+                        ),
+                      ),
+                      Text(
+                        displayName,
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 9,
+                          color: charColor,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => setState(() => _activeCharacter = null),
+                        child: const Text(
+                          'exit character',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 8,
+                            color: cSmoke,
+                            letterSpacing: 1,
                           ),
-                        )),
-                  ]),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ]),
-          ),
-        if (_quotingPostId != null) _buildQuotePreview(),
-        _buildFormattingBar(),
-        Container(
-          constraints: const BoxConstraints(maxHeight: 180),
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: ScrollConfiguration(
-            behavior: NoGlowBehavior(),
-            child: Focus(
-              onKeyEvent: (node, event) {
-                if (!kIsWeb) return KeyEventResult.ignored;
-                if (event is KeyDownEvent) {
-                  final isEnter = event.logicalKey == LogicalKeyboardKey.enter || 
-                                  event.logicalKey == LogicalKeyboardKey.numpadEnter;
-                  final isShift = HardwareKeyboard.instance.isShiftPressed;
-                  
-                  if (isEnter) {
-                    if (appSettings.enterToSend && !isShift) {
-                      _submitPost();
-                      return KeyEventResult.handled;
-                    } else if (!appSettings.enterToSend && isShift) {
-                      _submitPost();
-                      return KeyEventResult.handled;
-                    }
-                  }
-                }
-                return KeyEventResult.ignored;
-              },
-              child: TextField(
-                controller: _editorCtrl,
-                focusNode: _editorFocus,
-                maxLines: null,
-                autofocus: true,
-                style: TextStyle(
-                  fontSize: _fontSize,
-                  color: _activeCharacter != null ? charColor : _fontColor,
-                  fontStyle: _italic ? FontStyle.italic : FontStyle.normal,
-                  fontWeight:
-                      _bold ? FontWeight.bold : FontWeight.w300,
-                  height: 1.8,
-                ),
-                decoration: const InputDecoration(
-                  hintText: 'Write your post...',
-                  hintStyle: TextStyle(
-                      fontSize: 14,
-                      color: cSmoke,
-                      fontStyle: FontStyle.italic),
-                  border: InputBorder.none,
-                ),
-                cursorColor: cGold,
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
-          child: Row(children: [
-            Row(children: [
-              Text('$_wordCount words',
-                  style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 10,
-                      color: cSmoke,
-                      letterSpacing: 1)),
-              if (_draftSaved && _editorCtrl.text.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                const Icon(Icons.circle, size: 5, color: cVine),
-                const SizedBox(width: 4),
-                const Text('saved',
-                    style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 8,
-                        color: cVine,
-                        letterSpacing: 1)),
-              ],
-            ]),
-            const Spacer(),
-            GestureDetector(
-              onTap: () => setState(() {
-                _editorExpanded = false;
-                _quotingPostId = null;
-                _editingPostId = null;
-                _editorCtrl.text = '';
-              }),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 8),
-                margin: const EdgeInsets.only(right: 8),
-                decoration:
-                    BoxDecoration(border: Border.all(color: cAsh)),
-                child: const Text('Cancel',
-                    style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 10,
+              if (_availableLocations.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  decoration: const BoxDecoration(
+                    border: Border(bottom: BorderSide(color: cAsh)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 12,
                         color: cSmoke,
-                        letterSpacing: 1)),
-              ),
-            ),
-            LoreTap(
-              onTap: _submitPost,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 8),
-                color: _editorCtrl.text.trim().isEmpty
-                    ? cAsh
-                    : _editingPostId != null
-                        ? cIce.withValues(alpha: 0.8)
-                        : cParchment,
-                child: Text(
-                  _editingPostId != null ? 'Save' : 'Post',
-                  style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 10,
-                      color: _editorCtrl.text.trim().isEmpty
-                          ? cSmoke
-                          : cVoid,
-                      letterSpacing: 1),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () =>
+                                    setState(() => _activeLocation = null),
+                                child: Container(
+                                  margin: const EdgeInsets.only(right: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _activeLocation == null
+                                        ? cSmoke.withValues(alpha: 0.2)
+                                        : Colors.transparent,
+                                    border: Border.all(
+                                      color: _activeLocation == null
+                                          ? cSmoke
+                                          : cAsh,
+                                    ),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                  child: const Text(
+                                    'none',
+                                    style: TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 8,
+                                      color: cSmoke,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              ..._availableLocations.map(
+                                (loc) => GestureDetector(
+                                  onTap: () {
+                                    setState(() => _activeLocation = loc);
+                                    if (widget.sessionId.isNotEmpty) {
+                                      _log.addEvent(
+                                        title: 'Location · $loc',
+                                        body: 'The scene moved to $loc.',
+                                        source: 'location',
+                                        meta: {'locationName': loc},
+                                      );
+                                    }
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.only(right: 6),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _activeLocation == loc
+                                          ? cGold.withValues(alpha: 0.15)
+                                          : Colors.transparent,
+                                      border: Border.all(
+                                        color: _activeLocation == loc
+                                            ? cGold.withValues(alpha: 0.5)
+                                            : cAsh,
+                                      ),
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                    child: Text(
+                                      loc,
+                                      style: TextStyle(
+                                        fontFamily: 'monospace',
+                                        fontSize: 8,
+                                        color: _activeLocation == loc
+                                            ? cGold
+                                            : cSmoke,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (_quotingPostId != null) _buildQuotePreview(),
+              _buildFormattingBar(),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 180),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: ScrollConfiguration(
+                  behavior: NoGlowBehavior(),
+                  child: Focus(
+                    onKeyEvent: (node, event) {
+                      if (!kIsWeb) return KeyEventResult.ignored;
+                      if (event is KeyDownEvent) {
+                        final isEnter =
+                            event.logicalKey == LogicalKeyboardKey.enter ||
+                            event.logicalKey == LogicalKeyboardKey.numpadEnter;
+                        final isShift =
+                            HardwareKeyboard.instance.isShiftPressed;
+
+                        if (isEnter) {
+                          if (appSettings.enterToSend && !isShift) {
+                            _submitPost();
+                            return KeyEventResult.handled;
+                          } else if (!appSettings.enterToSend && isShift) {
+                            _submitPost();
+                            return KeyEventResult.handled;
+                          }
+                        }
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: TextField(
+                      controller: _editorCtrl,
+                      focusNode: _editorFocus,
+                      maxLines: null,
+                      autofocus: true,
+                      style: TextStyle(
+                        fontSize: _fontSize,
+                        color: _activeCharacter != null
+                            ? charColor
+                            : _fontColor,
+                        fontStyle: _italic
+                            ? FontStyle.italic
+                            : FontStyle.normal,
+                        fontWeight: _bold ? FontWeight.bold : FontWeight.w300,
+                        height: 1.8,
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: 'Write your post...',
+                        hintStyle: TextStyle(
+                          fontSize: 14,
+                          color: cSmoke,
+                          fontStyle: FontStyle.italic,
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      cursorColor: cGold,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ]),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+                child: Row(
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          '$_wordCount words',
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 10,
+                            color: cSmoke,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        if (_draftSaved && _editorCtrl.text.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          const Icon(Icons.circle, size: 5, color: cVine),
+                          const SizedBox(width: 4),
+                          const Text(
+                            'saved',
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 8,
+                              color: cVine,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => setState(() {
+                        _editorExpanded = false;
+                        _quotingPostId = null;
+                        _editingPostId = null;
+                        _editorCtrl.text = '';
+                      }),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: cAsh),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 10,
+                            color: cSmoke,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                    LoreTap(
+                      onTap: _submitPost,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        color: _editorCtrl.text.trim().isEmpty
+                            ? cAsh
+                            : _editingPostId != null
+                            ? cIce.withValues(alpha: 0.8)
+                            : cParchment,
+                        child: Text(
+                          _editingPostId != null ? 'Save' : 'Post',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 10,
+                            color: _editorCtrl.text.trim().isEmpty
+                                ? cSmoke
+                                : cVoid,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ]),
+      ),
     );
   }
 
@@ -2733,25 +3368,31 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       });
       return const SizedBox.shrink();
     }
-    final preview = post.content.substring(
-        0, min(80, post.content.length));
+    final preview = post.content.substring(0, min(80, post.content.length));
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       padding: const EdgeInsets.all(10),
       decoration: const BoxDecoration(
-          border: Border(left: BorderSide(color: cSmoke, width: 2))),
-      child: Row(children: [
-        Expanded(
+        border: Border(left: BorderSide(color: cSmoke, width: 2)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
             child: Text(
-                '${post.characterName ?? post.author}: $preview...',
-                style: const TextStyle(
-                    fontSize: 12,
-                    color: cSmoke,
-                    fontStyle: FontStyle.italic))),
-        GestureDetector(
+              '${post.characterName ?? post.author}: $preview...',
+              style: const TextStyle(
+                fontSize: 12,
+                color: cSmoke,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+          GestureDetector(
             onTap: () => setState(() => _quotingPostId = null),
-            child: const Icon(Icons.close, size: 14, color: cSmoke)),
-      ]),
+            child: const Icon(Icons.close, size: 14, color: cSmoke),
+          ),
+        ],
+      ),
     );
   }
 
@@ -2759,107 +3400,140 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Row(children: [
-        GestureDetector(
-          onTap: _showCharacterSwitcher,
-          child: Container(
-            margin: const EdgeInsets.only(right: 8),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: _activeCharacter != null
-                  ? (_activeCharacter!.accentColor).withValues(alpha: 0.12)
-                  : Colors.transparent,
-              border: Border.all(
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: _showCharacterSwitcher,
+            child: Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: _activeCharacter != null
+                    ? (_activeCharacter!.accentColor).withValues(alpha: 0.12)
+                    : Colors.transparent,
+                border: Border.all(
                   color: _activeCharacter != null
                       ? _activeCharacter!.accentColor.withValues(alpha: 0.5)
-                      : cAsh),
-            ),
-            child: Row(children: [
-              Icon(Icons.person_outline,
-                  size: 12,
-                  color: _activeCharacter != null
-                      ? _activeCharacter!.accentColor
-                      : cSmoke),
-              const SizedBox(width: 4),
-              Text(
-                _activeCharacter?.name ?? 'Self',
-                style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 9,
-                    letterSpacing: 1,
+                      : cAsh,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.person_outline,
+                    size: 12,
                     color: _activeCharacter != null
                         ? _activeCharacter!.accentColor
-                        : cSmoke),
+                        : cSmoke,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _activeCharacter?.name ?? 'Self',
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 9,
+                      letterSpacing: 1,
+                      color: _activeCharacter != null
+                          ? _activeCharacter!.accentColor
+                          : cSmoke,
+                    ),
+                  ),
+                ],
               ),
-            ]),
+            ),
           ),
-        ),
-        const SizedBox(width: 4),
-        _fmtBtn('B', _bold, () => setState(() => _bold = !_bold),
+          const SizedBox(width: 4),
+          _fmtBtn(
+            'B',
+            _bold,
+            () => setState(() => _bold = !_bold),
             style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: cMist)),
-        _fmtBtn('I', _italic, () => setState(() => _italic = !_italic),
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: cMist,
+            ),
+          ),
+          _fmtBtn(
+            'I',
+            _italic,
+            () => setState(() => _italic = !_italic),
             style: const TextStyle(
-                fontStyle: FontStyle.italic,
-                fontSize: 13,
-                color: cMist)),
-        const SizedBox(width: 6),
-        _fmtLabel('Size'),
-        ...[12.0, 14.0, 16.0, 18.0, 22.0].map((s) => _fmtBtn(
-            s.toInt().toString(),
-            _fontSize == s,
-            () => setState(() => _fontSize = s),
-            style: const TextStyle(
+              fontStyle: FontStyle.italic,
+              fontSize: 13,
+              color: cMist,
+            ),
+          ),
+          const SizedBox(width: 6),
+          _fmtLabel('Size'),
+          ...[12.0, 14.0, 16.0, 18.0, 22.0].map(
+            (s) => _fmtBtn(
+              s.toInt().toString(),
+              _fontSize == s,
+              () => setState(() => _fontSize = s),
+              style: const TextStyle(
                 fontSize: 10,
                 color: cMist,
-                fontFamily: 'monospace'))),
-        if (_activeCharacter == null) ...[
-          const SizedBox(width: 6),
-          _fmtLabel('Colour'),
-          ...[
-            cParchment,
-            cGold,
-            cIce,
-            cEmber,
-            cMagic,
-            cVine,
-            Colors.white,
-            const Color(0xFFa0c4a0)
-          ].map((c) => GestureDetector(
+                fontFamily: 'monospace',
+              ),
+            ),
+          ),
+          if (_activeCharacter == null) ...[
+            const SizedBox(width: 6),
+            _fmtLabel('Colour'),
+            ...[
+              cParchment,
+              cGold,
+              cIce,
+              cEmber,
+              cMagic,
+              cVine,
+              Colors.white,
+              const Color(0xFFa0c4a0),
+            ].map(
+              (c) => GestureDetector(
                 onTap: () => setState(() => _fontColor = c),
                 child: Container(
-                    width: 20,
-                    height: 20,
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    decoration: BoxDecoration(
-                        color: c,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                            color: _fontColor == c
-                                ? Colors.white
-                                : Colors.transparent,
-                            width: 2))),
-              )),
+                  width: 20,
+                  height: 20,
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: BoxDecoration(
+                    color: c,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _fontColor == c
+                          ? Colors.white
+                          : Colors.transparent,
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
-      ]),
+      ),
     );
   }
 
-  Widget _fmtBtn(String label, bool active, VoidCallback onTap,
-      {TextStyle? style}) {
+  Widget _fmtBtn(
+    String label,
+    bool active,
+    VoidCallback onTap, {
+    TextStyle? style,
+  }) {
     return LoreTap(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 2),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-            color: active ? cAsh : Colors.transparent,
-            border: Border.all(color: active ? cSmoke : cAsh)),
-        child: Text(label,
-            style: style ?? const TextStyle(fontSize: 12, color: cMist)),
+          color: active ? cAsh : Colors.transparent,
+          border: Border.all(color: active ? cSmoke : cAsh),
+        ),
+        child: Text(
+          label,
+          style: style ?? const TextStyle(fontSize: 12, color: cMist),
+        ),
       ),
     );
   }
@@ -2867,16 +3541,19 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   Widget _fmtLabel(String t) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Text(t,
-          style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 9,
-              color: cSmoke,
-              letterSpacing: 2)),
+      child: Text(
+        t,
+        style: const TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 9,
+          color: cSmoke,
+          letterSpacing: 2,
+        ),
+      ),
     );
   }
 
-    Widget _buildOOCPanel() {
+  Widget _buildOOCPanel() {
     return Positioned(
       left: 0,
       right: 0,
@@ -2884,92 +3561,643 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       child: Container(
         height: MediaQuery.of(context).size.height * 0.55,
         decoration: const BoxDecoration(
-            color: cInk,
-            border: Border(top: BorderSide(color: cAsh))),
-        child: Column(children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 12),
-            child: Row(children: [
-              const Text('OOC',
-                  style: TextStyle(
+          color: cInk,
+          border: Border(top: BorderSide(color: cAsh)),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  const Text(
+                    'OOC',
+                    style: TextStyle(
                       fontFamily: 'monospace',
                       fontSize: 11,
                       color: cIce,
-                      letterSpacing: 4)),
-              const Spacer(),
-              GestureDetector(
-                  onTap: () => setState(() => _oocOpen = false),
-                  child: const Icon(Icons.close,
-                      color: cSmoke, size: 18)),
-            ]),
-          ),
-          const Divider(color: cAsh, height: 1),
-          Expanded(
-            child: ScrollConfiguration(
-              behavior: NoGlowBehavior(),
-              child: ListView.builder(
-                controller: _oocScrollCtrl,
-                padding: const EdgeInsets.all(16),
-                itemCount: _oocMessages.length,
-                itemBuilder: (_, i) {
-                  final msg = _oocMessages[i];
-                  return Align(
-                    alignment: msg.isUser
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      constraints: BoxConstraints(
-                          maxWidth:
-                              MediaQuery.of(context).size.width * 0.75),
-                      decoration: BoxDecoration(
+                      letterSpacing: 4,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => setState(() => _oocOpen = false),
+                    child: const Icon(Icons.close, color: cSmoke, size: 18),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(color: cAsh, height: 1),
+            Expanded(
+              child: ScrollConfiguration(
+                behavior: NoGlowBehavior(),
+                child: ListView.builder(
+                  controller: _oocScrollCtrl,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _oocMessages.length,
+                  itemBuilder: (_, i) {
+                    final msg = _oocMessages[i];
+                    return Align(
+                      alignment: msg.isUser
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.75,
+                        ),
+                        decoration: BoxDecoration(
                           color: msg.isUser ? cAsh : cVoid,
-                          border: Border.all(color: cAsh)),
-                      child: Column(
+                          border: Border.all(color: cAsh),
+                        ),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (!msg.isUser)
-                              Text(msg.author,
-                                  style: TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 9,
-                                      color: appSettings
-                                              .textColourFor(
-                                                  'partner_name') ??
-                                          cIce,
-                                      letterSpacing: 2)),
+                              Text(
+                                msg.author,
+                                style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 9,
+                                  color:
+                                      appSettings.textColourFor(
+                                        'partner_name',
+                                      ) ??
+                                      cIce,
+                                  letterSpacing: 2,
+                                ),
+                              ),
                             if (msg.content.isNotEmpty)
-                              Text(msg.content,
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      color: appSettings
-                                              .textColourFor('ooc') ??
-                                          cMist,
-                                      height: 1.5)),
+                              Text(
+                                msg.content,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color:
+                                      appSettings.textColourFor('ooc') ?? cMist,
+                                  height: 1.5,
+                                ),
+                              ),
                             if (msg.mediaUrl != null)
                               Padding(
                                 padding: const EdgeInsets.only(top: 8),
                                 child: _OocMediaPreview(
-                                  msg.mediaUrl!, 
-                                  isEncrypted: msg.isEncryptedMedia, 
+                                  msg.mediaUrl!,
+                                  isEncrypted: msg.isEncryptedMedia,
                                   sessionId: widget.sessionId,
                                 ),
                               ),
-                          ]),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: cAsh)),
+              ),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () async {
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: cInk,
+                        builder: (ctx) => Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.link, color: cGold),
+                              title: const Text(
+                                'Paste Web Link',
+                                style: TextStyle(color: cParchment),
+                              ),
+                              onTap: () async {
+                                Navigator.pop(ctx);
+                                final mediaUrl = await _promptForMediaUrl();
+                                if (mediaUrl != null && mediaUrl.isNotEmpty) {
+                                  _sendEncryptedMediaUrl(mediaUrl);
+                                }
+                              },
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.image, color: cIce),
+                              title: const Text(
+                                'Upload Image',
+                                style: TextStyle(color: cParchment),
+                              ),
+                              onTap: () {
+                                Navigator.pop(ctx);
+                                _pickAndUploadImage();
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: cAsh),
+                      ),
+                      child: const Icon(
+                        Icons.add_photo_alternate_outlined,
+                        size: 18,
+                        color: cSmoke,
+                      ),
                     ),
-                  );
-                },
+                  ),
+                  Expanded(
+                    child: Focus(
+                      onKeyEvent: (node, event) {
+                        if (!kIsWeb) return KeyEventResult.ignored;
+                        if (event is KeyDownEvent) {
+                          final isEnter =
+                              event.logicalKey == LogicalKeyboardKey.enter ||
+                              event.logicalKey ==
+                                  LogicalKeyboardKey.numpadEnter;
+                          final isShift =
+                              HardwareKeyboard.instance.isShiftPressed;
+                          if (isEnter) {
+                            if (appSettings.enterToSend && !isShift) {
+                              _sendOocMessage();
+                              return KeyEventResult.handled;
+                            } else if (!appSettings.enterToSend && isShift) {
+                              _sendOocMessage();
+                              return KeyEventResult.handled;
+                            }
+                          }
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: TextField(
+                        controller: _oocCtrl,
+                        style: const TextStyle(fontSize: 13, color: cParchment),
+                        decoration: const InputDecoration(
+                          hintText: 'Out of character...',
+                          hintStyle: TextStyle(fontSize: 13, color: cSmoke),
+                          border: InputBorder.none,
+                        ),
+                        cursorColor: cIce,
+                      ),
+                    ),
+                  ),
+                  LoreTap(
+                    onTap: _sendOocMessage,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      color: cAsh,
+                      child: const Text(
+                        'Send',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 10,
+                          color: cMist,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsPanel() {
+    return Positioned(
+      right: 0,
+      top: 60,
+      child: Container(
+        width: 270,
+        decoration: BoxDecoration(
+          color: cInk,
+          border: Border.all(color: cAsh),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    const Text(
+                      'SETTINGS',
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 9,
+                        color: cGold,
+                        letterSpacing: 3,
+                      ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => setState(() => _settingsOpen = false),
+                      child: const Icon(Icons.close, size: 14, color: cSmoke),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(color: cAsh, height: 1),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(14, 12, 14, 6),
+                child: Text(
+                  'DISPLAY MODE',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 9,
+                    color: cSmoke,
+                    letterSpacing: 3,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                child: Row(
+                  children: [
+                    _modeBtn(
+                      RPDisplayMode.cards,
+                      Icons.credit_card_outlined,
+                      'Cards',
+                    ),
+                    const SizedBox(width: 6),
+                    _modeBtn(
+                      RPDisplayMode.bubbles,
+                      Icons.chat_bubble_outline,
+                      'Bubbles',
+                    ),
+                    const SizedBox(width: 6),
+                    _modeBtn(
+                      RPDisplayMode.classical,
+                      Icons.article_outlined,
+                      'Classical',
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(color: cAsh, height: 1),
+              _settingToggle('Scene Mood', _aiMoodEnabled, (v) {
+                appSettings.setAiMood(v);
+              }),
+              if (_aiMoodEnabled) ...[
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(14, 10, 14, 4),
+                  child: Text(
+                    'MOOD INTENSITY',
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 9,
+                      color: cSmoke,
+                      letterSpacing: 3,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                  child: Row(
+                    children: [
+                      const Text(
+                        'Subtle',
+                        style: TextStyle(fontSize: 10, color: cSmoke),
+                      ),
+                      Expanded(
+                        child: Slider(
+                          value: _moodIntensity,
+                          onChanged: (v) {
+                            setState(() => _moodIntensity = v);
+                            _initParticles();
+                            _particleTick.value++;
+                          },
+                          activeColor: cGold,
+                          inactiveColor: cAsh,
+                        ),
+                      ),
+                      const Text(
+                        'Dramatic',
+                        style: TextStyle(fontSize: 10, color: cSmoke),
+                      ),
+                    ],
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(14, 4, 14, 6),
+                  child: Text(
+                    'MOOD CONTROL',
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 9,
+                      color: cSmoke,
+                      letterSpacing: 3,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      GestureDetector(
+                        onTap: _unlockMood,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: !_moodLockedByUser ? cMagic : cAsh,
+                            ),
+                            color: !_moodLockedByUser
+                                ? cMagic.withValues(alpha: 0.1)
+                                : Colors.transparent,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '✦',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  color: !_moodLockedByUser ? cMagic : cSmoke,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'AUTO',
+                                style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 9,
+                                  letterSpacing: 1,
+                                  color: !_moodLockedByUser ? cMagic : cSmoke,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      ...StoryMood.values.map((m) {
+                        final isActive = _moodLockedByUser && m == _currentMood;
+                        return GestureDetector(
+                          onTap: () => _setMoodManual(m),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: isActive ? cGold : cAsh,
+                              ),
+                              color: isActive
+                                  ? cGold.withValues(alpha: 0.08)
+                                  : Colors.transparent,
+                            ),
+                            child: Text(
+                              MoodEngine.moodLabel(m),
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 9,
+                                letterSpacing: 1,
+                                color: isActive ? cGold : cSmoke,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+                if (_moodLockedByUser)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                    child: GestureDetector(
+                      onTap: _unlockMood,
+                      child: const Text(
+                        '← return control to AI',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 9,
+                          color: cMagic,
+                          letterSpacing: 1,
+                          decoration: TextDecoration.underline,
+                          decorationColor: cMagic,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+              const Divider(color: cAsh, height: 1),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() => _settingsOpen = false);
+                    showBlockDialog(
+                      context: context,
+                      partnerName: widget.partnerName,
+                      myCode: _auth.currentCode ?? '',
+                      partnerCode: widget.partnerCode,
+                      fs: _fs,
+                    );
+                  },
+                  child: Row(
+                    children: const [
+                      Icon(Icons.block, size: 14, color: cEmber),
+                      SizedBox(width: 8),
+                      Text(
+                        'Block this user',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 9,
+                          color: cEmber,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _modeBtn(RPDisplayMode mode, IconData icon, String label) {
+    final active = _displayMode == mode;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() {
+          _displayMode = mode;
+          _settingsOpen = false;
+        }),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: active ? cGold.withValues(alpha: 0.1) : Colors.transparent,
+            border: Border.all(color: active ? cGold : cAsh),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, size: 16, color: active ? cGold : cSmoke),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 8,
+                  letterSpacing: 1,
+                  color: active ? cGold : cSmoke,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _settingToggle(
+    String label,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: cMist,
+              fontWeight: FontWeight.w300,
+            ),
+          ),
+          const Spacer(),
+          GestureDetector(
+            onTap: () => onChanged(!value),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 36,
+              height: 20,
+              decoration: BoxDecoration(
+                color: value ? cGold : cAsh,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 200),
+                alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  margin: const EdgeInsets.all(2),
+                  width: 16,
+                  height: 16,
+                  decoration: const BoxDecoration(
+                    color: cVoid,
+                    shape: BoxShape.circle,
+                  ),
+                ),
               ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: cAsh))),
-            child: Row(children: [
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOOCDesktopWidget() {
+    return Column(
+      children: [
+        Expanded(
+          child: ScrollConfiguration(
+            behavior: NoGlowBehavior(),
+            child: ListView.builder(
+              controller: _oocScrollCtrl,
+              padding: const EdgeInsets.all(16),
+              itemCount: _oocMessages.length,
+              itemBuilder: (_, i) {
+                final msg = _oocMessages[i];
+                return Align(
+                  alignment: msg.isUser
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    constraints: const BoxConstraints(maxWidth: 260),
+                    decoration: BoxDecoration(
+                      color: msg.isUser ? cAsh : cVoid,
+                      border: Border.all(color: cAsh),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (!msg.isUser)
+                          Text(
+                            msg.author,
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 9,
+                              color:
+                                  appSettings.textColourFor('partner_name') ??
+                                  cIce,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        if (msg.content.isNotEmpty)
+                          Text(
+                            msg.content,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: appSettings.textColourFor('ooc') ?? cMist,
+                              height: 1.5,
+                            ),
+                          ),
+                        if (msg.mediaUrl != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: _OocMediaPreview(
+                              msg.mediaUrl!,
+                              isEncrypted: msg.isEncryptedMedia,
+                              sessionId: widget.sessionId,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: cAsh)),
+          ),
+          child: Row(
+            children: [
               GestureDetector(
                 onTap: () async {
                   showModalBottomSheet(
@@ -2980,7 +4208,10 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                       children: [
                         ListTile(
                           leading: const Icon(Icons.link, color: cGold),
-                          title: const Text('Paste Web Link', style: TextStyle(color: cParchment)),
+                          title: const Text(
+                            'Paste Web Link',
+                            style: TextStyle(color: cParchment),
+                          ),
                           onTap: () async {
                             Navigator.pop(ctx);
                             final mediaUrl = await _promptForMediaUrl();
@@ -2991,7 +4222,10 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                         ),
                         ListTile(
                           leading: const Icon(Icons.image, color: cIce),
-                          title: const Text('Upload Image', style: TextStyle(color: cParchment)),
+                          title: const Text(
+                            'Upload Image',
+                            style: TextStyle(color: cParchment),
+                          ),
                           onTap: () {
                             Navigator.pop(ctx);
                             _pickAndUploadImage();
@@ -3004,9 +4238,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   margin: const EdgeInsets.only(right: 8),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: cAsh),
-                  ),
+                  decoration: BoxDecoration(border: Border.all(color: cAsh)),
                   child: const Icon(
                     Icons.add_photo_alternate_outlined,
                     size: 18,
@@ -3019,8 +4251,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   onKeyEvent: (node, event) {
                     if (!kIsWeb) return KeyEventResult.ignored;
                     if (event is KeyDownEvent) {
-                      final isEnter = event.logicalKey == LogicalKeyboardKey.enter || 
-                                      event.logicalKey == LogicalKeyboardKey.numpadEnter;
+                      final isEnter =
+                          event.logicalKey == LogicalKeyboardKey.enter ||
+                          event.logicalKey == LogicalKeyboardKey.numpadEnter;
                       final isShift = HardwareKeyboard.instance.isShiftPressed;
                       if (isEnter) {
                         if (appSettings.enterToSend && !isShift) {
@@ -3036,497 +4269,80 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   },
                   child: TextField(
                     controller: _oocCtrl,
-                    style: const TextStyle(
-                        fontSize: 13, color: cParchment),
+                    style: const TextStyle(fontSize: 13, color: cParchment),
                     decoration: const InputDecoration(
-                        hintText: 'Out of character...',
-                        hintStyle: TextStyle(
-                            fontSize: 13, color: cSmoke),
-                        border: InputBorder.none),
+                      hintText: 'Out of character...',
+                      hintStyle: TextStyle(fontSize: 13, color: cSmoke),
+                      border: InputBorder.none,
+                    ),
                     cursorColor: cIce,
                   ),
                 ),
               ),
               LoreTap(
-                onTap: _sendOocMessage,
+                onTap: () async {
+                  final text = _oocCtrl.text.trim();
+                  if (text.isEmpty) return;
+                  sounds.play(SoundKey.oocMsg);
+                  if (widget.sessionId.isNotEmpty) {
+                    try {
+                      await _fs.addOocMessage(
+                        sessionId: widget.sessionId,
+                        content: text,
+                      );
+                      _oocCtrl.clear();
+                      _scrollOocToBottom();
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: cInk,
+                            content: Text(
+                              'Send failed: $e',
+                              style: const TextStyle(color: cParchment),
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  } else {
+                    _oocCtrl.clear();
+                    setState(
+                      () => _oocMessages.add(
+                        OOCMessage(
+                          author: _auth.currentName ?? 'You',
+                          content: text,
+                          isUser: true,
+                          timestamp: DateTime.now(),
+                        ),
+                      ),
+                    );
+                    _scrollOocToBottom();
+                  }
+                },
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 8),
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   color: cAsh,
-                  child: const Text('Send',
-                      style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 10,
-                          color: cMist,
-                          letterSpacing: 1)),
-                ),
-              ),
-            ]),
-          ),
-        ]),
-      ),
-    );
-  }
-
-  Widget _buildSettingsPanel() {
-    return Positioned(
-      right: 0,
-      top: 60,
-      child: Container(
-        width: 270,
-        decoration:
-            BoxDecoration(color: cInk, border: Border.all(color: cAsh)),
-        child: SingleChildScrollView(
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(children: [
-                    const Text('SETTINGS',
-                        style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 9,
-                            color: cGold,
-                            letterSpacing: 3)),
-                    const Spacer(),
-                    GestureDetector(
-                        onTap: () =>
-                            setState(() => _settingsOpen = false),
-                        child: const Icon(Icons.close,
-                            size: 14, color: cSmoke)),
-                  ]),
-                ),
-                const Divider(color: cAsh, height: 1),
-                const Padding(
-                    padding: EdgeInsets.fromLTRB(14, 12, 14, 6),
-                    child: Text('DISPLAY MODE',
-                        style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 9,
-                            color: cSmoke,
-                            letterSpacing: 3))),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-                  child: Row(children: [
-                    _modeBtn(RPDisplayMode.cards,
-                        Icons.credit_card_outlined, 'Cards'),
-                    const SizedBox(width: 6),
-                    _modeBtn(RPDisplayMode.bubbles,
-                        Icons.chat_bubble_outline, 'Bubbles'),
-                    const SizedBox(width: 6),
-                    _modeBtn(RPDisplayMode.classical,
-                        Icons.article_outlined, 'Classical'),
-                  ]),
-                ),
-                const Divider(color: cAsh, height: 1),
-                _settingToggle(
-                    'Scene Mood', _aiMoodEnabled, (v) {
-                  appSettings.setAiMood(v);
-                }),
-                if (_aiMoodEnabled) ...[
-                  const Padding(
-                      padding:
-                          EdgeInsets.fromLTRB(14, 10, 14, 4),
-                      child: Text('MOOD INTENSITY',
-                          style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 9,
-                              color: cSmoke,
-                              letterSpacing: 3))),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-                    child: Row(children: [
-                      const Text('Subtle',
-                          style: TextStyle(
-                              fontSize: 10, color: cSmoke)),
-                      Expanded(
-                          child: Slider(
-                              value: _moodIntensity,
-                              onChanged: (v) {
-                                setState(
-                                    () => _moodIntensity = v);
-                                _initParticles();
-                                _particleTick.value++;
-                              },
-                              activeColor: cGold,
-                              inactiveColor: cAsh)),
-                      const Text('Dramatic',
-                          style: TextStyle(
-                              fontSize: 10, color: cSmoke)),
-                    ]),
-                  ),
-                  const Padding(
-                      padding:
-                          EdgeInsets.fromLTRB(14, 4, 14, 6),
-                      child: Text('MOOD CONTROL',
-                          style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 9,
-                              color: cSmoke,
-                              letterSpacing: 3))),
-                  Padding(
-                    padding:
-                        const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                    child: Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          GestureDetector(
-                            onTap: _unlockMood,
-                            child: Container(
-                              padding:
-                                  const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                    color: !_moodLockedByUser
-                                        ? cMagic
-                                        : cAsh),
-                                color: !_moodLockedByUser
-                                    ? cMagic.withValues(alpha: 0.1)
-                                    : Colors.transparent,
-                              ),
-                              child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text('✦',
-                                        style: TextStyle(
-                                            fontSize: 9,
-                                            color:
-                                                !_moodLockedByUser
-                                                    ? cMagic
-                                                    : cSmoke)),
-                                    const SizedBox(width: 4),
-                                    Text('AUTO',
-                                        style: TextStyle(
-                                            fontFamily:
-                                                'monospace',
-                                            fontSize: 9,
-                                            letterSpacing: 1,
-                                            color:
-                                                !_moodLockedByUser
-                                                    ? cMagic
-                                                    : cSmoke)),
-                                  ]),
-                            ),
-                          ),
-                          ...StoryMood.values.map((m) {
-                            final isActive = _moodLockedByUser &&
-                                m == _currentMood;
-                            return GestureDetector(
-                              onTap: () => _setMoodManual(m),
-                              child: Container(
-                                padding:
-                                    const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                      color: isActive
-                                          ? cGold
-                                          : cAsh),
-                                  color: isActive
-                                      ? cGold.withValues(alpha: 0.08)
-                                      : Colors.transparent,
-                                ),
-                                child: Text(
-                                    MoodEngine.moodLabel(m),
-                                    style: TextStyle(
-                                        fontFamily: 'monospace',
-                                        fontSize: 9,
-                                        letterSpacing: 1,
-                                        color: isActive
-                                            ? cGold
-                                            : cSmoke)),
-                              ),
-                            );
-                          }),
-                        ]),
-                  ),
-                  if (_moodLockedByUser)
-                    Padding(
-                      padding:
-                          const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                      child: GestureDetector(
-                        onTap: _unlockMood,
-                        child: const Text('← return control to AI',
-                            style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 9,
-                                color: cMagic,
-                                letterSpacing: 1,
-                                decoration:
-                                    TextDecoration.underline,
-                                decorationColor: cMagic)),
-                      ),
+                  child: const Text(
+                    'Send',
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 10,
+                      color: cMist,
+                      letterSpacing: 1,
                     ),
-                ],
-                const Divider(color: cAsh, height: 1),
-                Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() => _settingsOpen = false);
-                      showBlockDialog(
-                        context: context,
-                        partnerName: widget.partnerName,
-                        myCode: _auth.currentCode ?? '',
-                        partnerCode: widget.partnerCode,
-                        fs: _fs,
-                      );
-                    },
-                    child: Row(children: const [
-                      Icon(Icons.block, size: 14, color: cEmber),
-                      SizedBox(width: 8),
-                      Text('Block this user',
-                          style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 9,
-                              color: cEmber,
-                              letterSpacing: 2)),
-                    ]),
                   ),
                 ),
-              ]),
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
-
-  Widget _modeBtn(RPDisplayMode mode, IconData icon, String label) {
-    final active = _displayMode == mode;
-    return Expanded(
-        child: GestureDetector(
-      onTap: () => setState(() {
-        _displayMode = mode;
-        _settingsOpen = false;
-      }),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: active ? cGold.withValues(alpha: 0.1) : Colors.transparent,
-          border: Border.all(color: active ? cGold : cAsh),
-        ),
-        child: Column(children: [
-          Icon(icon, size: 16, color: active ? cGold : cSmoke),
-          const SizedBox(height: 4),
-          Text(label,
-              style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 8,
-                  letterSpacing: 1,
-                  color: active ? cGold : cSmoke)),
-        ]),
-      ),
-    ));
-  }
-
-  Widget _settingToggle(
-      String label, bool value, ValueChanged<bool> onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Row(children: [
-        Text(label,
-            style: const TextStyle(
-                fontSize: 12,
-                color: cMist,
-                fontWeight: FontWeight.w300)),
-        const Spacer(),
-        GestureDetector(
-          onTap: () => onChanged(!value),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 36,
-            height: 20,
-            decoration: BoxDecoration(
-                color: value ? cGold : cAsh,
-                borderRadius: BorderRadius.circular(10)),
-            child: AnimatedAlign(
-              duration: const Duration(milliseconds: 200),
-              alignment:
-                  value ? Alignment.centerRight : Alignment.centerLeft,
-              child: Container(
-                  margin: const EdgeInsets.all(2),
-                  width: 16,
-                  height: 16,
-                  decoration: const BoxDecoration(
-                      color: cVoid, shape: BoxShape.circle)),
-            ),
-          ),
-        ),
-      ]),
-    );
-  }
-
-    Widget _buildOOCDesktopWidget() {
-    return Column(children: [
-      Expanded(
-        child: ScrollConfiguration(
-          behavior: NoGlowBehavior(),
-          child: ListView.builder(
-            controller: _oocScrollCtrl,
-            padding: const EdgeInsets.all(16),
-            itemCount: _oocMessages.length,
-            itemBuilder: (_, i) {
-              final msg = _oocMessages[i];
-              return Align(
-                alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  constraints: const BoxConstraints(maxWidth: 260),
-                  decoration: BoxDecoration(
-                      color: msg.isUser ? cAsh : cVoid,
-                      border: Border.all(color: cAsh)),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (!msg.isUser)
-                          Text(msg.author, style: TextStyle(
-                                  fontFamily: 'monospace', fontSize: 9,
-                                  color: appSettings.textColourFor('partner_name') ?? cIce,
-                                  letterSpacing: 2)),
-                        if (msg.content.isNotEmpty)
-                          Text(msg.content, style: TextStyle(
-                                  fontSize: 13,
-                                  color: appSettings.textColourFor('ooc') ?? cMist,
-                                  height: 1.5)),
-                        if (msg.mediaUrl != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: _OocMediaPreview(
-                              msg.mediaUrl!, 
-                              isEncrypted: msg.isEncryptedMedia, 
-                              sessionId: widget.sessionId,
-                            ),
-                          ),
-                      ]),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-      Container(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        decoration: const BoxDecoration(border: Border(top: BorderSide(color: cAsh))),
-        child: Row(children: [
-          GestureDetector(
-            onTap: () async {
-              showModalBottomSheet(
-                context: context,
-                backgroundColor: cInk,
-                builder: (ctx) => Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.link, color: cGold),
-                      title: const Text('Paste Web Link', style: TextStyle(color: cParchment)),
-                      onTap: () async {
-                        Navigator.pop(ctx);
-                        final mediaUrl = await _promptForMediaUrl();
-                        if (mediaUrl != null && mediaUrl.isNotEmpty) {
-                          _sendEncryptedMediaUrl(mediaUrl);
-                        }
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.image, color: cIce),
-                      title: const Text('Upload Image', style: TextStyle(color: cParchment)),
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _pickAndUploadImage();
-                      },
-                    ),
-                  ],
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              margin: const EdgeInsets.only(right: 8),
-              decoration: BoxDecoration(
-                border: Border.all(color: cAsh),
-              ),
-              child: const Icon(
-                Icons.add_photo_alternate_outlined,
-                size: 18,
-                color: cSmoke,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Focus(
-              onKeyEvent: (node, event) {
-                if (!kIsWeb) return KeyEventResult.ignored;
-                if (event is KeyDownEvent) {
-                  final isEnter = event.logicalKey == LogicalKeyboardKey.enter || 
-                                  event.logicalKey == LogicalKeyboardKey.numpadEnter;
-                  final isShift = HardwareKeyboard.instance.isShiftPressed;
-                  if (isEnter) {
-                    if (appSettings.enterToSend && !isShift) {
-                      _sendOocMessage();
-                      return KeyEventResult.handled;
-                    } else if (!appSettings.enterToSend && isShift) {
-                      _sendOocMessage();
-                      return KeyEventResult.handled;
-                    }
-                  }
-                }
-                return KeyEventResult.ignored;
-              },
-              child: TextField(
-                controller: _oocCtrl,
-                style: const TextStyle(fontSize: 13, color: cParchment),
-                decoration: const InputDecoration(
-                    hintText: 'Out of character...',
-                    hintStyle: TextStyle(fontSize: 13, color: cSmoke),
-                    border: InputBorder.none),
-                cursorColor: cIce,
-              ),
-            ),
-          ),
-          LoreTap(
-            onTap: () async {
-              final text = _oocCtrl.text.trim();
-              if (text.isEmpty) return;
-              sounds.play(SoundKey.oocMsg);
-              if (widget.sessionId.isNotEmpty) {
-                try {
-                  await _fs.addOocMessage(sessionId: widget.sessionId, content: text);
-                  _oocCtrl.clear();
-                  _scrollOocToBottom(); 
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        backgroundColor: cInk,
-                        content: Text('Send failed: $e', style: const TextStyle(color: cParchment))));
-                  }
-                }
-              } else {
-                _oocCtrl.clear();
-                setState(() => _oocMessages.add(OOCMessage(
-                    author: _auth.currentName ?? 'You',
-                    content: text,
-                    isUser: true,
-                    timestamp: DateTime.now())));
-                _scrollOocToBottom();
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              color: cAsh,
-              child: const Text('Send', style: TextStyle(
-                      fontFamily: 'monospace', fontSize: 10, color: cMist, letterSpacing: 1)),
-            ),
-          ),
-        ]),
-      ),
-    ]);
-  }
-
 } // <--- CLOSES _RPRoomScreenState
 
 class _OocMediaPreview extends StatefulWidget {
@@ -3563,7 +4379,9 @@ class _OocMediaPreviewState extends State<_OocMediaPreview> {
       final iv = downloadBytes.sublist(0, 12);
       final cipher = downloadBytes.sublist(12);
 
-      final sessionKey = await FirestoreService().getSessionKeyForMedia(widget.sessionId!);
+      final sessionKey = await FirestoreService().getSessionKeyForMedia(
+        widget.sessionId!,
+      );
       if (sessionKey == null) throw 'No key';
 
       final decrypted = await CryptoService().decryptBytes(
@@ -3574,9 +4392,17 @@ class _OocMediaPreviewState extends State<_OocMediaPreview> {
 
       if (decrypted == null) throw 'Decryption failed';
 
-      if (mounted) setState(() { _decryptedBytes = decrypted; _loading = false; });
+      if (mounted)
+        setState(() {
+          _decryptedBytes = decrypted;
+          _loading = false;
+        });
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+      if (mounted)
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
     }
   }
 
@@ -3595,10 +4421,7 @@ class _OocMediaPreviewState extends State<_OocMediaPreview> {
               panEnabled: true,
               minScale: 1.0,
               maxScale: 4.0,
-              child: Image(
-                image: imageProvider,
-                fit: BoxFit.contain,
-              ),
+              child: Image(image: imageProvider, fit: BoxFit.contain),
             ),
             Positioned(
               top: 10,
@@ -3618,8 +4441,18 @@ class _OocMediaPreviewState extends State<_OocMediaPreview> {
   @override
   Widget build(BuildContext context) {
     if (widget.isEncrypted) {
-      if (_loading) return const SizedBox(height: 100, child: Center(child: CircularProgressIndicator(strokeWidth: 1, color: cGold)));
-      if (_error != null) return Text('[Encrypted image failed: $_error]', style: const TextStyle(fontSize: 11, color: cEmber));
+      if (_loading)
+        return const SizedBox(
+          height: 100,
+          child: Center(
+            child: CircularProgressIndicator(strokeWidth: 1, color: cGold),
+          ),
+        );
+      if (_error != null)
+        return Text(
+          '[Encrypted image failed: $_error]',
+          style: const TextStyle(fontSize: 11, color: cEmber),
+        );
       if (_decryptedBytes != null) {
         return GestureDetector(
           onTap: () => _openFullScreen(context, MemoryImage(_decryptedBytes!)),
@@ -3627,7 +4460,11 @@ class _OocMediaPreviewState extends State<_OocMediaPreview> {
             constraints: const BoxConstraints(maxHeight: 200),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(4),
-              child: Image.memory(_decryptedBytes!, width: double.infinity, fit: BoxFit.cover),
+              child: Image.memory(
+                _decryptedBytes!,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
             ),
           ),
         );
@@ -3729,7 +4566,9 @@ class _PostCardState extends State<_PostCard>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 300));
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
     _expand = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
     if (widget.isExpanded) _ctrl.value = 1;
   }
@@ -3770,130 +4609,149 @@ class _PostCardState extends State<_PostCard>
           color: const Color(0xFF08080A).withValues(alpha: 0.82),
           border: Border(
             left: BorderSide(
-                color: post.isUser ? nameColor : cSmoke,
-                width: post.isUser ? 2 : 1),
+              color: post.isUser ? nameColor : cSmoke,
+              width: post.isUser ? 2 : 1,
+            ),
             top: const BorderSide(color: cAsh),
             right: const BorderSide(color: cAsh),
             bottom: const BorderSide(color: cAsh),
           ),
         ),
         child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (post.quotedContent != null)
-                Container(
-                  margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-                  padding: const EdgeInsets.all(10),
-                  decoration: const BoxDecoration(
-                      border: Border(
-                          left: BorderSide(color: cSmoke, width: 2))),
-                  child: Text(
-                      '${post.quotedAuthor ?? ""}: ${post.quotedContent}...',
-                      style: const TextStyle(
-                          fontSize: 11,
-                          color: cSmoke,
-                          fontStyle: FontStyle.italic)),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (post.quotedContent != null)
+              Container(
+                margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  border: Border(left: BorderSide(color: cSmoke, width: 2)),
                 ),
-              GestureDetector(
-                onLongPress: widget.onLongPress,
-                behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-                  child: Row(children: [
-                    Text(post.characterName ?? post.author,
-                        style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 10,
-                            color: nameColor,
-                            letterSpacing: 2)),
+                child: Text(
+                  '${post.quotedAuthor ?? ""}: ${post.quotedContent}...',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: cSmoke,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            GestureDetector(
+              onLongPress: widget.onLongPress,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+                child: Row(
+                  children: [
+                    Text(
+                      post.characterName ?? post.author,
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 10,
+                        color: nameColor,
+                        letterSpacing: 2,
+                      ),
+                    ),
                     if (post.locationName != null) ...[
-                      const Text(' · ',
-                          style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 10,
-                              color: cSmoke)),
-                      Text(post.locationName!,
-                          style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 10,
-                              color: cSmoke,
-                              letterSpacing: 1)),
+                      const Text(
+                        ' · ',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 10,
+                          color: cSmoke,
+                        ),
+                      ),
+                      Text(
+                        post.locationName!,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 10,
+                          color: cSmoke,
+                          letterSpacing: 1,
+                        ),
+                      ),
                     ],
                     const Spacer(),
-                    Text('${post.wordCount} words',
-                        style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 9,
-                            color: cSmoke,
-                            letterSpacing: 1)),
+                    Text(
+                      '${post.wordCount} words',
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 9,
+                        color: cSmoke,
+                        letterSpacing: 1,
+                      ),
+                    ),
                     const SizedBox(width: 8),
                     AnimatedRotation(
-                        turns: widget.isExpanded ? 0.5 : 0,
-                        duration: const Duration(milliseconds: 300),
-                        child: const Icon(Icons.keyboard_arrow_down,
-                            size: 14, color: cSmoke)),
-                  ]),
+                      turns: widget.isExpanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 300),
+                      child: const Icon(
+                        Icons.keyboard_arrow_down,
+                        size: 14,
+                        color: cSmoke,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                child: _selectablePostText(
-                  text: preview,
-                  style: TextStyle(
-                      fontSize: post.fontSize,
-                      color: post.textColor.withValues(alpha: 0.7),
-                      fontStyle: post.italic
-                          ? FontStyle.italic
-                          : FontStyle.normal,
-                      fontWeight:
-                          post.bold ? FontWeight.bold : FontWeight.w300,
-                      height: 1.7),
-                  onAddToLog: widget.onAddToLog ?? (_) {},
-                  onSelectionChanged: widget.onSelectionChanged,
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+              child: _selectablePostText(
+                text: preview,
+                style: TextStyle(
+                  fontSize: post.fontSize,
+                  color: post.textColor.withValues(alpha: 0.7),
+                  fontStyle: post.italic ? FontStyle.italic : FontStyle.normal,
+                  fontWeight: post.bold ? FontWeight.bold : FontWeight.w300,
+                  height: 1.7,
+                ),
+                onAddToLog: widget.onAddToLog ?? (_) {},
+                onSelectionChanged: widget.onSelectionChanged,
+              ),
+            ),
+            SizeTransition(
+              sizeFactor: _expand,
+              child: Container(
+                decoration: const BoxDecoration(
+                  border: Border(top: BorderSide(color: cAsh)),
+                ),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _selectablePostText(
+                      text: post.content,
+                      style: TextStyle(
+                        fontSize: post.fontSize,
+                        color: post.textColor,
+                        fontStyle: post.italic
+                            ? FontStyle.italic
+                            : FontStyle.normal,
+                        fontWeight: post.bold
+                            ? FontWeight.bold
+                            : FontWeight.w300,
+                        height: 1.9,
+                      ),
+                      onAddToLog: widget.onAddToLog ?? (_) {},
+                      onSelectionChanged: widget.onSelectionChanged,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      '${post.timestamp.hour.toString().padLeft(2, '0')}:${post.timestamp.minute.toString().padLeft(2, '0')}',
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 9,
+                        color: cSmoke,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              SizeTransition(
-                sizeFactor: _expand,
-                child: Container(
-                  decoration: const BoxDecoration(
-                      border:
-                          Border(top: BorderSide(color: cAsh))),
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _selectablePostText(
-                          text: post.content,
-                          style: TextStyle(
-                              fontSize: post.fontSize,
-                              color: post.textColor,
-                              fontStyle: post.italic
-                                  ? FontStyle.italic
-                                  : FontStyle.normal,
-                              fontWeight: post.bold
-                                  ? FontWeight.bold
-                                  : FontWeight.w300,
-                              height: 1.9),
-                          onAddToLog: widget.onAddToLog ?? (_) {},
-                          onSelectionChanged: widget.onSelectionChanged,
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          '${post.timestamp.hour
-                                  .toString()
-                                  .padLeft(2, '0')}:${post.timestamp.minute
-                                  .toString()
-                                  .padLeft(2, '0')}',
-                          style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 9,
-                              color: cSmoke,
-                              letterSpacing: 2),
-                        ),
-                      ]),
-                ),
-              ),
-            ]),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -3928,5 +4786,7 @@ class _MoodShaderPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _MoodShaderPainter old) =>
-      old.time != time || old.moodColor != moodColor || old.intensity != intensity;
+      old.time != time ||
+      old.moodColor != moodColor ||
+      old.intensity != intensity;
 }

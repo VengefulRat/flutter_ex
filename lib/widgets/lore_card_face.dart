@@ -1,16 +1,13 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../theme.dart';
+import '../settings.dart';
 import 'card_frame.dart';
 
 /// The shared "Lore card" chrome. Renders the set bar, name banner,
 /// art zone, optional stats strip, and optional footer — all wrapped
 /// in the procedural [CardFrame] ornaments.
-///
-/// Callers provide the *content* for the art zone (via [art]), the
-/// stats strip (via [statsStrip]), and the footer (via [footer]). The
-/// chrome itself (dividers, set bar layout, watermark) stays identical
-/// across every Lore card, so the visual family is consistent.
 class LoreCardFace extends StatelessWidget {
   final String title;
   final String code;
@@ -21,6 +18,7 @@ class LoreCardFace extends StatelessWidget {
   final int seed;
   final bool fillHeight;
   final Color accent;
+  final String? backgroundImageUrl;
 
   const LoreCardFace({
     super.key,
@@ -33,6 +31,7 @@ class LoreCardFace extends StatelessWidget {
     this.statsStrip,
     this.footer,
     this.fillHeight = false,
+    this.backgroundImageUrl,
   });
 
   String get _serial {
@@ -61,47 +60,91 @@ class LoreCardFace extends StatelessWidget {
       dense: false,
     );
 
+    Widget content = Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      child: Column(
+        mainAxisSize: fillHeight ? MainAxisSize.max : MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildSetBar(),
+          const SizedBox(height: 10),
+          _rule(),
+          const SizedBox(height: 2),
+          _buildNameBanner(),
+          const SizedBox(height: 2),
+          _rule(),
+          if (subtitle != null && subtitle!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _buildSubtitleLine(),
+          ],
+          const SizedBox(height: 12),
+          if (fillHeight)
+            Expanded(child: _buildArtZone())
+          else
+            SizedBox(height: 130, child: _buildArtZone()),
+          if (statsStrip != null) ...[
+            const SizedBox(height: 14),
+            _rule(),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: statsStrip,
+            ),
+            _rule(),
+          ] else
+            const SizedBox(height: 12),
+          if (footer != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: footer!,
+            ),
+        ],
+      ),
+    );
+
+    // If there's a background image, wrap it all in a Stack
+    if (backgroundImageUrl != null && backgroundImageUrl!.isNotEmpty) {
+      content = Stack(
+        fit: StackFit.expand,
+        children: [
+          // 1. The Image
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: Image.network(
+              backgroundImageUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(color: Colors.transparent),
+            ),
+          ),
+          // 2. The Scrim (Frosted Glass + Dark Gradient)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.85),
+                      Colors.black.withValues(alpha: 0.6),
+                      Colors.black.withValues(alpha: 0.9),
+                    ],
+                    stops: const [0.0, 0.4, 1.0],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // 3. The Text/Stats Content
+          content,
+        ],
+      );
+    }
+
     return CardFrame(
       spec: spec,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildSetBar(),
-            const SizedBox(height: 10),
-            _rule(),
-            const SizedBox(height: 2),
-            _buildNameBanner(),
-            const SizedBox(height: 2),
-            _rule(),
-            if (subtitle != null && subtitle!.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              _buildSubtitleLine(),
-            ],
-            const SizedBox(height: 12),
-            if (fillHeight)
-              Expanded(child: _buildArtZone())
-            else
-              SizedBox(height: 130, child: _buildArtZone()),
-            if (statsStrip != null) ...[
-              const SizedBox(height: 14),
-              _rule(),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: statsStrip,
-              ),
-              _rule(),
-            ] else
-              const SizedBox(height: 12),
-            if (footer != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: footer!,
-              ),
-          ],
-        ),
-      ),
+      child: content,
     );
   }
 
@@ -148,11 +191,11 @@ class LoreCardFace extends StatelessWidget {
           textAlign: TextAlign.center,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 26,
             fontWeight: FontWeight.w300,
             fontStyle: FontStyle.italic,
-            color: cParchment,
+            color: appSettings.textColourFor('profile_name') ?? cParchment,
             letterSpacing: 0.5,
             height: 1.1,
           ),
@@ -164,7 +207,7 @@ class LoreCardFace extends StatelessWidget {
         textAlign: TextAlign.center,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: _mono(9, accent.withValues(alpha: 0.75), 2),
+        style: _mono(9, appSettings.textColourFor('profile_bio') ?? accent.withValues(alpha: 0.75), 2),
       );
 
   Widget _buildArtZone() => Container(
