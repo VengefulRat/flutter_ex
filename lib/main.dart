@@ -3106,6 +3106,17 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
   List<_CardData> _allCards = [];
   Set<String> _hiddenCodes = {}; // blocked by me + blocked me
   bool _loading = true;
+    late PageController _pageController;
+  int _currentIndex = 0;
+
+  void _resetPage() {
+    if (_currentIndex != 0) {
+      setState(() => _currentIndex = 0);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_pageController.hasClients) _pageController.jumpToPage(0);
+      });
+    }
+  }
 
   List<_CardData> get _filtered => _allCards.where((c) {
     if (_hiddenCodes.contains(c.code)) return false;
@@ -3122,6 +3133,7 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(viewportFraction: 0.88); // Shows a sliver of the next card
     appSettings.addListener(_onSettingsChanged);
     _loadAndListen();
   }
@@ -3148,6 +3160,7 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
 
   @override
   void dispose() {
+    _pageController.dispose();
     appSettings.removeListener(_onSettingsChanged);
     _searchCtrl.dispose();
     super.dispose();
@@ -3323,16 +3336,14 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
     );
   }
 
-  @override
+    @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: appSettings.bgColor,
     body: SafeArea(
       child: Column(
         children: [
           LoreTopBar(
-            onLogoTap: () => Navigator.of(
-              context,
-            ).pushAndRemoveUntil(fadeRoute(const HomeScreen()), (_) => false),
+            onLogoTap: () => Navigator.of(context).pushAndRemoveUntil(fadeRoute(const HomeScreen()), (_) => false),
             trailing: LoreTap(
               onTap: () => Navigator.of(context).pop(),
               child: const Text(
@@ -3345,31 +3356,27 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: TextField(
               controller: _searchCtrl,
-              onChanged: (v) => setState(() => _search = v),
+              onChanged: (v) {
+                setState(() => _search = v);
+                _resetPage();
+              },
               style: const TextStyle(fontSize: 14, color: cParchment),
               decoration: InputDecoration(
                 hintText: 'Search by name, genre or keywords...',
-                hintStyle: const TextStyle(
-                  fontSize: 13,
-                  color: cSmoke,
-                  fontStyle: FontStyle.italic,
-                ),
+                hintStyle: const TextStyle(fontSize: 13, color: cSmoke, fontStyle: FontStyle.italic),
                 prefixIcon: const Icon(Icons.search, color: cSmoke, size: 18),
                 suffixIcon: _search.isNotEmpty
                     ? LoreTap(
                         onTap: () {
                           _searchCtrl.clear();
                           setState(() => _search = '');
+                          _resetPage();
                         },
                         child: const Icon(Icons.close, color: cSmoke, size: 16),
                       )
                     : null,
-                enabledBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: cAsh),
-                ),
-                focusedBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: cSmoke),
-                ),
+                enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: cAsh)),
+                focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: cSmoke)),
                 filled: true,
                 fillColor: cInk,
                 contentPadding: const EdgeInsets.symmetric(vertical: 10),
@@ -3380,74 +3387,148 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
           _FilterRow(
             options: _allGenres,
             selected: _genre,
-            onSelect: (v) => setState(() {
-              _genre = v;
-            }),
+            onSelect: (v) {
+              setState(() => _genre = v);
+              _resetPage();
+            },
           ),
           _FilterRow(
             options: _allAges,
             selected: _age,
             accentColor: cEmber,
-            onSelect: (v) => setState(() {
-              _age = v;
-            }),
+            onSelect: (v) {
+              setState(() => _age = v);
+              _resetPage();
+            },
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: Row(
-              children: [
-                Text(
-                  '${_filtered.length} cards',
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 10,
-                    color: cSmoke,
-                    letterSpacing: 2,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const SizedBox(height: 12),
+          
+          // ── THE NEW CARD PAGE VIEW ──
           Expanded(
             child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      color: cGold,
-                      strokeWidth: 1,
-                    ),
-                  )
+                ? const Center(child: CircularProgressIndicator(color: cGold, strokeWidth: 1))
                 : _filtered.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No cards found.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: cSmoke,
-                        fontStyle: FontStyle.italic,
+                    ? const Center(
+                        child: Text('No cards found.', style: TextStyle(fontSize: 14, color: cSmoke, fontStyle: FontStyle.italic)),
+                      )
+                    : PageView.builder(
+                        controller: _pageController,
+                        physics: const NeverScrollableScrollPhysics(), // Card handles its own touch
+                        itemCount: _filtered.length,
+                        onPageChanged: (i) => setState(() => _currentIndex = i),
+                        itemBuilder: (_, i) {
+                          return Center(
+                            child: _DiscoveryCard(
+                              key: ValueKey('${_filtered[i].code}_$i'),
+                              data: _filtered[i],
+                              onTap: () => _openCardSheet(_filtered[i]),
+                            ),
+                          );
+                        },
                       ),
-                    ),
-                  )
-                : ScrollConfiguration(
-                    behavior: NoGlowBehavior(),
-                    child: ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                      itemCount: _filtered.length,
-                      itemBuilder: (_, i) {
-                        final card = _filtered[i];
-                        return _DiscoveryCard(
-                          key: ValueKey('${card.name}_$i'),
-                          data: card,
-                          isExpanded: false,
-                          onTap: () => _openCardSheet(card),
-                        );
-                      },
-                    ),
-                  ),
           ),
+          
+          // ── THE NEW SCRUBBER ──
+          if (!_loading && _filtered.isNotEmpty) _buildScrubber(),
         ],
       ),
     ),
   );
+
+    Widget _buildScrubber() {
+    final total = _filtered.length;
+    
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      decoration: const BoxDecoration(
+        color: cVoid,
+        border: Border(top: BorderSide(color: cAsh)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'CARD ${_currentIndex + 1} OF $total',
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 10,
+                  color: cSmoke,
+                  letterSpacing: 2,
+                ),
+              ),
+              GestureDetector(
+                onTap: () => _openCardSheet(_filtered[_currentIndex]),
+                child: const Text(
+                  'OPEN FULL CARD',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 10,
+                    color: cGold,
+                    letterSpacing: 2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              GestureDetector(
+                onTap: _currentIndex > 0
+                    ? () => _pageController.previousPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOut,
+                        )
+                    : null,
+                child: Icon(
+                  Icons.arrow_back_ios,
+                  size: 16,
+                  color: _currentIndex > 0 ? cGold : cAsh,
+                ),
+              ),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 2,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+                    activeTrackColor: cGold,
+                    inactiveTrackColor: cAsh,
+                    thumbColor: cGold,
+                  ),
+                  child: Slider(
+                    value: _currentIndex.toDouble(),
+                    min: 0,
+                    max: total > 1 ? (total - 1).toDouble() : 1.0,
+                    divisions: total > 1 ? total - 1 : null,
+                    onChanged: total > 1
+                        ? (v) => _pageController.jumpToPage(v.round())
+                        : null,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: _currentIndex < total - 1
+                    ? () => _pageController.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOut,
+                        )
+                    : null,
+                child: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: _currentIndex < total - 1 ? cGold : cAsh,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _FilterRow extends StatelessWidget {
@@ -3504,450 +3585,54 @@ class _FilterRow extends StatelessWidget {
   );
 }
 
-class _DiscoveryCard extends StatefulWidget {
+class _DiscoveryCard extends StatelessWidget {
   final _CardData data;
-  final bool isExpanded;
   final VoidCallback onTap;
+
   const _DiscoveryCard({
     super.key,
     required this.data,
-    required this.isExpanded,
     required this.onTap,
   });
-  @override
-  State<_DiscoveryCard> createState() => _DiscoveryCardState();
-}
-
-class _DiscoveryCardState extends State<_DiscoveryCard>
-    with TickerProviderStateMixin {
-  late AnimationController _ctrl, _borderCtrl;
-  late Animation<double> _expand;
 
   @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 350),
-    );
-    _expand = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
-    _borderCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
-  }
-
-  @override
-  void didUpdateWidget(_DiscoveryCard old) {
-    super.didUpdateWidget(old);
-    if (widget.isExpanded != old.isExpanded) {
-      widget.isExpanded ? _ctrl.forward() : _ctrl.reverse();
-    }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    _borderCtrl.dispose();
-    super.dispose();
-  }
-
-  String _genreSymbol(String genre) {
-    switch (genre.toLowerCase()) {
-      case 'fantasy':
-        return '⚔';
-      case 'sci-fi':
-        return '⚙';
-      case 'modern':
-        return '◈';
-      case 'historical':
-        return '⌛';
-      case 'horror':
-        return '☾';
-      case 'romance':
-        return '♡';
-      case 'post-apocalyptic':
-        return '☢';
-      case 'freeform':
-        return '∿';
-      case 'mystery':
-        return '⌕';
-      case 'thriller':
-        return '✦';
-      case 'literary':
-        return '✎';
-      case 'journal':
-        return '▤';
-      default:
-        return '';
-    }
-  }
-
-  Widget _miniTag(String label, Color color, {bool withSymbol = false}) {
-    final symbol = withSymbol ? _genreSymbol(label) : '';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        border: Border.all(color: color.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (symbol.isNotEmpty) ...[
-            Text(
-              symbol,
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 10,
-                color: color,
-                height: 1.0,
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Center(
+          child: SizedBox(
+            width: 320, // Fixed width makes it look like a physical card
+            child: HoloCardV2(
+              accent: data.accentColor,
+              intensity: 0.4,
+              seed: data.frameSeed,
+              gyroEnabled: false, // Stable while scrolling
+              child: RequestCardView(
+                name: data.name,
+                code: data.code,
+                genre: data.genre,
+                bio: data.seeking,
+                writingStyle: data.writingStyle,
+                frequency: data.frequency,
+                ageRating: data.ageRating,
+                isOpen: data.isOpen,
+                tags: data.extraTags,
+                accent: data.accentColor,
+                bgTint: data.bgTint,
+                frame: CardFrameSpec(
+                  seed: data.frameSeed,
+                  accent: data.accentColor,
+                  glow: data.frameGlow,
+                  ornate: data.frameOrnate,
+                  dense: data.frameDense,
+                ),
+                foilEnabled: data.foilEnabled,
+                foilSeed: data.frameSeed,
+                foilIntensity: data.foilIntensity,
               ),
             ),
-            const SizedBox(width: 5),
-          ],
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 9,
-              color: color,
-              letterSpacing: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: _borderCtrl,
-    builder: (_, child) {
-      final pulse = appSettings.cardBorderEffects
-          ? (sin(_borderCtrl.value * 2 * pi) * 0.5 + 0.5)
-          : 0.5;
-      final style = widget.data.borderStyle;
-
-      return Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          color: cInk,
-          boxShadow: style == _CardBorderStyle.glow
-              ? [
-                  BoxShadow(
-                    color: widget.data.accentColor.withValues(
-                      alpha: 0.10 + pulse * 0.08,
-                    ),
-                    blurRadius: 8.0,
-                    spreadRadius: 0,
-                  ),
-                ]
-              : [],
-        ),
-        child: CustomPaint(
-          painter: _CornerBracketPainter(
-            color: widget.data.accentColor,
-            pulse: pulse,
-            style: style,
-          ),
-          child: child,
-        ),
-      );
-    },
-    child: Column(
-      children: [
-        LoreTap(
-          onTap: widget.onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  margin: const EdgeInsets.only(right: 12),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: widget.data.accentColor,
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.data.name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w300,
-                          fontStyle: FontStyle.italic,
-                          color: cParchment,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          _miniTag(widget.data.genre, cGold, withSymbol: true),
-                          const SizedBox(width: 6),
-                          _miniTag(widget.data.ageRating, cEmber),
-                          const SizedBox(width: 6),
-                          _miniTag(
-                            widget.data.isOpen ? 'Open' : 'Closed',
-                            widget.data.isOpen ? cVine : cSmoke,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                AnimatedRotation(
-                  turns: widget.isExpanded ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 300),
-                  child: const Icon(
-                    Icons.keyboard_arrow_down,
-                    color: cSmoke,
-                    size: 18,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        SizeTransition(
-          sizeFactor: _expand,
-          child: Container(
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: cAsh)),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.data.seeking,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontStyle: FontStyle.italic,
-                    color: cMist,
-                    height: 1.8,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: widget.data.extraTags
-                      .map((t) => _miniTag(t, cSmoke, withSymbol: true))
-                      .toList(),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    const Icon(Icons.edit_outlined, size: 12, color: cSmoke),
-                    const SizedBox(width: 6),
-                    Text(
-                      widget.data.writingStyle,
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 10,
-                        color: cSmoke,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    const Icon(Icons.schedule, size: 12, color: cSmoke),
-                    const SizedBox(width: 6),
-                    Text(
-                      widget.data.frequency,
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 10,
-                        color: cSmoke,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                widget.data.isOpen
-                    ? LoreTap(
-                        onTap: () => _showInterestDialog(context, widget.data),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          color: cParchment,
-                          child: const Center(
-                            child: Text(
-                              'S E N D   I N T E R E S T',
-                              style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 10,
-                                color: cVoid,
-                                letterSpacing: 3,
-                              ),
-                            ),
-                          ),
-                        ),
-                      )
-                    : Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: cAsh),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'NOT ACCEPTING',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 10,
-                              color: cSmoke,
-                              letterSpacing: 3,
-                            ),
-                          ),
-                        ),
-                      ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-
-  void _showInterestDialog(BuildContext context, _CardData card) {
-    final msgCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        backgroundColor: cInk,
-        shape: const RoundedRectangleBorder(),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Send interest to ${card.name}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w300,
-                  fontStyle: FontStyle.italic,
-                  color: cParchment,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Write a short message about what kind of story you have in mind.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: cSmoke,
-                  fontStyle: FontStyle.italic,
-                  height: 1.6,
-                ),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: msgCtrl,
-                maxLines: 4,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: cParchment,
-                  fontStyle: FontStyle.italic,
-                ),
-                decoration: const InputDecoration(
-                  hintText: 'I had an idea about...',
-                  hintStyle: TextStyle(
-                    fontSize: 13,
-                    color: cSmoke,
-                    fontStyle: FontStyle.italic,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: cAsh),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: cSmoke),
-                  ),
-                  filled: false,
-                ),
-                cursorColor: cGold,
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: LoreTap(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: cAsh),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 10,
-                              color: cSmoke,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: LoreTap(
-                      onTap: () async {
-                        Navigator.of(context).pop();
-                        await FirestoreService().sendInterest(
-                          toCode: card.code,
-                          message: msgCtrl.text.trim(),
-                          genre: card.genre,
-                        );
-                        sounds.play(SoundKey.interestSent);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              backgroundColor: cInk,
-                              behavior: SnackBarBehavior.floating,
-                              shape: const RoundedRectangleBorder(),
-                              content: Text(
-                                'Interest sent to ${card.name}',
-                                style: const TextStyle(
-                                  color: cParchment,
-                                  fontSize: 13,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        color: cParchment,
-                        child: const Center(
-                          child: Text(
-                            'Send',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 10,
-                              color: cVoid,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ),
         ),
       ),
