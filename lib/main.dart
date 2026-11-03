@@ -936,7 +936,6 @@ class _HomeScreenState extends State<HomeScreen>
   late AnimationController _fadeCtrl;
   late Animation<double> _fade;
   bool _loadingData = true;
-  bool _isEditingHome = false;
 
   String _buildProfileSubtitle() {
   final profile = _profile;
@@ -1564,7 +1563,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final isDesktop = width >= 900;
@@ -1585,70 +1584,40 @@ class _HomeScreenState extends State<HomeScreen>
         child: SafeArea(
           child: FadeTransition(
             opacity: _fade,
-            child: Column(
-              children: [
-                LoreTopBar(
-                  onLogoTap: () {
-                    if (inSplitMode) setState(() => _activeBlock = null);
-                  },
-                  trailing: inSplitMode
-                      ? null
-                      : GestureDetector(
-                          onTap: () =>
-                              setState(() => _isEditingHome = !_isEditingHome),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
+            child: Column(children: [
+              LoreTopBar(
+                onLogoTap: () {
+                  if (inSplitMode) setState(() => _activeBlock = null);
+                },
+                trailing: null, // EDIT button removed
+              ),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  child: !isDesktop
+                      ? KeyedSubtree(
+                          key: const ValueKey('mobile'),
+                          child: _buildMobileBody(),
+                        )
+                      : inSplitMode
+                          ? KeyedSubtree(
+                              key: const ValueKey('desktop-split'),
+                              child: _buildDesktopSplitBody(),
+                            )
+                          : KeyedSubtree(
+                              key: const ValueKey('desktop-full'),
+                              child: _buildDesktopFullBody(),
                             ),
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: _isEditingHome ? cGold : cAsh,
-                              ),
-                              color: _isEditingHome
-                                  ? cGold.withValues(alpha: 0.1)
-                                  : Colors.transparent,
-                            ),
-                            child: Text(
-                              _isEditingHome ? 'DONE' : 'EDIT',
-                              style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 9,
-                                letterSpacing: 2,
-                                color: _isEditingHome ? cGold : cSmoke,
-                              ),
-                            ),
-                          ),
-                        ),
                 ),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    switchInCurve: Curves.easeOut,
-                    switchOutCurve: Curves.easeIn,
-                    child: !isDesktop
-                        ? KeyedSubtree(
-                            key: const ValueKey('mobile'),
-                            child: _buildMobileBody(),
-                          )
-                        : inSplitMode
-                        ? KeyedSubtree(
-                            key: const ValueKey('desktop-split'),
-                            child: _buildDesktopSplitBody(),
-                          )
-                        : KeyedSubtree(
-                            key: const ValueKey('desktop-full'),
-                            child: _buildDesktopFullBody(),
-                          ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ]),
           ),
         ),
       ),
     );
-  } //THE BUILD METHOD
+  } // THE BUILD METHOD
 
   // ── MOBILE BODY ─────────────────────────
   // The same layout as before, just extracted into its own method so

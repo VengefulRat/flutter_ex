@@ -1,11 +1,10 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme.dart';
 import '../settings.dart';
 import 'shared.dart';
 import 'holo_card_v2.dart';
-import 'card_frame.dart';
+import 'lore_card_face.dart';
 
 class ProfileStat {
   final String key;
@@ -111,19 +110,10 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
     return AnimatedBuilder(
       animation: appSettings,
       builder: (_, _) {
-        final accent = appSettings.profileBorderColor;
-        final spec = CardFrameSpec(
-          seed: seed,
-          accent: accent,
-          glow: false,   // shader provides the glow already
-          ornate: true,  // corner diamonds
-          dense: false,  // not too many tick marks
-        );
-
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
           child: HoloCardV2(
-            accent: accent,
+            accent: appSettings.profileBorderColor,
             intensity: 0.55,
             seed: seed,
             child: LoreTap(
@@ -133,12 +123,17 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
                 decoration: _cardDecoration(),
                 child: Padding(
                   padding: const EdgeInsets.all(6),
-                  child: CardFrame(
-                    spec: spec,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-                      child: _buildCardLayout(),
-                    ),
+                  child: LoreCardFace(
+                    title: widget.name,
+                    code: widget.code,
+                    subtitle: widget.subtitle,
+                    seed: seed,
+                    accent: appSettings.profileBorderColor,
+                    fillHeight: widget.fillHeight,
+                    art: _buildBioText(),
+                    statsStrip:
+                        widget.stats.isEmpty ? null : _buildStatsRow(),
+                    footer: _buildFooterRow(),
                   ),
                 ),
               ),
@@ -149,283 +144,73 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
     );
   }
 
-  // ─────────────────────────────────────────
-  // CARD LAYOUT
-  // ─────────────────────────────────────────
-
-  Widget _buildCardLayout() {
-    final accent = appSettings.profileBorderColor;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _buildSetBar(accent),
-        const SizedBox(height: 10),
-        _buildRule(accent),
-        const SizedBox(height: 2),
-        _buildNameBanner(),
-        const SizedBox(height: 2),
-        _buildRule(accent),
-        if (widget.subtitle.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          _buildSubtitleLine(accent),
-        ],
-        const SizedBox(height: 12),
-        if (widget.fillHeight)
-          Expanded(child: _buildArtZone(accent))
-        else
-          SizedBox(height: 130, child: _buildArtZone(accent)),
-        const SizedBox(height: 14),
-        if (widget.stats.isNotEmpty) ...[
-          _buildRule(accent),
-          _buildStatsStrip(accent),
-          _buildRule(accent),
-          const SizedBox(height: 10),
-        ],
-        _buildFooter(accent),
-      ],
-    );
-  }
-
-  Widget _buildRule(Color accent) => Container(
-        height: 1,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.transparent,
-              accent.withValues(alpha: 0.55),
-              Colors.transparent,
-            ],
-            stops: const [0.0, 0.5, 1.0],
-          ),
+  Widget _buildBioText() => Text(
+        widget.bio.isEmpty ? 'Tap to add a bio...' : widget.bio,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 15,
+          color: widget.bio.isEmpty ? cSmoke : cMist,
+          fontStyle: FontStyle.italic,
+          height: 1.9,
         ),
       );
 
-  // ─────────────────────────────────────────
-  // SET BAR (top strip)
-  // ─────────────────────────────────────────
-
-  Widget _buildSetBar(Color accent) {
-    final clean = widget.code.replaceAll('-', '');
-    final serial = clean.length >= 4
-        ? clean.substring(clean.length - 4)
-        : clean.padLeft(4, '0');
-
-    return Row(
-      children: [
-        Transform.rotate(
-          angle: math.pi / 4,
-          child: Container(
-            width: 7,
-            height: 7,
-            decoration: BoxDecoration(
-              color: accent,
-              borderRadius: BorderRadius.circular(1),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          'LORE',
-          style: TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 9,
-            letterSpacing: 4,
-            color: accent,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          '· RP',
-          style: TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 9,
-            letterSpacing: 2,
-            color: accent.withValues(alpha: 0.5),
-          ),
-        ),
-        const Spacer(),
-        Text(
-          '#$serial',
-          style: TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 9,
-            color: accent.withValues(alpha: 0.7),
-            letterSpacing: 1,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ─────────────────────────────────────────
-  // NAME BANNER
-  // ─────────────────────────────────────────
-
-  Widget _buildNameBanner() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Text(
-        widget.name,
-        textAlign: TextAlign.center,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          fontSize: 26,
-          fontWeight: FontWeight.w300,
-          fontStyle: FontStyle.italic,
-          color: cParchment,
-          letterSpacing: 0.5,
-          height: 1.1,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSubtitleLine(Color accent) {
-    return Text(
-      widget.subtitle.toUpperCase(),
-      textAlign: TextAlign.center,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-        fontFamily: 'monospace',
-        fontSize: 9,
-        letterSpacing: 2,
-        color: accent.withValues(alpha: 0.75),
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────────
-  // ART ZONE (bio as flavor text)
-  // ─────────────────────────────────────────
-
-  Widget _buildArtZone(Color accent) {
-    final hasBio = widget.bio.isNotEmpty;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 24, 18, 18),
-      decoration: BoxDecoration(
-        border: Border.all(color: accent.withValues(alpha: 0.22), width: 1),
-        gradient: RadialGradient(
-          center: Alignment.topLeft,
-          radius: 1.6,
-          colors: [
-            accent.withValues(alpha: 0.09),
-            Colors.transparent,
-          ],
-        ),
-      ),
-      child: Stack(
-        children: [
-          // Corner emblem
-          Positioned(
-            top: -10,
-            right: -6,
-            child: Text(
-              '✦',
-              style: TextStyle(
-                fontSize: 14,
-                color: accent.withValues(alpha: 0.4),
-              ),
-            ),
-          ),
-          Center(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Text(
-                hasBio ? widget.bio : 'Tap to add a bio...',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: hasBio ? cMist : cSmoke,
-                  fontStyle: FontStyle.italic,
-                  height: 1.9,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────────
-  // STATS STRIP
-  // ─────────────────────────────────────────
-
-  Widget _buildStatsStrip(Color accent) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
+  Widget _buildStatsRow() => Row(
         children: [
           for (var i = 0; i < widget.stats.length; i++) ...[
             if (i > 0)
               Container(
                 width: 1,
                 height: 34,
-                color: accent.withValues(alpha: 0.25),
+                color:
+                    appSettings.profileBorderColor.withValues(alpha: 0.25),
               ),
-            Expanded(child: _statCell(widget.stats[i], accent)),
+            Expanded(child: _statCell(widget.stats[i])),
           ],
         ],
-      ),
-    );
-  }
+      );
 
-  Widget _statCell(ProfileStat s, Color accent) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          s.value,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w300,
-            color: cParchment,
-            height: 1.1,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          s.label.toUpperCase(),
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 7.5,
-            letterSpacing: 1.5,
-            color: accent.withValues(alpha: 0.7),
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _statCell(ProfileStat s) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(s.value,
+              style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w300,
+                  color: cParchment,
+                  height: 1.1)),
+          const SizedBox(height: 4),
+          Text(s.label.toUpperCase(),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 7.5,
+                letterSpacing: 1.5,
+                color: appSettings.profileBorderColor
+                    .withValues(alpha: 0.7),
+              )),
+        ],
+      );
 
-  // ─────────────────────────────────────────
-  // FOOTER
-  // ─────────────────────────────────────────
-
-  Widget _buildFooter(Color accent) {
-    return Row(
-      children: [
-        Expanded(
-          child: _codeRevealed ? _revealedCodeRow() : _hiddenCodeRow(),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          '✦ LORE ✦',
-          style: TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 8,
-            color: accent.withValues(alpha: 0.35),
-            letterSpacing: 3,
+  Widget _buildFooterRow() => Row(
+        children: [
+          Expanded(
+            child:
+                _codeRevealed ? _revealedCodeRow() : _hiddenCodeRow(),
           ),
-        ),
-      ],
-    );
-  }
+          const SizedBox(width: 8),
+          Text('✦ LORE ✦',
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 8,
+                color: appSettings.profileBorderColor
+                    .withValues(alpha: 0.35),
+                letterSpacing: 3,
+              )),
+        ],
+      );
 
   Widget _hiddenCodeRow() {
     return GestureDetector(
@@ -487,10 +272,6 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
     ]);
   }
 
-  // ─────────────────────────────────────────
-  // DECORATION (unchanged — user customization)
-  // ─────────────────────────────────────────
-
   BoxDecoration _cardDecoration() {
     final gradient = appSettings.profileGradient;
     final borderColor = appSettings.profileBorderColor;
@@ -504,13 +285,13 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
         border = Border.all(color: borderColor, width: 3);
         break;
       case 'glow':
-        border = Border.all(color: borderColor.withValues(alpha: 0.7), width: 1);
+        border =
+            Border.all(color: borderColor.withValues(alpha: 0.7), width: 1);
         shadows = [
           BoxShadow(
-            color: borderColor.withValues(alpha: 0.35),
-            blurRadius: 16,
-            spreadRadius: 2,
-          )
+              color: borderColor.withValues(alpha: 0.35),
+              blurRadius: 16,
+              spreadRadius: 2)
         ];
         break;
       case 'none':
