@@ -27,17 +27,16 @@ import 'services/sound_service.dart';
 import 'widgets/request_card_view.dart';
 import 'widgets/card_frame.dart';
 import 'widgets/home_profile_card.dart';
-import 'widgets/home_grid.dart';
 import 'widgets/block_style_sheet.dart';
 import 'screens/gestures_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'screens/qr_scanner_screen.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'widgets/friends_strip.dart';
 import 'widgets/colour_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'widgets/holo_card_v2.dart';
+import 'widgets/floating_menu.dart';
 
 // Must be top-level for FCM background handling
 @pragma('vm:entry-point')
@@ -939,6 +938,20 @@ class _HomeScreenState extends State<HomeScreen>
   bool _loadingData = true;
   bool _isEditingHome = false;
 
+  String _buildProfileSubtitle() {
+  final profile = _profile;
+  if (profile == null) return '';
+  final tags = (profile['tags'] as List<dynamic>? ?? [])
+      .map((t) => (t as Map)['label'] as String? ?? '')
+      .where((s) => s.isNotEmpty)
+      .toList();
+  if (tags.isNotEmpty) return tags.join(' · ');
+  final style = profile['writingStyle'] as String? ?? '';
+  if (style.isNotEmpty) return style;
+  final genre = profile['genre'] as String? ?? '';
+  return genre;
+}
+
   // ── Desktop layout state ──
   // null  → the "Overview" view (mobile-style, centered on wide screens)
   // string → split view with the sidebar collapsed and this block shown
@@ -1649,218 +1662,144 @@ class _HomeScreenState extends State<HomeScreen>
         constraints: BoxConstraints(
           maxWidth: isDesktop ? 900 : double.infinity,
         ),
-        child: Column(
+        child: Stack(
           children: [
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  children: [
-                    HomeProfileCard(
-                      name: _auth.currentName ?? '—',
-                      code: _auth.currentCode ?? '—',
-                      bio: _profile?['bio'] as String? ?? '',
-                      stats: _computeStats(),
-                      onTap: _openProfile,
-                      onLongPress: () => ProfileStyleSheet.show(context),
-                    ),
-                    AnimatedBuilder(
-                      animation: appSettings,
-                      builder: (_, _) => HomeGrid(
-                        isEditing: _isEditingHome,
-                        blocks: [
-                          HomeGridBlock(
-                            icon: Icons.notifications_none,
-                            title: 'Notifications',
-                            subtitle: _notifications.isEmpty
-                                ? 'All caught up'
-                                : '${_notifications.where((n) => !n.read).length} unread',
-                            badge: _notifications.where((n) => !n.read).length,
-                            accent: cGold,
-                            onTap: _openNotifications,
-                            style: appSettings.styleForBlock(
-                              AppSettings.blockNotifications,
-                            ),
-                            onLongPress: () => BlockStyleSheet.show(
-                              context,
-                              AppSettings.blockNotifications,
-                            ),
-                          ),
-                          HomeGridBlock(
-                            icon: Icons.auto_stories_outlined,
-                            title: 'Roleplays',
-                            subtitle: _roleplays.isEmpty
-                                ? 'Find a partner'
-                                : '${_roleplays.length} active',
-                            accent: cGold,
-                            onTap: _openRoleplays,
-                            style: appSettings.styleForBlock(
-                              AppSettings.blockRoleplays,
-                            ),
-                            onLongPress: () => BlockStyleSheet.show(
-                              context,
-                              AppSettings.blockRoleplays,
-                            ),
-                          ),
-                          HomeGridBlock(
-                            icon: Icons.lightbulb_outline,
-                            title: 'Preludes',
-                            subtitle: _brainstorms.isEmpty
-                                ? 'Start one'
-                                : '${_brainstorms.length} open',
-                            accent: cIce,
-                            onTap: _openBrainstorms,
-                            style: appSettings.styleForBlock(
-                              AppSettings.blockBrainstorms,
-                            ),
-                            onLongPress: () => BlockStyleSheet.show(
-                              context,
-                              AppSettings.blockBrainstorms,
+            Column(
+              children: [
+                Expanded(
+                  child: HomeProfileCard(
+                    name: _auth.currentName ?? '—',
+                    code: _auth.currentCode ?? '—',
+                    bio: _profile?['bio'] as String? ?? '',
+                    subtitle: _buildProfileSubtitle(),
+                    stats: _computeStats(),
+                    onTap: _openProfile,
+                    onLongPress: () => ProfileStyleSheet.show(context),
+                    fillHeight: true,
+                  ),
+                ),
+                Container(
+                  decoration: const BoxDecoration(
+                    border: Border(top: BorderSide(color: cAsh)),
+                  ),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.topCenter,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: LoreTap(
+                              onTap: () async {
+                                await Navigator.of(
+                                  context,
+                                ).push(fadeRoute(const SandboxScreen()));
+                                if (mounted) await _refreshProfile();
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 18,
+                                ),
+                                decoration: const BoxDecoration(
+                                  border: Border(
+                                    right: BorderSide(color: cAsh),
+                                  ),
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.public_outlined,
+                                      size: 16,
+                                      color: cSmoke,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Sandbox',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: cSmoke,
+                                        letterSpacing: 2,
+                                        fontWeight: FontWeight.w300,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                          HomeGridBlock(
-                            icon: Icons.credit_card_outlined,
-                            title: 'Request Card',
-                            subtitle: 'Edit your public card',
-                            accent: cMist,
-                            onTap: _openRequestCard,
-                            style: appSettings.styleForBlock(
-                              AppSettings.blockRequestCard,
-                            ),
-                            onLongPress: () => BlockStyleSheet.show(
-                              context,
-                              AppSettings.blockRequestCard,
-                            ),
-                          ),
-                          HomeGridBlock(
-                            icon: Icons.tune,
-                            title: 'Settings',
-                            subtitle: 'Appearance, security, notifications',
-                            accent: cSmoke,
-                            fullWidth: true,
-                            onTap: _openSettings,
-                            style: appSettings.styleForBlock(
-                              AppSettings.blockSettings,
-                            ),
-                            onLongPress: () => BlockStyleSheet.show(
-                              context,
-                              AppSettings.blockSettings,
+                          const SizedBox(width: 90),
+                          Expanded(
+                            child: LoreTap(
+                              onTap: () => Navigator.of(
+                                context,
+                              ).push(fadeRoute(const CardDiscoveryScreen())),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 18,
+                                ),
+                                decoration: const BoxDecoration(
+                                  border: Border(left: BorderSide(color: cAsh)),
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.explore_outlined,
+                                      size: 16,
+                                      color: cGold,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Find Partners',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: cGold,
+                                        letterSpacing: 2,
+                                        fontWeight: FontWeight.w300,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    FriendsStrip(
-                      onFindFriends: () => Navigator.of(
-                        context,
-                      ).push(fadeRoute(const CardDiscoveryScreen())),
-                      onFriendTap: (code) {
-                        Navigator.of(
-                          context,
-                        ).push(fadeRoute(const CardDiscoveryScreen()));
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            _ContinueCard(
-              session: _continueSession,
-              mode: appSettings.continueMode,
-              isLoading: _loadingData,
-              onOpen: () {
-                final s = _continueSession;
-                if (s == null) return;
-                Navigator.of(context).push(
-                  fadeRoute(
-                    RPRoomScreen(
-                      partnerName: s.partner,
-                      partnerCode: s.partnerCode,
-                      genre: s.genre,
-                      sessionId: s.id,
-                    ),
-                  ),
-                );
-              },
-              onLongPress: _openContinuePrefs,
-              onFindPartner: () => Navigator.of(
-                context,
-              ).push(fadeRoute(const CardDiscoveryScreen())),
-            ),
-            Container(
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: cAsh)),
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.topCenter,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: LoreTap(
-                          onTap: () async {
-                            await Navigator.of(
-                              context,
-                            ).push(fadeRoute(const SandboxScreen()));
-                            if (mounted) await _refreshProfile();
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            decoration: const BoxDecoration(
-                              border: Border(right: BorderSide(color: cAsh)),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.public_outlined,
-                                  size: 16,
-                                  color: cSmoke,
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Sandbox',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: cSmoke,
-                                    letterSpacing: 2,
-                                    fontWeight: FontWeight.w300,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 90),
-                      Expanded(
+                      Positioned(
+                        top: -22,
                         child: LoreTap(
                           onTap: () => Navigator.of(
                             context,
-                          ).push(fadeRoute(const CardDiscoveryScreen())),
+                          ).push(fadeRoute(const DiaryScreen())),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            decoration: const BoxDecoration(
-                              border: Border(left: BorderSide(color: cAsh)),
+                            width: 90,
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: appSettings.bgColor,
+                              border: Border.all(
+                                color: cGold.withValues(alpha: 0.6),
+                              ),
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(8),
+                              ),
                             ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            child: const Column(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  Icons.explore_outlined,
+                                  Icons.menu_book_outlined,
                                   size: 16,
                                   color: cGold,
                                 ),
-                                SizedBox(width: 8),
+                                SizedBox(height: 4),
                                 Text(
-                                  'Find Partners',
+                                  'Diary',
                                   style: TextStyle(
-                                    fontSize: 13,
+                                    fontFamily: 'monospace',
+                                    fontSize: 10,
                                     color: cGold,
                                     letterSpacing: 2,
-                                    fontWeight: FontWeight.w300,
                                   ),
                                 ),
                               ],
@@ -1870,54 +1809,68 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     ],
                   ),
-                  Positioned(
-                    top: -22,
-                    child: LoreTap(
-                      onTap: () => Navigator.of(
-                        context,
-                      ).push(fadeRoute(const DiaryScreen())),
-                      child: Container(
-                        width: 90,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: appSettings.bgColor,
-                          border: Border.all(
-                            color: cGold.withValues(alpha: 0.6),
-                          ),
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(8),
-                          ),
-                        ),
-                        child: const Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.menu_book_outlined,
-                              size: 16,
-                              color: cGold,
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Diary',
-                              style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 10,
-                                color: cGold,
-                                letterSpacing: 2,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
+            FloatingMenuButton(items: _buildMenuItems()),
           ],
         ),
       ),
     );
+  }
+
+  List<FloatingMenuItem> _buildMenuItems() {
+    final unread = _notifications.where((n) => !n.read).length;
+    return [
+      FloatingMenuItem(
+        blockKey: AppSettings.blockNotifications,
+        label: 'Notifications',
+        icon: Icons.notifications_none,
+        accent: cGold,
+        badge: unread,
+        onTap: _openNotifications,
+        onLongPress: () =>
+            BlockStyleSheet.show(context, AppSettings.blockNotifications),
+      ),
+      FloatingMenuItem(
+        blockKey: AppSettings.blockRoleplays,
+        label: 'Roleplays',
+        icon: Icons.auto_stories_outlined,
+        accent: cGold,
+        badge: _roleplays.isEmpty ? null : _roleplays.length,
+        onTap: _openRoleplays,
+        onLongPress: () =>
+            BlockStyleSheet.show(context, AppSettings.blockRoleplays),
+      ),
+      FloatingMenuItem(
+        blockKey: AppSettings.blockBrainstorms,
+        label: 'Preludes',
+        icon: Icons.lightbulb_outline,
+        accent: cIce,
+        badge: _brainstorms.isEmpty ? null : _brainstorms.length,
+        onTap: _openBrainstorms,
+        onLongPress: () =>
+            BlockStyleSheet.show(context, AppSettings.blockBrainstorms),
+      ),
+      FloatingMenuItem(
+        blockKey: AppSettings.blockRequestCard,
+        label: 'Request Card',
+        icon: Icons.credit_card_outlined,
+        accent: cMist,
+        onTap: _openRequestCard,
+        onLongPress: () =>
+            BlockStyleSheet.show(context, AppSettings.blockRequestCard),
+      ),
+      FloatingMenuItem(
+        blockKey: AppSettings.blockSettings,
+        label: 'Settings',
+        icon: Icons.tune,
+        accent: cSmoke,
+        onTap: _openSettings,
+        onLongPress: () =>
+            BlockStyleSheet.show(context, AppSettings.blockSettings),
+      ),
+    ];
   }
 
   // ── DESKTOP: FULL / OVERVIEW ────────────

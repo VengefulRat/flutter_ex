@@ -2,20 +2,30 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 /// Shared accelerometer → tilt provider.
-/// All HoloCardV2 widgets call acquire() in initState and release() in
-/// dispose. The underlying sensor stream only runs while refCount > 0.
+///
+/// Reports tilt RELATIVE to a baseline captured on start and on app
+/// resume. This means the card sits flat in whatever position the
+/// phone is held when the user opens the screen, and only responds
+/// to changes from there.
 class GyroService {
   GyroService._();
   static final instance = GyroService._();
 
-  /// -1..1 in each axis. (0,0) means phone is upright and still.
+  /// -1..1 in each axis, relative to baseline. (0,0) = phone is in
+  /// whatever position was captured as neutral.
   final ValueNotifier<Offset> tilt = ValueNotifier(Offset.zero);
 
   StreamSubscription<AccelerometerEvent>? _sub;
+  _LifecycleListener? _lifecycle;
   int _refCount = 0;
+
+  Offset _raw = Offset.zero;
+  Offset _baseline = Offset.zero;
+  bool _baselineSet = false;
 
   void acquire() {
     _refCount++;
@@ -30,8 +40,20 @@ class GyroService {
     }
   }
 
+  /// Capture the current phone orientation as "neutral." Every card
+  /// will appear flat at this position. Call this from any gesture
+  /// if you want a manual recenter.
+  void calibrate() {
+    if (!_baselineSet) return;
+    _baseline = _raw;
+    tilt.value = Offset.zero;
+  }
+
   void _start() {
     try {
+      _lifecycle = _LifecycleListener(onResume: calibrate);
+      WidgetsBinding.instance.addObserver(_lifecycle!);
+
       _sub = accelerometerEventStream(
         samplingPeriod: SensorInterval.gameInterval,
       ).listen(_onEvent, onError: (e) {
@@ -45,27 +67,58 @@ class GyroService {
   void _stop() {
     _sub?.cancel();
     _sub = null;
+    if (_lifecycle != null) {
+      WidgetsBinding.instance.removeObserver(_lifecycle!);
+      _lifecycle = null;
+    }
     tilt.value = Offset.zero;
+    _baselineSet = false;
+    _raw = Offset.zero;
+    _baseline = Offset.zero;
   }
 
   void _onEvent(AccelerometerEvent e) {
-    // Portrait upright: y ≈ 9.81 (gravity up). x and z ≈ 0.
-    // Tilt right  → x > 0. Tilt forward (top away) → z > 0, y < 9.81.
     final roll = atan2(e.x, e.y);
     final pitch = atan2(e.z, e.y);
-
-    // Normalise to -1..1. The 0.45 divisor gives good sensitivity so a
-    // modest wrist tilt produces a visible card response.
     final nx = (roll / 0.45).clamp(-1.0, 1.0);
     final ny = (pitch / 0.45).clamp(-1.0, 1.0);
 
-    // Low-pass filter: accelerometer is noisy. Only push a new value when
-    // it has meaningfully changed, which also saves rebuilds.
+    // First event — seed the filter AND the baseline with the raw
+    // reading. This is what makes the card start flat instead of
+    // inheriting the phone's reading-angle tilt.
+    if (!_baselineSet) {
+      _raw = Offset(nx, ny);
+      _baseline = _raw;
+      _baselineSet = true;
+      return;
+    }
+
+    _raw = Offset(
+      _raw.dx + (nx - _raw.dx) * 0.18,
+      _raw.dy + (ny - _raw.dy) * 0.18,
+    );
+
+    // Report tilt RELATIVE to baseline.
+    final dx = (_raw.dx - _baseline.dx).clamp(-1.0, 1.0);
+    final dy = (_raw.dy - _baseline.dy).clamp(-1.0, 1.0);
+
     final prev = tilt.value;
-    final sx = prev.dx + (nx - prev.dx) * 0.18;
-    final sy = prev.dy + (ny - prev.dy) * 0.18;
-    if ((sx - prev.dx).abs() > 0.001 || (sy - prev.dy).abs() > 0.001) {
-      tilt.value = Offset(sx, sy);
+    if ((dx - prev.dx).abs() > 0.001 || (dy - prev.dy).abs() > 0.001) {
+      tilt.value = Offset(dx, dy);
+    }
+  }
+}
+
+class _LifecycleListener with WidgetsBindingObserver {
+  final VoidCallback onResume;
+  _LifecycleListener({required this.onResume});
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Small delay so the accelerometer delivers fresh data after
+      // resume. 300ms is enough for 60Hz to have settled.
+      Future.delayed(const Duration(milliseconds: 300), onResume);
     }
   }
 }

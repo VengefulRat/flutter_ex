@@ -1,11 +1,12 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme.dart';
 import '../settings.dart';
 import 'shared.dart';
 import 'holo_card_v2.dart';
+import 'card_frame.dart';
 
-/// A single stat to display on the profile card.
 class ProfileStat {
   final String key;
   final String label;
@@ -17,18 +18,15 @@ class ProfileStat {
   });
 }
 
-/// The big card at the top of the home screen.
-///
-/// Pure display + one interaction: tapping anywhere (except the code
-/// reveal) opens the full profile editor. The card itself doesn't load
-/// anything; main.dart computes the stats and passes them in.
 class HomeProfileCard extends StatefulWidget {
   final String name;
   final String code;
   final String bio;
+  final String subtitle;
   final List<ProfileStat> stats;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+  final bool fillHeight;
 
   const HomeProfileCard({
     super.key,
@@ -37,7 +35,9 @@ class HomeProfileCard extends StatefulWidget {
     required this.bio,
     required this.stats,
     required this.onTap,
+    this.subtitle = '',
     this.onLongPress,
+    this.fillHeight = false,
   });
 
   @override
@@ -46,6 +46,15 @@ class HomeProfileCard extends StatefulWidget {
 
 class _HomeProfileCardState extends State<HomeProfileCard> {
   bool _codeRevealed = false;
+
+  static int _stableSeed(String s) {
+    int h = 17;
+    for (int i = 0; i < s.length; i++) {
+      h = h * 31 + s.codeUnitAt(i);
+      h &= 0x7fffffff;
+    }
+    return h;
+  }
 
   Future<void> _revealCode() async {
     if (_codeRevealed) return;
@@ -82,53 +91,54 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
     if (confirm == true && mounted) {
       await Clipboard.setData(ClipboardData(text: widget.code));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: cInk,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(),
-          content: Text(
-            'Unique code copied. Guard it carefully.',
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        backgroundColor: cInk,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(),
+        content: Text('Unique code copied. Guard it carefully.',
             style: TextStyle(
-              color: cParchment,
-              fontSize: 13,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-        ),
-      );
+                color: cParchment,
+                fontSize: 13,
+                fontStyle: FontStyle.italic)),
+      ));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final seed = _stableSeed(widget.code);
+
     return AnimatedBuilder(
       animation: appSettings,
       builder: (_, _) {
+        final accent = appSettings.profileBorderColor;
+        final spec = CardFrameSpec(
+          seed: seed,
+          accent: accent,
+          glow: false,   // shader provides the glow already
+          ornate: true,  // corner diamonds
+          dense: false,  // not too many tick marks
+        );
+
         return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
           child: HoloCardV2(
-            accent: appSettings.profileBorderColor,
+            accent: accent,
             intensity: 0.55,
-            seed: widget.code.hashCode,
+            seed: seed,
             child: LoreTap(
               onTap: widget.onTap,
               onLongPress: widget.onLongPress,
               child: Container(
                 decoration: _cardDecoration(),
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildHeader(),
-                      const SizedBox(height: 16),
-                      _buildBio(),
-                      if (widget.stats.isNotEmpty) ...[
-                        const SizedBox(height: 20),
-                        _buildStats(),
-                      ],
-                    ],
+                  padding: const EdgeInsets.all(6),
+                  child: CardFrame(
+                    spec: spec,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                      child: _buildCardLayout(),
+                    ),
                   ),
                 ),
               ),
@@ -139,40 +149,280 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
     );
   }
 
-  Widget _buildHeader() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  // ─────────────────────────────────────────
+  // CARD LAYOUT
+  // ─────────────────────────────────────────
+
+  Widget _buildCardLayout() {
+    final accent = appSettings.profileBorderColor;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: cAsh),
-            color: cVoid.withValues(alpha: 0.4),
+        _buildSetBar(accent),
+        const SizedBox(height: 10),
+        _buildRule(accent),
+        const SizedBox(height: 2),
+        _buildNameBanner(),
+        const SizedBox(height: 2),
+        _buildRule(accent),
+        if (widget.subtitle.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _buildSubtitleLine(accent),
+        ],
+        const SizedBox(height: 12),
+        if (widget.fillHeight)
+          Expanded(child: _buildArtZone(accent))
+        else
+          SizedBox(height: 130, child: _buildArtZone(accent)),
+        const SizedBox(height: 14),
+        if (widget.stats.isNotEmpty) ...[
+          _buildRule(accent),
+          _buildStatsStrip(accent),
+          _buildRule(accent),
+          const SizedBox(height: 10),
+        ],
+        _buildFooter(accent),
+      ],
+    );
+  }
+
+  Widget _buildRule(Color accent) => Container(
+        height: 1,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.transparent,
+              accent.withValues(alpha: 0.55),
+              Colors.transparent,
+            ],
+            stops: const [0.0, 0.5, 1.0],
           ),
-          child: const Icon(Icons.person, color: cSmoke, size: 28),
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.name,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w300,
+      );
+
+  // ─────────────────────────────────────────
+  // SET BAR (top strip)
+  // ─────────────────────────────────────────
+
+  Widget _buildSetBar(Color accent) {
+    final clean = widget.code.replaceAll('-', '');
+    final serial = clean.length >= 4
+        ? clean.substring(clean.length - 4)
+        : clean.padLeft(4, '0');
+
+    return Row(
+      children: [
+        Transform.rotate(
+          angle: math.pi / 4,
+          child: Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              color: accent,
+              borderRadius: BorderRadius.circular(1),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          'LORE',
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 9,
+            letterSpacing: 4,
+            color: accent,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '· RP',
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 9,
+            letterSpacing: 2,
+            color: accent.withValues(alpha: 0.5),
+          ),
+        ),
+        const Spacer(),
+        Text(
+          '#$serial',
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 9,
+            color: accent.withValues(alpha: 0.7),
+            letterSpacing: 1,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─────────────────────────────────────────
+  // NAME BANNER
+  // ─────────────────────────────────────────
+
+  Widget _buildNameBanner() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Text(
+        widget.name,
+        textAlign: TextAlign.center,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.w300,
+          fontStyle: FontStyle.italic,
+          color: cParchment,
+          letterSpacing: 0.5,
+          height: 1.1,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubtitleLine(Color accent) {
+    return Text(
+      widget.subtitle.toUpperCase(),
+      textAlign: TextAlign.center,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontFamily: 'monospace',
+        fontSize: 9,
+        letterSpacing: 2,
+        color: accent.withValues(alpha: 0.75),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────
+  // ART ZONE (bio as flavor text)
+  // ─────────────────────────────────────────
+
+  Widget _buildArtZone(Color accent) {
+    final hasBio = widget.bio.isNotEmpty;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 24, 18, 18),
+      decoration: BoxDecoration(
+        border: Border.all(color: accent.withValues(alpha: 0.22), width: 1),
+        gradient: RadialGradient(
+          center: Alignment.topLeft,
+          radius: 1.6,
+          colors: [
+            accent.withValues(alpha: 0.09),
+            Colors.transparent,
+          ],
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Corner emblem
+          Positioned(
+            top: -10,
+            right: -6,
+            child: Text(
+              '✦',
+              style: TextStyle(
+                fontSize: 14,
+                color: accent.withValues(alpha: 0.4),
+              ),
+            ),
+          ),
+          Center(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Text(
+                hasBio ? widget.bio : 'Tap to add a bio...',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: hasBio ? cMist : cSmoke,
                   fontStyle: FontStyle.italic,
-                  color: cParchment,
+                  height: 1.9,
                 ),
               ),
-              const SizedBox(height: 4),
-              _codeRevealed ? _revealedCodeRow() : _hiddenCodeRow(),
-            ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────
+  // STATS STRIP
+  // ─────────────────────────────────────────
+
+  Widget _buildStatsStrip(Color accent) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          for (var i = 0; i < widget.stats.length; i++) ...[
+            if (i > 0)
+              Container(
+                width: 1,
+                height: 34,
+                color: accent.withValues(alpha: 0.25),
+              ),
+            Expanded(child: _statCell(widget.stats[i], accent)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _statCell(ProfileStat s, Color accent) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          s.value,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w300,
+            color: cParchment,
+            height: 1.1,
           ),
         ),
-        const Icon(Icons.chevron_right, size: 18, color: cSmoke),
+        const SizedBox(height: 4),
+        Text(
+          s.label.toUpperCase(),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 7.5,
+            letterSpacing: 1.5,
+            color: accent.withValues(alpha: 0.7),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─────────────────────────────────────────
+  // FOOTER
+  // ─────────────────────────────────────────
+
+  Widget _buildFooter(Color accent) {
+    return Row(
+      children: [
+        Expanded(
+          child: _codeRevealed ? _revealedCodeRow() : _hiddenCodeRow(),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '✦ LORE ✦',
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 8,
+            color: accent.withValues(alpha: 0.35),
+            letterSpacing: 3,
+          ),
+        ),
       ],
     );
   }
@@ -181,120 +431,65 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
     return GestureDetector(
       onTap: _revealCode,
       behavior: HitTestBehavior.opaque,
-      child: const Padding(
-        padding: EdgeInsets.symmetric(vertical: 2),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.lock_outline, size: 11, color: cSmoke),
-            SizedBox(width: 5),
-            Text(
-              'UNIQUE CODE — tap to reveal',
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 10,
-                color: cSmoke,
-                letterSpacing: 1,
-              ),
+      child: const Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.lock_outline, size: 10, color: cSmoke),
+        SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            'UNIQUE CODE — tap to reveal',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 9,
+              color: cSmoke,
+              letterSpacing: 1,
             ),
-          ],
+          ),
         ),
-      ),
+      ]),
     );
   }
 
   Widget _revealedCodeRow() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Flexible(
+        child: Text(
           widget.code,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             fontFamily: 'monospace',
-            fontSize: 12,
+            fontSize: 11,
             color: cGold,
             letterSpacing: 2,
           ),
         ),
-        const SizedBox(width: 8),
-        GestureDetector(
-          onTap: _copyCode,
-          behavior: HitTestBehavior.opaque,
-          child: const Padding(
-            padding: EdgeInsets.all(4),
-            child: Icon(Icons.copy, size: 13, color: cSmoke),
-          ),
+      ),
+      const SizedBox(width: 6),
+      GestureDetector(
+        onTap: _copyCode,
+        behavior: HitTestBehavior.opaque,
+        child: const Padding(
+          padding: EdgeInsets.all(3),
+          child: Icon(Icons.copy, size: 11, color: cSmoke),
         ),
-        const SizedBox(width: 4),
-        GestureDetector(
-          onTap: () => setState(() => _codeRevealed = false),
-          behavior: HitTestBehavior.opaque,
-          child: const Padding(
-            padding: EdgeInsets.all(4),
-            child: Icon(Icons.visibility_off, size: 13, color: cSmoke),
-          ),
+      ),
+      const SizedBox(width: 2),
+      GestureDetector(
+        onTap: () => setState(() => _codeRevealed = false),
+        behavior: HitTestBehavior.opaque,
+        child: const Padding(
+          padding: EdgeInsets.all(3),
+          child: Icon(Icons.visibility_off, size: 11, color: cSmoke),
         ),
-      ],
-    );
+      ),
+    ]);
   }
 
-  Widget _buildBio() {
-    final text = widget.bio.isEmpty ? 'Tap to add a bio...' : widget.bio;
-    return Text(
-      text,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-        fontSize: 13,
-        color: widget.bio.isEmpty ? cSmoke : cMist,
-        fontStyle: FontStyle.italic,
-        height: 1.6,
-      ),
-    );
-  }
-
-  Widget _buildStats() {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: widget.stats.map((s) => _statChip(s)).toList(),
-    );
-  }
-
-  Widget _statChip(ProfileStat s) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: cVoid.withValues(alpha: 0.5),
-        border: Border.all(color: cAsh),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            s.value,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w300,
-              color: cParchment,
-              height: 1.1,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            s.label.toUpperCase(),
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 8,
-              color: cSmoke,
-              letterSpacing: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // ─────────────────────────────────────────
+  // DECORATION (unchanged — user customization)
+  // ─────────────────────────────────────────
 
   BoxDecoration _cardDecoration() {
     final gradient = appSettings.profileGradient;
@@ -309,16 +504,13 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
         border = Border.all(color: borderColor, width: 3);
         break;
       case 'glow':
-        border = Border.all(
-          color: borderColor.withValues(alpha: 0.7),
-          width: 1,
-        );
+        border = Border.all(color: borderColor.withValues(alpha: 0.7), width: 1);
         shadows = [
           BoxShadow(
             color: borderColor.withValues(alpha: 0.35),
             blurRadius: 16,
             spreadRadius: 2,
-          ),
+          )
         ];
         break;
       case 'none':
@@ -361,78 +553,58 @@ class _CodeDialog extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 9,
-                color: actionColor,
-                letterSpacing: 4,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              body,
-              style: const TextStyle(
-                fontSize: 13,
-                color: cMist,
-                height: 1.7,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 9,
+                      color: actionColor,
+                      letterSpacing: 4)),
+              const SizedBox(height: 12),
+              Text(body,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      color: cMist,
+                      height: 1.7,
+                      fontStyle: FontStyle.italic)),
+              const SizedBox(height: 24),
+              Row(children: [
                 Expanded(
-                  child: GestureDetector(
-                    onTap: () => Navigator.of(context).pop(false),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: cAsh),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'Cancel',
-                          style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 9,
-                            color: cSmoke,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                      ),
-                    ),
+                    child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(false),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration:
+                        BoxDecoration(border: Border.all(color: cAsh)),
+                    child: const Center(
+                        child: Text('Cancel',
+                            style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 9,
+                                color: cSmoke,
+                                letterSpacing: 2))),
                   ),
-                ),
+                )),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: GestureDetector(
-                    onTap: () => Navigator.of(context).pop(true),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      color: actionColor.withValues(alpha: 0.8),
-                      child: Center(
-                        child: Text(
-                          actionLabel,
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 9,
-                            color: cParchment,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                      ),
-                    ),
+                    child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(true),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    color: actionColor.withValues(alpha: 0.8),
+                    child: Center(
+                        child: Text(actionLabel,
+                            style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 9,
+                                color: cParchment,
+                                letterSpacing: 2))),
                   ),
-                ),
-              ],
-            ),
-          ],
-        ),
+                )),
+              ]),
+            ]),
       ),
     );
   }
