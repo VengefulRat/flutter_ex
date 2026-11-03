@@ -119,7 +119,7 @@ class LoreCardFace extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(2),
             child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+              filter: ui.ImageFilter.blur(sigmaX: 0.1, sigmaY: 0.1),
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

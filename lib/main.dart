@@ -1234,6 +1234,8 @@ class _HomeScreenState extends State<HomeScreen>
           lastPostAt: lastPostAt,
           status: status.isEmpty ? 'active' : status,
           title: (s['title'] as String?) ?? '',
+          summary: (s['summary'] as String?) ?? '', // <-- ADD
+          backgroundUrl: s['backgroundUrl'] as String?, // <-- ADD
         );
         if (status == 'brainstorm') {
           brains.add(item);
@@ -5181,6 +5183,8 @@ class _RPData {
   final DateTime? lastPostAt;
   final String status;
   final String title;
+  final String summary;
+  final String? backgroundUrl;
 
   const _RPData(
     this.partner,
@@ -5192,6 +5196,8 @@ class _RPData {
     this.lastPostAt,
     this.status = 'active',
     this.title = '',
+    this.summary = '',
+    this.backgroundUrl,
   });
 
   bool get isArchived => status == 'archived';
@@ -5207,6 +5213,8 @@ class _RPData {
     lastPostAt: lastPostAt,
     status: newStatus,
     title: title,
+    summary: summary,
+    backgroundUrl: backgroundUrl,
   );
 }
 
@@ -5290,7 +5298,7 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
     );
   }
 
-  void _openMenu(_RPData rp) {
+    void _openMenu(_RPData rp) {
     showModalBottomSheet(
       context: context,
       backgroundColor: cInk,
@@ -5312,6 +5320,8 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
               ),
             ),
             const SizedBox(height: 20),
+            
+            // Header Info
             if (rp.hasTitle) ...[
               Text(
                 rp.title,
@@ -5353,6 +5363,31 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
               ),
             ),
             const SizedBox(height: 20),
+
+            // 1. CUSTOMIZE
+            _menuTile(
+              icon: Icons.color_lens_outlined,
+              title: 'Customize Card',
+              subtitle: 'Change title, image, and summary.',
+              color: cGold,
+              onTap: () {
+                Navigator.of(ctx).pop();
+                Navigator.of(context).push(fadeRoute(
+                  _RPEditorScreen(
+                    rp: rp,
+                    onSave: (updatedRp) async {
+                      setState(() {
+                        final i = _items.indexWhere((x) => x.id == rp.id);
+                        if (i != -1) _items[i] = updatedRp;
+                      });
+                    },
+                  ),
+                ));
+              },
+            ),
+            const SizedBox(height: 8),
+
+            // 2. ARCHIVE / RESTORE
             if (!rp.isArchived)
               _menuTile(
                 icon: Icons.inventory_2_outlined,
@@ -5376,16 +5411,20 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
                 },
               ),
             const SizedBox(height: 8),
-            _menuTile(
-              icon: Icons.block,
-              title: 'Block this user',
-              subtitle: 'Never see or hear from them again.',
-              color: cEmber,
-              onTap: () {
-                Navigator.of(ctx).pop();
-                widget.onBlock?.call(rp);
-              },
-            ),
+
+            // 3. BLOCK USER
+            if (widget.onBlock != null) ...[
+              _menuTile(
+                icon: Icons.block,
+                title: 'Block this user',
+                subtitle: 'Never see or hear from them again.',
+                color: cEmber,
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  widget.onBlock?.call(rp);
+                },
+              ),
+            ],
           ],
         ),
       ),
@@ -5445,13 +5484,14 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
     );
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     final items = _visible;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Show archived toggle — only if there are archived items
+        // Show archived toggle
         if (_archivedCount > 0) ...[
           GestureDetector(
             onTap: () => setState(() => _showArchived = !_showArchived),
@@ -5461,30 +5501,15 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 border: Border.all(color: _showArchived ? cGold : cAsh),
-                color: _showArchived
-                    ? cGold.withValues(alpha: 0.06)
-                    : Colors.transparent,
+                color: _showArchived ? cGold.withValues(alpha: 0.06) : Colors.transparent,
               ),
               child: Row(
                 children: [
-                  Icon(
-                    _showArchived
-                        ? Icons.visibility
-                        : Icons.visibility_outlined,
-                    size: 14,
-                    color: _showArchived ? cGold : cSmoke,
-                  ),
+                  Icon(_showArchived ? Icons.visibility : Icons.visibility_outlined, size: 14, color: _showArchived ? cGold : cSmoke),
                   const SizedBox(width: 10),
                   Text(
-                    _showArchived
-                        ? 'Showing archived ($_archivedCount)'
-                        : 'Show archived ($_archivedCount)',
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 9,
-                      letterSpacing: 2,
-                      color: _showArchived ? cGold : cSmoke,
-                    ),
+                    _showArchived ? 'Showing archived ($_archivedCount)' : 'Show archived ($_archivedCount)',
+                    style: TextStyle(fontFamily: 'monospace', fontSize: 9, letterSpacing: 2, color: _showArchived ? cGold : cSmoke),
                   ),
                 ],
               ),
@@ -5497,134 +5522,32 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: Column(
               children: [
-                Text(
-                  _showArchived ? 'No stories yet.' : 'No active roleplays.',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: cMist,
-                    fontStyle: FontStyle.italic,
-                    fontWeight: FontWeight.w300,
-                  ),
-                ),
+                Text(_showArchived ? 'No stories yet.' : 'No active roleplays.', style: const TextStyle(fontSize: 14, color: cMist, fontStyle: FontStyle.italic, fontWeight: FontWeight.w300)),
                 const SizedBox(height: 8),
-                const Text(
-                  'Send an interest to start a story.',
-                  style: TextStyle(fontSize: 12, color: cSmoke),
-                ),
+                const Text('Send an interest to start a story.', style: TextStyle(fontSize: 12, color: cSmoke)),
               ],
             ),
           )
         else
-          ...items.map(
-            (rp) => GestureDetector(
-              onTap: () => widget.onEnter(rp),
-              onLongPress: () => _openMenu(rp),
-              behavior: HitTestBehavior.opaque,
-              child: Opacity(
-                opacity: rp.isArchived ? 0.55 : 1.0,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: HoloCardV2(
-                    accent: cGold,
-                    intensity: 0.3,
-                    seed: rp.id.hashCode,
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: cInk,
-                        border: Border.all(color: cAsh),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (rp.hasTitle) ...[
-                                  Text(
-                                    rp.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w300,
-                                      fontStyle: FontStyle.italic,
-                                      color: cParchment,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    rp.partner,
-                                    style: const TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 10,
-                                      color: cSmoke,
-                                      letterSpacing: 1,
-                                    ),
-                                  ),
-                                ] else
-                                  Text(
-                                    rp.partner,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w300,
-                                      fontStyle: FontStyle.italic,
-                                      color: cParchment,
-                                    ),
-                                  ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  rp.isArchived
-                                      ? '${rp.genre} · archived'
-                                      : '${rp.genre} · ${rp.posts} posts',
-                                  style: const TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 10,
-                                    color: cSmoke,
-                                    letterSpacing: 1,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              if (!rp.isArchived && rp.yourTurn)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  color: cGold,
-                                  child: const Text(
-                                    'YOUR TURN',
-                                    style: TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 8,
-                                      color: cVoid,
-                                      letterSpacing: 1,
-                                    ),
-                                  ),
-                                ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Enter →',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: cSmoke,
-                                  letterSpacing: 1,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+          // THE NEW GRID
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 200,
+              childAspectRatio: 0.7, // 5:7 aspect ratio like a TCG card
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
             ),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final rp = items[index];
+              return _RPSelectionCard(
+                rp: rp,
+                onTap: () => widget.onEnter(rp),
+                onLongPress: () => _openMenu(rp),
+              );
+            },
           ),
       ],
     );
@@ -7697,6 +7620,311 @@ class _ContinueCard extends StatelessWidget {
     return const Text(
       'Find a partner to begin one',
       style: TextStyle(fontSize: 13, color: cMist, fontStyle: FontStyle.italic),
+    );
+  }
+}
+
+class _RPSelectionCard extends StatelessWidget {
+  final _RPData rp;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  const _RPSelectionCard({
+    required this.rp,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final myName = AuthService().currentName ?? 'You';
+    final titleText = rp.hasTitle ? rp.title : rp.partner;
+    final seed = rp.id.hashCode;
+    final accent = rp.genre.toLowerCase().contains('fantasy') ? cGold 
+                 : rp.genre.toLowerCase().contains('sci-fi') ? cIce 
+                 : cMist;
+
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: Opacity(
+        opacity: rp.isArchived ? 0.5 : 1.0,
+        child: HoloCardV2(
+          accent: accent,
+          intensity: 0.4,
+          seed: seed,
+          bgColor: cInk,
+          child: Container(
+            decoration: BoxDecoration(
+              color: cInk,
+              border: Border.all(color: accent.withValues(alpha: 0.4), width: 1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(4), // Frame inset
+              child: CardFrame(
+                spec: CardFrameSpec(seed: seed, accent: accent, ornate: true, glow: false),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // 1. Background Image (if any)
+                      if (rp.backgroundUrl != null)
+                        Image.network(rp.backgroundUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox()),
+                      
+                      // 2. Dark Scrim
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.black.withValues(alpha: 0.8), Colors.black.withValues(alpha: 0.5), Colors.black.withValues(alpha: 0.9)],
+                            stops: const [0.0, 0.4, 1.0],
+                          ),
+                        ),
+                      ),
+
+                      // 3. Content
+                      Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Top: Both Names
+                            Text(
+                              '$myName & ${rp.partner}',
+                              style: const TextStyle(fontFamily: 'monospace', fontSize: 7.5, color: cSmoke, letterSpacing: 1),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const Spacer(),
+                            
+                            // Center: Title
+                            Center(
+                              child: Text(
+                                titleText,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontFamily: 'serif', fontSize: 18, fontWeight: FontWeight.w300, fontStyle: FontStyle.italic, color: cParchment, height: 1.1),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            
+                            // Summary (if any)
+                            if (rp.summary.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                rp.summary,
+                                textAlign: TextAlign.center,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontFamily: 'serif', fontSize: 8, color: cMist, fontStyle: FontStyle.italic, height: 1.4),
+                              ),
+                            ],
+                            const Spacer(),
+
+                            // Bottom: Stats
+                            Container(
+                              padding: const EdgeInsets.only(top: 6),
+                              decoration: BoxDecoration(border: Border(top: BorderSide(color: accent.withValues(alpha: 0.3)))),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    rp.genre.toUpperCase(),
+                                    style: TextStyle(fontFamily: 'monospace', fontSize: 6.5, color: accent, letterSpacing: 1),
+                                  ),
+                                  Text(
+                                    '${rp.posts}p',
+                                    style: const TextStyle(fontFamily: 'monospace', fontSize: 7, color: cSmoke),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RPEditorScreen extends StatefulWidget {
+  final _RPData rp;
+  final Function(_RPData) onSave;
+
+  const _RPEditorScreen({required this.rp, required this.onSave});
+
+  @override
+  State<_RPEditorScreen> createState() => _RPEditorScreenState();
+}
+
+class _RPEditorScreenState extends State<_RPEditorScreen> {
+  late TextEditingController _titleCtrl;
+  late TextEditingController _summaryCtrl;
+  String? _bgUrl;
+  bool _uploading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleCtrl = TextEditingController(text: widget.rp.title);
+    _summaryCtrl = TextEditingController(text: widget.rp.summary);
+    _bgUrl = widget.rp.backgroundUrl;
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _summaryCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+
+    final bytes = await image.readAsBytes();
+    if (!mounted) return;
+    setState(() => _uploading = true);
+
+    try {
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('sessions/${widget.rp.id}/background.jpg');
+      await ref.putData(bytes);
+      final url = await ref.getDownloadURL();
+      
+      final freshUrl = '$url?v=${DateTime.now().millisecondsSinceEpoch}';
+      await NetworkImage(url).evict();
+      
+      setState(() {
+        _bgUrl = freshUrl;
+        _uploading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _uploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: cInk, content: Text('Upload failed: $e', style: const TextStyle(color: cEmber))));
+      }
+    }
+  }
+
+  void _save() async {
+    final newTitle = _titleCtrl.text.trim();
+    final newSummary = _summaryCtrl.text.trim();
+    
+    await FirestoreService().updateSessionDetails(
+      widget.rp.id,
+      title: newTitle,
+      summary: newSummary,
+      backgroundUrl: _bgUrl,
+    );
+
+    final updated = _RPData(
+      widget.rp.partner,
+      widget.rp.partnerCode,
+      widget.rp.genre,
+      widget.rp.posts,
+      widget.rp.yourTurn,
+      id: widget.rp.id,
+      lastPostAt: widget.rp.lastPostAt,
+      status: widget.rp.status,
+      title: newTitle,
+      summary: newSummary,
+      backgroundUrl: _bgUrl,
+    );
+
+    widget.onSave(updated);
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: appSettings.bgColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: cAsh))),
+              child: Row(
+                children: [
+                  GestureDetector(onTap: () => Navigator.pop(context), child: const Icon(Icons.arrow_back_ios, color: cSmoke, size: 16)),
+                  const SizedBox(width: 16),
+                  const Text('CUSTOMIZE CARD', style: TextStyle(fontFamily: 'monospace', fontSize: 11, color: cGold, letterSpacing: 4)),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: _save,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      color: cParchment,
+                      child: const Text('Save', style: TextStyle(fontFamily: 'monospace', fontSize: 10, color: cVoid, letterSpacing: 1)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: GestureDetector(
+                        onTap: _uploading ? null : _pickImage,
+                        child: Container(
+                          width: 200,
+                          height: 280, // 5:7 ratio
+                          decoration: BoxDecoration(
+                            color: cInk,
+                            border: Border.all(color: cAsh),
+                            borderRadius: BorderRadius.circular(8),
+                            image: _bgUrl != null ? DecorationImage(image: NetworkImage(_bgUrl!), fit: BoxFit.cover) : null,
+                          ),
+                          child: _uploading
+                              ? const Center(child: CircularProgressIndicator(color: cGold))
+                              : (_bgUrl == null ? const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.add_photo_alternate_outlined, color: cSmoke, size: 32), SizedBox(height: 8), Text('Add Background', style: TextStyle(color: cSmoke, fontFamily: 'monospace', fontSize: 10))])) : null),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    const Text('TITLE', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 3)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _titleCtrl,
+                      style: const TextStyle(fontSize: 16, color: cParchment, fontStyle: FontStyle.italic),
+                      decoration: const InputDecoration(hintText: 'Give this story a name...', hintStyle: TextStyle(color: cSmoke), enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: cAsh)), focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: cGold))),
+                      cursorColor: cGold,
+                    ),
+                    const SizedBox(height: 24),
+                    const Text('SUMMARY', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 3)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _summaryCtrl,
+                      maxLines: 4,
+                      style: const TextStyle(fontSize: 14, color: cMist, fontStyle: FontStyle.italic, height: 1.6),
+                      decoration: const InputDecoration(hintText: 'What is this story about?', hintStyle: TextStyle(color: cSmoke), enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: cAsh)), focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: cGold))),
+                      cursorColor: cGold,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

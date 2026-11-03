@@ -1053,4 +1053,20 @@ class FirestoreService {
       print('[markAllRead] failed: $e');
     }
   }
+   Future<void> updateSessionDetails(
+    String sessionId, {
+    required String title,
+    required String summary,
+    String? backgroundUrl,
+  }) async {
+    final data = <String, dynamic>{
+      'title': title,
+      'summary': summary,
+      if (backgroundUrl != null) 'backgroundUrl': backgroundUrl,
+      'titleUpdatedAt': FieldValue.serverTimestamp(),
+    };
+    await _db.collection('sessions').doc(sessionId).update(data);
+  }
 }
+
+ 
