@@ -35,9 +35,9 @@ import 'screens/qr_scanner_screen.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'widgets/friends_strip.dart';
 import 'widgets/colour_picker.dart';
-import 'widgets/holo_card.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'widgets/holo_card_v2.dart';
 
 // Must be top-level for FCM background handling
 @pragma('vm:entry-point')
@@ -182,14 +182,17 @@ class _SplashScreenState extends State<SplashScreen>
     });
   }
 
-    Future<void> _playMusic() async {
+  Future<void> _playMusic() async {
     try {
-      await _player.setAudioContext(AudioContext(
-        android: AudioContextAndroid(
-          usageType: AndroidUsageType.media,
-          audioFocus: AndroidAudioFocus.gainTransientMayDuck, // Allows other apps to play over it
+      await _player.setAudioContext(
+        AudioContext(
+          android: AudioContextAndroid(
+            usageType: AndroidUsageType.media,
+            audioFocus: AndroidAudioFocus
+                .gainTransientMayDuck, // Allows other apps to play over it
+          ),
         ),
-      ));
+      );
       await _player.setVolume(0.8);
       await _player.play(AssetSource('sounds/echoes_of_the_deep.mp3'));
     } catch (_) {}
@@ -1569,55 +1572,65 @@ class _HomeScreenState extends State<HomeScreen>
         child: SafeArea(
           child: FadeTransition(
             opacity: _fade,
-            child: Column(children: [
-              LoreTopBar(
-                onLogoTap: () {
-                  if (inSplitMode) setState(() => _activeBlock = null);
-                },
-                                trailing: inSplitMode 
-                    ? null 
-                    : GestureDetector(
-                        onTap: () => setState(() => _isEditingHome = !_isEditingHome),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: _isEditingHome ? cGold : cAsh),
-                            color: _isEditingHome ? cGold.withValues(alpha: 0.1) : Colors.transparent,
-                          ),
-                          child: Text(
-                            _isEditingHome ? 'DONE' : 'EDIT',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 9,
-                              letterSpacing: 2,
-                              color: _isEditingHome ? cGold : cSmoke,
+            child: Column(
+              children: [
+                LoreTopBar(
+                  onLogoTap: () {
+                    if (inSplitMode) setState(() => _activeBlock = null);
+                  },
+                  trailing: inSplitMode
+                      ? null
+                      : GestureDetector(
+                          onTap: () =>
+                              setState(() => _isEditingHome = !_isEditingHome),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: _isEditingHome ? cGold : cAsh,
+                              ),
+                              color: _isEditingHome
+                                  ? cGold.withValues(alpha: 0.1)
+                                  : Colors.transparent,
+                            ),
+                            child: Text(
+                              _isEditingHome ? 'DONE' : 'EDIT',
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 9,
+                                letterSpacing: 2,
+                                color: _isEditingHome ? cGold : cSmoke,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-              ),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
-                  child: !isDesktop
-                      ? KeyedSubtree(
-                          key: const ValueKey('mobile'),
-                          child: _buildMobileBody(),
-                        )
-                      : inSplitMode
-                          ? KeyedSubtree(
-                              key: const ValueKey('desktop-split'),
-                              child: _buildDesktopSplitBody(),
-                            )
-                          : KeyedSubtree(
-                              key: const ValueKey('desktop-full'),
-                              child: _buildDesktopFullBody(),
-                            ),
                 ),
-              ),
-            ]),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    switchInCurve: Curves.easeOut,
+                    switchOutCurve: Curves.easeIn,
+                    child: !isDesktop
+                        ? KeyedSubtree(
+                            key: const ValueKey('mobile'),
+                            child: _buildMobileBody(),
+                          )
+                        : inSplitMode
+                        ? KeyedSubtree(
+                            key: const ValueKey('desktop-split'),
+                            child: _buildDesktopSplitBody(),
+                          )
+                        : KeyedSubtree(
+                            key: const ValueKey('desktop-full'),
+                            child: _buildDesktopFullBody(),
+                          ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -5062,7 +5075,8 @@ class _NotificationsContentState extends State<_NotificationsContent> {
 
     if (snap.docs.isEmpty) return '';
     final interestId = snap.docs.first.id;
-    final fromName = (snap.docs.first.data()['fromName'] as String?) ?? fromCode;
+    final fromName =
+        (snap.docs.first.data()['fromName'] as String?) ?? fromCode;
 
     final sessionId = await _fs.respondToInterest(
       interestId: interestId,
@@ -5076,7 +5090,7 @@ class _NotificationsContentState extends State<_NotificationsContent> {
     return sessionId;
   }
 
-    @override
+  @override
   Widget build(BuildContext context) {
     if (widget.notifications.isEmpty) {
       return const Center(
@@ -5104,7 +5118,15 @@ class _NotificationsContentState extends State<_NotificationsContent> {
             padding: const EdgeInsets.only(bottom: 16),
             child: Row(
               children: [
-                const Text('UNREAD', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 2)),
+                const Text(
+                  'UNREAD',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 9,
+                    color: cSmoke,
+                    letterSpacing: 2,
+                  ),
+                ),
                 const Spacer(),
                 LoreTap(
                   onTap: () async {
@@ -5115,7 +5137,16 @@ class _NotificationsContentState extends State<_NotificationsContent> {
                     });
                     await _fs.markAllNotificationsRead(_auth.currentCode!);
                   },
-                  child: const Text('MARK ALL READ', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 1, fontWeight: FontWeight.w600)),
+                  child: const Text(
+                    'MARK ALL READ',
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 9,
+                      color: cGold,
+                      letterSpacing: 1,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -5140,57 +5171,92 @@ class _NotificationsContentState extends State<_NotificationsContent> {
               ),
               alignment: Alignment.centerRight,
               padding: const EdgeInsets.only(right: 20),
-              child: const Icon(Icons.delete_outline, color: cParchment, size: 24),
+              child: const Icon(
+                Icons.delete_outline,
+                color: cParchment,
+                size: 24,
+              ),
             ),
             onDismissed: (_) {
               _fs.deleteNotification(n.id);
             },
             child: LoreTap(
-              onTap: (isRpPost || isBrainstorm || isOoc) ? () async {
-                await _markRead(n.id);
-                setState(() => n.read = true);
-                final sessionId = n.data['sessionId'] as String? ?? '';
-                if (!context.mounted || sessionId.isEmpty) return;
-                final session = _roleplays.firstWhere((r) => r.id == sessionId,
-                    orElse: () => _brainstorms.firstWhere((b) => b.id == sessionId,
-                        orElse: () => const _RPData('', '', '', 0, false)));
-                if (isRpPost || isOoc) {
-                  Navigator.of(context).push(fadeRoute(RPRoomScreen(
-                    partnerName: session.partner,
-                    partnerCode: session.partnerCode,
-                    genre: session.genre,
-                    sessionId: sessionId,
-                  )));
-                } else {
-                  Navigator.of(context).push(fadeRoute(BrainstormRoomScreen(
-                    partnerName: session.partner,
-                    partnerCode: session.partnerCode,
-                    genre: session.genre,
-                    sessionId: sessionId,
-                  )));
-                }
-              } : null,
+              onTap: (isRpPost || isBrainstorm || isOoc)
+                  ? () async {
+                      await _markRead(n.id);
+                      setState(() => n.read = true);
+                      final sessionId = n.data['sessionId'] as String? ?? '';
+                      if (!context.mounted || sessionId.isEmpty) return;
+                      final session = _roleplays.firstWhere(
+                        (r) => r.id == sessionId,
+                        orElse: () => _brainstorms.firstWhere(
+                          (b) => b.id == sessionId,
+                          orElse: () => const _RPData('', '', '', 0, false),
+                        ),
+                      );
+                      if (isRpPost || isOoc) {
+                        Navigator.of(context).push(
+                          fadeRoute(
+                            RPRoomScreen(
+                              partnerName: session.partner,
+                              partnerCode: session.partnerCode,
+                              genre: session.genre,
+                              sessionId: sessionId,
+                            ),
+                          ),
+                        );
+                      } else {
+                        Navigator.of(context).push(
+                          fadeRoute(
+                            BrainstormRoomScreen(
+                              partnerName: session.partner,
+                              partnerCode: session.partnerCode,
+                              genre: session.genre,
+                              sessionId: sessionId,
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  : null,
               child: Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: !n.read && isAccepted ? cGold.withValues(alpha: 0.5)
-                        : !n.read && isInterest ? cIce.withValues(alpha: 0.5)
-                        : !n.read && isRpPost ? cEmber.withValues(alpha: 0.4)
-                        : !n.read && isBrainstorm ? cMagic.withValues(alpha: 0.4)
-                        : !n.read && isOoc ? cSmoke.withValues(alpha: 0.5)
-                        : !n.read && isSecurityWarning ? cEmber.withValues(alpha: 0.7)
-                        : n.read ? cAsh : cSmoke,
+                    color: !n.read && isAccepted
+                        ? cGold.withValues(alpha: 0.5)
+                        : !n.read && isInterest
+                        ? cIce.withValues(alpha: 0.5)
+                        : !n.read && isRpPost
+                        ? cEmber.withValues(alpha: 0.4)
+                        : !n.read && isBrainstorm
+                        ? cMagic.withValues(alpha: 0.4)
+                        : !n.read && isOoc
+                        ? cSmoke.withValues(alpha: 0.5)
+                        : !n.read && isSecurityWarning
+                        ? cEmber.withValues(alpha: 0.7)
+                        : n.read
+                        ? cAsh
+                        : cSmoke,
                   ),
-                  color: !n.read && isAccepted ? cGold.withValues(alpha: 0.12)
-                      : !n.read && isInterest ? cIce.withValues(alpha: 0.12)
-                      : !n.read && isRpPost ? cEmber.withValues(alpha: 0.12)
-                      : !n.read && isBrainstorm ? cMagic.withValues(alpha: 0.12)
-                      : !n.read && isOoc ? cAsh.withValues(alpha: 0.12)
-                      : !n.read && isInviteRequest ? cVine.withValues(alpha: 0.12)
-                      : !n.read && isSecurityWarning ? cEmber.withValues(alpha: 0.15)
-                      : n.read ? Colors.transparent : cInk,
+                  color: !n.read && isAccepted
+                      ? cGold.withValues(alpha: 0.12)
+                      : !n.read && isInterest
+                      ? cIce.withValues(alpha: 0.12)
+                      : !n.read && isRpPost
+                      ? cEmber.withValues(alpha: 0.12)
+                      : !n.read && isBrainstorm
+                      ? cMagic.withValues(alpha: 0.12)
+                      : !n.read && isOoc
+                      ? cAsh.withValues(alpha: 0.12)
+                      : !n.read && isInviteRequest
+                      ? cVine.withValues(alpha: 0.12)
+                      : !n.read && isSecurityWarning
+                      ? cEmber.withValues(alpha: 0.15)
+                      : n.read
+                      ? Colors.transparent
+                      : cInk,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -5198,48 +5264,97 @@ class _NotificationsContentState extends State<_NotificationsContent> {
                     Row(
                       children: [
                         if (isAccepted)
-                          Padding(padding: const EdgeInsets.only(right: 10),
-                            child: Icon(Icons.check_circle_outline, size: 16,
-                                color: n.read ? cSmoke : cGold)),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 10),
+                            child: Icon(
+                              Icons.check_circle_outline,
+                              size: 16,
+                              color: n.read ? cSmoke : cGold,
+                            ),
+                          ),
                         if (isInterest)
-                          Padding(padding: const EdgeInsets.only(right: 10),
-                            child: Icon(Icons.mail_outline, size: 16,
-                                color: n.read ? cSmoke : cIce)),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 10),
+                            child: Icon(
+                              Icons.mail_outline,
+                              size: 16,
+                              color: n.read ? cSmoke : cIce,
+                            ),
+                          ),
                         if (isRpPost)
-                          Padding(padding: const EdgeInsets.only(right: 10),
-                            child: Icon(Icons.edit_outlined, size: 16,
-                                color: n.read ? cSmoke : cEmber)),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 10),
+                            child: Icon(
+                              Icons.edit_outlined,
+                              size: 16,
+                              color: n.read ? cSmoke : cEmber,
+                            ),
+                          ),
                         if (isOoc)
-                          Padding(padding: const EdgeInsets.only(right: 10),
-                            child: Icon(Icons.chat_bubble_outline, size: 16,
-                                color: n.read ? cSmoke : cMist)),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 10),
+                            child: Icon(
+                              Icons.chat_bubble_outline,
+                              size: 16,
+                              color: n.read ? cSmoke : cMist,
+                            ),
+                          ),
                         if (isInviteRequest)
-                          Padding(padding: const EdgeInsets.only(right: 10),
-                            child: Icon(Icons.card_giftcard_outlined, size: 16,
-                                color: n.read ? cSmoke : cVine)),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 10),
+                            child: Icon(
+                              Icons.card_giftcard_outlined,
+                              size: 16,
+                              color: n.read ? cSmoke : cVine,
+                            ),
+                          ),
                         if (isSecurityWarning)
-                          Padding(padding: const EdgeInsets.only(right: 10),
-                            child: Icon(Icons.shield_outlined, size: 16,
-                                color: n.read ? cSmoke : cEmber)),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 10),
+                            child: Icon(
+                              Icons.shield_outlined,
+                              size: 16,
+                              color: n.read ? cSmoke : cEmber,
+                            ),
+                          ),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(n.title, style: TextStyle(fontSize: 13,
-                                  color: n.read ? cSmoke
-                                      : isAccepted ? cGold
-                                      : isInterest ? cIce
-                                      : isRpPost ? cEmber
-                                      : isBrainstorm ? cMagic
-                                      : isOoc ? cMist
-                                      : isInviteRequest ? cVine
-                                      : isSecurityWarning ? cEmber
+                              Text(
+                                n.title,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: n.read
+                                      ? cSmoke
+                                      : isAccepted
+                                      ? cGold
+                                      : isInterest
+                                      ? cIce
+                                      : isRpPost
+                                      ? cEmber
+                                      : isBrainstorm
+                                      ? cMagic
+                                      : isOoc
+                                      ? cMist
+                                      : isInviteRequest
+                                      ? cVine
+                                      : isSecurityWarning
+                                      ? cEmber
                                       : cParchment,
-                                  fontWeight: FontWeight.w300)),
+                                  fontWeight: FontWeight.w300,
+                                ),
+                              ),
                               const SizedBox(height: 4),
-                              Text(n.subtitle, style: const TextStyle(
-                                  fontFamily: 'monospace', fontSize: 10,
-                                  color: cSmoke, letterSpacing: 1)),
+                              Text(
+                                n.subtitle,
+                                style: const TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 10,
+                                  color: cSmoke,
+                                  letterSpacing: 1,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -5251,101 +5366,169 @@ class _NotificationsContentState extends State<_NotificationsContent> {
                           behavior: HitTestBehavior.opaque,
                           child: Padding(
                             padding: const EdgeInsets.all(8),
-                            child: Icon(Icons.close, size: 18,
-                                color: n.read ? cAsh : cSmoke),
+                            child: Icon(
+                              Icons.close,
+                              size: 18,
+                              color: n.read ? cAsh : cSmoke,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    
+
                     if (isInterest && !n.read) ...[
                       const SizedBox(height: 12),
-                      Row(children: [
-                        Expanded(child: LoreTap(
-                          onTap: () async {
-                            await _respond(n, false);
-                            setState(() => n.read = true);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            decoration: BoxDecoration(border: Border.all(color: cAsh)),
-                            child: const Center(child: Text('Decline',
-                                style: TextStyle(fontFamily: 'monospace',
-                                    fontSize: 9, color: cSmoke, letterSpacing: 2)))),
-                        )),
-                        const SizedBox(width: 8),
-                        Expanded(child: LoreTap(
-                          onTap: () async {
-                            final sessionId = await _respond(n, true);
-                            setState(() => n.read = true);
-                            if (context.mounted) {
-                              showSessionStartChoice(
-                                context,
-                                partnerName: n.data['fromCode'] as String? ?? '?',
-                                partnerCode: n.data['fromCode'] as String? ?? '',
-                                genre: n.data['genre'] as String? ?? '',
-                                sessionId: sessionId,
-                              );
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            color: cParchment,
-                            child: const Center(child: Text('Accept',
-                                style: TextStyle(fontFamily: 'monospace',
-                                    fontSize: 9, color: cVoid, letterSpacing: 2)))),
-                        )),
-                      ]),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: LoreTap(
+                              onTap: () async {
+                                await _respond(n, false);
+                                setState(() => n.read = true);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: cAsh),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    'Decline',
+                                    style: TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 9,
+                                      color: cSmoke,
+                                      letterSpacing: 2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: LoreTap(
+                              onTap: () async {
+                                final sessionId = await _respond(n, true);
+                                setState(() => n.read = true);
+                                if (context.mounted) {
+                                  showSessionStartChoice(
+                                    context,
+                                    partnerName:
+                                        n.data['fromCode'] as String? ?? '?',
+                                    partnerCode:
+                                        n.data['fromCode'] as String? ?? '',
+                                    genre: n.data['genre'] as String? ?? '',
+                                    sessionId: sessionId,
+                                  );
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                ),
+                                color: cParchment,
+                                child: const Center(
+                                  child: Text(
+                                    'Accept',
+                                    style: TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 9,
+                                      color: cVoid,
+                                      letterSpacing: 2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
 
                     if (isInviteRequest && !n.read) ...[
                       const SizedBox(height: 12),
-                      Row(children: [
-                        Expanded(child: LoreTap(
-                          onTap: () async {
-                            await _markRead(n.id);
-                            setState(() => n.read = true);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            decoration: BoxDecoration(border: Border.all(color: cAsh)),
-                            child: const Center(child: Text('Decline',
-                                style: TextStyle(fontFamily: 'monospace',
-                                    fontSize: 9, color: cSmoke, letterSpacing: 2)))),
-                        )),
-                        const SizedBox(width: 8),
-                        Expanded(child: LoreTap(
-                          onTap: () async {
-                            final fromCode = n.data['fromCode'] as String? ?? '';
-                            final fromName = n.data['fromName'] as String? ?? fromCode;
-                            final genre = n.data['genre'] as String? ?? '';
-                            await _markRead(n.id);
-                            setState(() => n.read = true);
-                            final sessionId = await FirestoreService().respondToInterest(
-                              interestId: n.id,
-                              fromCode: fromCode,
-                              fromName: fromName,
-                              genre: genre,
-                              accepted: true,
-                            );
-                            if (context.mounted && sessionId.isNotEmpty) {
-                              showSessionStartChoice(
-                                context,
-                                partnerName: fromName,
-                                partnerCode: fromCode,
-                                genre: genre,
-                                sessionId: sessionId,
-                              );
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            color: cVine.withValues(alpha: 0.8),
-                            child: const Center(child: Text('Accept',
-                                style: TextStyle(fontFamily: 'monospace',
-                                    fontSize: 9, color: cParchment, letterSpacing: 2)))),
-                        )),
-                      ]),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: LoreTap(
+                              onTap: () async {
+                                await _markRead(n.id);
+                                setState(() => n.read = true);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: cAsh),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    'Decline',
+                                    style: TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 9,
+                                      color: cSmoke,
+                                      letterSpacing: 2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: LoreTap(
+                              onTap: () async {
+                                final fromCode =
+                                    n.data['fromCode'] as String? ?? '';
+                                final fromName =
+                                    n.data['fromName'] as String? ?? fromCode;
+                                final genre = n.data['genre'] as String? ?? '';
+                                await _markRead(n.id);
+                                setState(() => n.read = true);
+                                final sessionId = await FirestoreService()
+                                    .respondToInterest(
+                                      interestId: n.id,
+                                      fromCode: fromCode,
+                                      fromName: fromName,
+                                      genre: genre,
+                                      accepted: true,
+                                    );
+                                if (context.mounted && sessionId.isNotEmpty) {
+                                  showSessionStartChoice(
+                                    context,
+                                    partnerName: fromName,
+                                    partnerCode: fromCode,
+                                    genre: genre,
+                                    sessionId: sessionId,
+                                  );
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                ),
+                                color: cVine.withValues(alpha: 0.8),
+                                child: const Center(
+                                  child: Text(
+                                    'Accept',
+                                    style: TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 9,
+                                      color: cParchment,
+                                      letterSpacing: 2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
 
                     if (isAccepted && !n.read) ...[
@@ -5355,31 +5538,48 @@ class _NotificationsContentState extends State<_NotificationsContent> {
                           await _markRead(n.id);
                           setState(() => n.read = true);
                           if (context.mounted) {
-                            final sessionId = n.data['sessionId'] as String? ?? '';
+                            final sessionId =
+                                n.data['sessionId'] as String? ?? '';
                             showSessionStartChoice(
                               context,
                               partnerName: n.subtitle.split(' · ').first,
-                              partnerCode: n.data['partnerCode'] as String? ?? '',
+                              partnerCode:
+                                  n.data['partnerCode'] as String? ?? '',
                               genre: n.data['genre'] as String? ?? '',
                               sessionId: sessionId,
                             );
                           }
                         },
-                        child: const Text('Tap to choose how to begin →',
-                            style: TextStyle(fontFamily: 'monospace', fontSize: 9,
-                                color: cGold, letterSpacing: 1)),
+                        child: const Text(
+                          'Tap to choose how to begin →',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 9,
+                            color: cGold,
+                            letterSpacing: 1,
+                          ),
+                        ),
                       ),
                     ],
                     if ((isRpPost || isBrainstorm || isOoc) && !n.read) ...[
                       const SizedBox(height: 8),
-                      Text(isRpPost ? 'Tap to enter the RP room →'
-                          : isBrainstorm ? 'Tap to enter prelude →'
-                          : 'Tap to open OOC →',
-                          style: TextStyle(fontFamily: 'monospace', fontSize: 9,
-                              color: isRpPost ? cEmber
-                                  : isBrainstorm ? cMagic
-                                  : cMist,
-                              letterSpacing: 1)),
+                      Text(
+                        isRpPost
+                            ? 'Tap to enter the RP room →'
+                            : isBrainstorm
+                            ? 'Tap to enter prelude →'
+                            : 'Tap to open OOC →',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 9,
+                          color: isRpPost
+                              ? cEmber
+                              : isBrainstorm
+                              ? cMagic
+                              : cMist,
+                          letterSpacing: 1,
+                        ),
+                      ),
                     ],
                   ],
                 ), // Column
@@ -6465,10 +6665,11 @@ class _CardPreviewState extends State<_CardPreview> {
     return Center(
       child: SizedBox(
         width: 280,
-        child: HoloCard3D(
+        child: HoloCardV2(
           accent: _CardState.accentColor,
           intensity: _CardState.foilIntensity,
           enabled: _CardState.foilEnabled,
+          seed: _CardState.frameSeed,
           child: RequestCardView(
             name: 'You',
             code: 'DEMO-A1B2',
@@ -7257,10 +7458,11 @@ class _RequestCardEditorState extends State<_RequestCardEditor>
     return Center(
       child: SizedBox(
         width: 260,
-        child: HoloCard3D(
+        child: HoloCardV2(
           accent: _CardState.accentColor,
           intensity: _CardState.foilIntensity,
           enabled: _CardState.foilEnabled,
+          seed: _CardState.frameSeed,
           child: RequestCardView(
             name: 'You',
             code: 'DEMO-A1B2',

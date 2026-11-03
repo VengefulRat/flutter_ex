@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'card_frame.dart';
 import 'foil_overlay.dart';
-import 'holo_card.dart';
+import 'holo_parallax.dart';
+import 'holo_card_v2.dart';
 
 /// TCG-style card view. Phase 1 — static layout, no pattern system yet.
 /// The outer frame, name banner, bio zone, meta strip, and tag row are
@@ -53,74 +54,83 @@ class RequestCardView extends StatelessWidget {
     return clean.substring(clean.length - 4);
   }
 
-    @override
+  @override
   Widget build(BuildContext context) {
     // Default spec: derived from the user's code so every card is
     // distinct out of the box, before the user customises anything.
-    final spec = frame ?? CardFrameSpec(
-      seed: code.hashCode,
-      accent: accent,
-      glow: true,
-      ornate: true,
-    );
+    final spec =
+        frame ??
+        CardFrameSpec(
+          seed: code.hashCode,
+          accent: accent,
+          glow: true,
+          ornate: true,
+        );
 
     return AspectRatio(
       aspectRatio: 5 / 7,
       child: GestureDetector(
-        // These empty callbacks absorb the drag gesture so the parent 
+        // These empty callbacks absorb the drag gesture so the parent
         // ListView/ScrollView doesn't scroll while you play with the shimmer.
         onVerticalDragUpdate: (_) {},
         onHorizontalDragUpdate: (_) {},
         child: CardFrame(
-        spec: spec,
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(3),
-              border: Border.all(color: accent.withValues(alpha: 0.3), width: 1),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                Color.lerp(cVoid, accent, 0.08)!,
-                bgTint == Colors.transparent ? cInk : Color.lerp(cInk, bgTint, 0.15)!,
-                Color.lerp(cVoid, accent, 0.05)!,
-              ],
-                stops: const [0.0, 0.5, 1.0],
-              ),
-            ),
-            // Foil sits INSIDE the frame so it never obscures the border.
-            child: FoilOverlay(
-              accent: accent,
-              enabled: false, // HoloCard3D owns foil now
-              seed: foilSeed == 0 ? spec.seed : foilSeed,
-              intensity: foilIntensity,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _header(),
-                    const SizedBox(height: 12),
-                    _nameBanner(),
-                    const SizedBox(height: 14),
-                    Expanded(child: _bioZone()),
-                    const SizedBox(height: 12),
-                    _statusStrip(),
-                    if (writingStyle.isNotEmpty || frequency.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      _bodyZone(),
-                    ],
-                    if (tags.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      _tagRow(),
-                    ],
+          spec: spec,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(3),
+                border: Border.all(
+                  color: accent.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color.lerp(cVoid, accent, 0.08)!,
+                    bgTint == Colors.transparent
+                        ? cInk
+                        : Color.lerp(cInk, bgTint, 0.15)!,
+                    Color.lerp(cVoid, accent, 0.05)!,
                   ],
+                  stops: const [0.0, 0.5, 1.0],
+                ),
+              ),
+              // Foil sits INSIDE the frame so it never obscures the border.
+              child: FoilOverlay(
+                accent: accent,
+                enabled: false, // HoloCard3D owns foil now
+                seed: foilSeed == 0 ? spec.seed : foilSeed,
+                intensity: foilIntensity,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      HoloParallaxLayer(depth: 1.0, child: _header()),
+                      const SizedBox(height: 12),
+                      HoloParallaxLayer(depth: 0.5, child: _nameBanner()),
+                      const SizedBox(height: 14),
+                      Expanded(
+                        child: HoloParallaxLayer(depth: 0.4, child: _bioZone()),
+                      ),
+                      const SizedBox(height: 12),
+                      HoloParallaxLayer(depth: 1.0, child: _statusStrip()),
+                      if (writingStyle.isNotEmpty || frequency.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        HoloParallaxLayer(depth: 0.6, child: _bodyZone()),
+                      ],
+                      if (tags.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        HoloParallaxLayer(depth: 1.0, child: _tagRow()),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
           ),
         ),
       ),
@@ -137,13 +147,15 @@ class RequestCardView extends StatelessWidget {
         ],
         _chip(ageRating.toUpperCase(), cEmber),
         const Spacer(),
-        Text('#$_serial',
-            style: TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 9,
-              color: accent.withValues(alpha: 0.6),
-              letterSpacing: 2,
-            )),
+        Text(
+          '#$_serial',
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 9,
+            color: accent.withValues(alpha: 0.6),
+            letterSpacing: 2,
+          ),
+        ),
       ],
     );
   }
@@ -154,13 +166,15 @@ class RequestCardView extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
-      child: Text(text,
-          style: TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 8,
-            color: color,
-            letterSpacing: 1.5,
-          )),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 8,
+          color: color,
+          letterSpacing: 1.5,
+        ),
+      ),
     );
   }
 
@@ -169,7 +183,10 @@ class RequestCardView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
       decoration: BoxDecoration(
         border: Border.symmetric(
-          horizontal: BorderSide(color: accent.withValues(alpha: 0.5), width: 1),
+          horizontal: BorderSide(
+            color: accent.withValues(alpha: 0.5),
+            width: 1,
+          ),
         ),
       ),
       child: Text(
@@ -212,26 +229,32 @@ class RequestCardView extends StatelessWidget {
   }
 
   Widget _statusStrip() {
-    return Row(children: [
-      Container(
+    return Row(
+      children: [
+        Container(
           width: 6,
           height: 6,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: isOpen ? cVine : cSmoke,
-          )),
-      const SizedBox(width: 6),
-      Text(isOpen ? 'OPEN' : 'CLOSED',
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          isOpen ? 'OPEN' : 'CLOSED',
           style: TextStyle(
             fontFamily: 'monospace',
             fontSize: 9,
             color: isOpen ? cVine : cSmoke,
             letterSpacing: 2,
-          )),
-      const SizedBox(width: 12),
-      Expanded(
-          child: Container(height: 1, color: accent.withValues(alpha: 0.2))),
-    ]);
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Container(height: 1, color: accent.withValues(alpha: 0.2)),
+        ),
+      ],
+    );
   }
 
   Widget _bodyZone() {
@@ -252,22 +275,26 @@ class RequestCardView extends StatelessWidget {
       children: [
         SizedBox(
           width: 62,
-          child: Text(label,
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 8,
-                color: accent.withValues(alpha: 0.7),
-                letterSpacing: 2,
-              )),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 8,
+              color: accent.withValues(alpha: 0.7),
+              letterSpacing: 2,
+            ),
+          ),
         ),
         Expanded(
-          child: Text(value,
-              style: const TextStyle(
-                fontSize: 12,
-                color: cMist,
-                fontStyle: FontStyle.italic,
-                height: 1.5,
-              )),
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 12,
+              color: cMist,
+              fontStyle: FontStyle.italic,
+              height: 1.5,
+            ),
+          ),
         ),
       ],
     );
@@ -278,20 +305,23 @@ class RequestCardView extends StatelessWidget {
       spacing: 6,
       runSpacing: 6,
       children: tags
-          .map((t) => Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  border: Border.all(color: cSmoke.withValues(alpha: 0.4)),
+          .map(
+            (t) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                border: Border.all(color: cSmoke.withValues(alpha: 0.4)),
+              ),
+              child: Text(
+                t,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 8,
+                  color: cSmoke,
+                  letterSpacing: 1,
                 ),
-                child: Text(t,
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 8,
-                      color: cSmoke,
-                      letterSpacing: 1,
-                    )),
-              ))
+              ),
+            ),
+          )
           .toList(),
     );
   }
@@ -357,16 +387,18 @@ class RequestCardSheet extends StatelessWidget {
                 width: 32,
                 height: 3,
                 decoration: BoxDecoration(
-                    color: cAsh,
-                    borderRadius: BorderRadius.circular(2)),
+                  color: cAsh,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
               const SizedBox(height: 20),
               SizedBox(
                 width: cardWidth,
-                child: HoloCard3D(
+                child: HoloCardV2(
                   accent: card.accent,
                   intensity: card.foilIntensity,
                   enabled: card.foilEnabled,
+                  seed: card.foilSeed,
                   child: card,
                 ),
               ),

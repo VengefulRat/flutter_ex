@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../theme.dart';
 import '../settings.dart';
 import 'shared.dart';
+import 'holo_card_v2.dart';
 
 /// A single stat to display on the profile card.
 class ProfileStat {
@@ -81,14 +82,21 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
     if (confirm == true && mounted) {
       await Clipboard.setData(ClipboardData(text: widget.code));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        backgroundColor: cInk,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(),
-        content: Text('Unique code copied. Guard it carefully.',
-            style: TextStyle(color: cParchment, fontSize: 13,
-                fontStyle: FontStyle.italic)),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: cInk,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(),
+          content: Text(
+            'Unique code copied. Guard it carefully.',
+            style: TextStyle(
+              color: cParchment,
+              fontSize: 13,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
+      );
     }
   }
 
@@ -97,25 +105,32 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
     return AnimatedBuilder(
       animation: appSettings,
       builder: (_, _) {
-        return LoreTap(
-          onTap: widget.onTap,
-          onLongPress: widget.onLongPress,
-          child: Container(
-            margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            decoration: _cardDecoration(),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 16),
-                  _buildBio(),
-                  if (widget.stats.isNotEmpty) ...[
-                    const SizedBox(height: 20),
-                    _buildStats(),
-                  ],
-                ],
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: HoloCardV2(
+            accent: appSettings.profileBorderColor,
+            intensity: 0.55,
+            seed: widget.code.hashCode,
+            child: LoreTap(
+              onTap: widget.onTap,
+              onLongPress: widget.onLongPress,
+              child: Container(
+                decoration: _cardDecoration(),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(),
+                      const SizedBox(height: 16),
+                      _buildBio(),
+                      if (widget.stats.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        _buildStats(),
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -129,7 +144,8 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 56, height: 56,
+          width: 56,
+          height: 56,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(color: cAsh),
@@ -142,9 +158,15 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(widget.name, style: const TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.w300,
-                  fontStyle: FontStyle.italic, color: cParchment)),
+              Text(
+                widget.name,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w300,
+                  fontStyle: FontStyle.italic,
+                  color: cParchment,
+                ),
+              ),
               const SizedBox(height: 4),
               _codeRevealed ? _revealedCodeRow() : _hiddenCodeRow(),
             ],
@@ -161,41 +183,59 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
       behavior: HitTestBehavior.opaque,
       child: const Padding(
         padding: EdgeInsets.symmetric(vertical: 2),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.lock_outline, size: 11, color: cSmoke),
-          SizedBox(width: 5),
-          Text('UNIQUE CODE — tap to reveal',
-              style: TextStyle(fontFamily: 'monospace', fontSize: 10,
-                  color: cSmoke, letterSpacing: 1)),
-        ]),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_outline, size: 11, color: cSmoke),
+            SizedBox(width: 5),
+            Text(
+              'UNIQUE CODE — tap to reveal',
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 10,
+                color: cSmoke,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _revealedCodeRow() {
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      Text(widget.code, style: const TextStyle(
-          fontFamily: 'monospace', fontSize: 12,
-          color: cGold, letterSpacing: 2)),
-      const SizedBox(width: 8),
-      GestureDetector(
-        onTap: _copyCode,
-        behavior: HitTestBehavior.opaque,
-        child: const Padding(
-          padding: EdgeInsets.all(4),
-          child: Icon(Icons.copy, size: 13, color: cSmoke),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          widget.code,
+          style: const TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 12,
+            color: cGold,
+            letterSpacing: 2,
+          ),
         ),
-      ),
-      const SizedBox(width: 4),
-      GestureDetector(
-        onTap: () => setState(() => _codeRevealed = false),
-        behavior: HitTestBehavior.opaque,
-        child: const Padding(
-          padding: EdgeInsets.all(4),
-          child: Icon(Icons.visibility_off, size: 13, color: cSmoke),
+        const SizedBox(width: 8),
+        GestureDetector(
+          onTap: _copyCode,
+          behavior: HitTestBehavior.opaque,
+          child: const Padding(
+            padding: EdgeInsets.all(4),
+            child: Icon(Icons.copy, size: 13, color: cSmoke),
+          ),
         ),
-      ),
-    ]);
+        const SizedBox(width: 4),
+        GestureDetector(
+          onTap: () => setState(() => _codeRevealed = false),
+          behavior: HitTestBehavior.opaque,
+          child: const Padding(
+            padding: EdgeInsets.all(4),
+            child: Icon(Icons.visibility_off, size: 13, color: cSmoke),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildBio() {
@@ -232,13 +272,25 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(s.value, style: const TextStyle(
-              fontSize: 16, fontWeight: FontWeight.w300,
-              color: cParchment, height: 1.1)),
+          Text(
+            s.value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w300,
+              color: cParchment,
+              height: 1.1,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(s.label.toUpperCase(), style: const TextStyle(
-              fontFamily: 'monospace', fontSize: 8,
-              color: cSmoke, letterSpacing: 1.5)),
+          Text(
+            s.label.toUpperCase(),
+            style: const TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 8,
+              color: cSmoke,
+              letterSpacing: 1.5,
+            ),
+          ),
         ],
       ),
     );
@@ -257,10 +309,17 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
         border = Border.all(color: borderColor, width: 3);
         break;
       case 'glow':
-        border = Border.all(color: borderColor.withValues(alpha: 0.7), width: 1);
-        shadows = [BoxShadow(
+        border = Border.all(
+          color: borderColor.withValues(alpha: 0.7),
+          width: 1,
+        );
+        shadows = [
+          BoxShadow(
             color: borderColor.withValues(alpha: 0.35),
-            blurRadius: 16, spreadRadius: 2)];
+            blurRadius: 16,
+            spreadRadius: 2,
+          ),
+        ];
         break;
       case 'none':
         border = Border.all(color: Colors.transparent, width: 1);
@@ -301,41 +360,79 @@ class _CodeDialog extends StatelessWidget {
       shape: const RoundedRectangleBorder(),
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: TextStyle(
-              fontFamily: 'monospace', fontSize: 9,
-              color: actionColor, letterSpacing: 4)),
-          const SizedBox(height: 12),
-          Text(body, style: const TextStyle(
-              fontSize: 13, color: cMist, height: 1.7,
-              fontStyle: FontStyle.italic)),
-          const SizedBox(height: 24),
-          Row(children: [
-            Expanded(child: GestureDetector(
-              onTap: () => Navigator.of(context).pop(false),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                    border: Border.all(color: cAsh)),
-                child: const Center(child: Text('Cancel',
-                    style: TextStyle(fontFamily: 'monospace',
-                        fontSize: 9, color: cSmoke, letterSpacing: 2))),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 9,
+                color: actionColor,
+                letterSpacing: 4,
               ),
-            )),
-            const SizedBox(width: 8),
-            Expanded(child: GestureDetector(
-              onTap: () => Navigator.of(context).pop(true),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                color: actionColor.withValues(alpha: 0.8),
-                child: Center(child: Text(actionLabel,
-                    style: const TextStyle(fontFamily: 'monospace',
-                        fontSize: 9, color: cParchment, letterSpacing: 2))),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              body,
+              style: const TextStyle(
+                fontSize: 13,
+                color: cMist,
+                height: 1.7,
+                fontStyle: FontStyle.italic,
               ),
-            )),
-          ]),
-        ]),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(false),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: cAsh),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 9,
+                            color: cSmoke,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(true),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      color: actionColor.withValues(alpha: 0.8),
+                      child: Center(
+                        child: Text(
+                          actionLabel,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 9,
+                            color: cParchment,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

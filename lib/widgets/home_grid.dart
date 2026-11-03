@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../settings.dart';
 import 'shared.dart';
+import 'holo_card_v2.dart';
 import 'package:reorderables/reorderables.dart';
 
 /// A single tile in the home grid.
@@ -72,7 +73,7 @@ class HomeGrid extends StatelessWidget {
             width: width,
             child: _HomeGridTile(
               key: ValueKey(b.title),
-              block: b, 
+              block: b,
               fullWidth: b.fullWidth,
               isEditing: isEditing,
             ),
@@ -87,56 +88,116 @@ class _HomeGridTile extends StatelessWidget {
   final HomeGridBlock block;
   final bool fullWidth;
   final bool isEditing;
-  const _HomeGridTile({super.key, required this.block, required this.fullWidth, this.isEditing = false});
+  const _HomeGridTile({
+    super.key,
+    required this.block,
+    required this.fullWidth,
+    this.isEditing = false,
+  });
 
   Color get _bg => block.style.background ?? cInk;
   Color get _borderColor => block.style.borderColor ?? cAsh;
   Color get _accent => block.style.accent ?? block.accent;
 
   BoxDecoration _tileDecoration() {
-    BorderRadius radius;
-    switch (block.style.shape) {
-      case 'rounded':
-        radius = BorderRadius.circular(16);
-        break;
-      case 'pill':
-        radius = BorderRadius.circular(50);
-        break;
-      default: // square and hexagon
-        radius = BorderRadius.zero; // Changed from circular(4) to zero for hexagons
-    }
-
-    final decoration = BoxDecoration(
-      color: _bg,
-      borderRadius: radius,
-    );
-
-    switch (block.style.borderStyle) {
-      case 'thick':
-        return decoration.copyWith(
-          border: Border.all(color: isEditing ? cGold : _borderColor, width: isEditing ? 2 : 3),
-        );
-      case 'faded':
-        return decoration.copyWith(
-          border: Border.all(color: isEditing ? cGold : _borderColor.withValues(alpha: 0.35), width: 1),
-        );
-      case 'glow':
-        return decoration.copyWith(
-          border: Border.all(color: isEditing ? cGold : _borderColor.withValues(alpha: 0.7), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: _borderColor.withValues(alpha: 0.35),
-              blurRadius: 12,
-              spreadRadius: 1,
-            ),
-          ],
-        );
-      default:
-        return decoration.copyWith(
-          border: Border.all(color: isEditing ? cGold : _borderColor, width: isEditing ? 2 : 1.5),
-        );
-    }
+  BorderRadius radius;
+  switch (block.style.shape) {
+    case 'rounded':
+      radius = BorderRadius.circular(16);
+      break;
+    case 'pill':
+      radius = BorderRadius.circular(50);
+      break;
+    default:
+      radius = BorderRadius.zero;
   }
+
+  final bgLum = _bg.computeLuminance();
+  final isBright = bgLum > 0.35;
+
+  // Top edge catches light, bottom edge falls into shadow. This is the
+  // "raised surface" gradient — it's what makes the tile read as sitting
+  // on top of the background rather than painted onto it.
+  final topHighlight = isBright ? 0.03 : 0.09;
+  final bottomShadow = isBright ? 0.12 : 0.24;
+
+  final gradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [
+      Color.lerp(_bg, Colors.white, topHighlight)!,
+      _bg,
+      Color.lerp(_bg, Colors.black, bottomShadow)!,
+    ],
+    stops: const [0.0, 0.35, 1.0],
+  );
+
+  // Lift shadows — dimmer on bright tiles so they don't add more mud
+  final darkShadow = BoxShadow(
+    color: Colors.black.withValues(alpha: isBright ? 0.45 : 0.8),
+    blurRadius: isBright ? 12 : 18,
+    offset: const Offset(0, 8),
+    spreadRadius: -6,
+  );
+  final glowLift = BoxShadow(
+    color: _accent.withValues(alpha: isBright ? 0.10 : 0.28),
+    blurRadius: isBright ? 22 : 40,
+    offset: const Offset(0, 18),
+    spreadRadius: -2,
+  );
+  final baseShadows = <BoxShadow>[darkShadow, glowLift];
+
+  final decoration = BoxDecoration(
+    gradient: gradient,
+    borderRadius: radius,
+  );
+
+  switch (block.style.borderStyle) {
+    case 'thick':
+      return decoration.copyWith(
+        border: Border.all(
+          color: isEditing ? cGold : _borderColor,
+          width: isEditing ? 2 : 3,
+        ),
+        boxShadow: baseShadows,
+      );
+    case 'faded':
+      return decoration.copyWith(
+        border: Border.all(
+          color: isEditing
+              ? cGold
+              : _borderColor.withValues(alpha: 0.35),
+          width: 1,
+        ),
+        boxShadow: baseShadows,
+      );
+    case 'glow':
+      return decoration.copyWith(
+        border: Border.all(
+          color: isEditing
+              ? cGold
+              : _borderColor.withValues(alpha: 0.7),
+          width: 1,
+        ),
+        boxShadow: [
+          ...baseShadows,
+          BoxShadow(
+            color: _borderColor.withValues(alpha: 0.35),
+            blurRadius: 12,
+            spreadRadius: 1,
+          ),
+        ],
+      );
+    default:
+      return decoration.copyWith(
+        border: Border.all(
+          color: isEditing ? cGold : _borderColor,
+          width: isEditing ? 2 : 1.5,
+        ),
+        boxShadow: baseShadows,
+      );
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -150,16 +211,35 @@ class _HomeGridTile extends StatelessWidget {
       child: fullWidth ? _fullWidthLayout() : _stackedLayout(),
     );
 
+    // Shader + tilt wrapper. Disabled during edit mode so reorder drags
+    // don't fight the pointer listener inside HoloCardV2.
+    tile = HoloCardV2(
+      accent: _accent,
+      intensity: 0.38,
+      seed: block.title.hashCode,
+      maxTiltDegrees: 8,
+      parallaxStrength: 6,
+      enabled: !isEditing,
+      gyroEnabled: !isEditing,
+      bgColor: _bg,
+      child: tile,
+    );
+
+    // Hexagon clip wraps the shader too, so foil respects the shape.
+    // PhysicalShape gives a hexagon-shaped shadow (not a rectangle).
     if (block.style.shape == 'hexagon') {
-      tile = ClipPath(
+      tile = PhysicalShape(
         clipper: HexagonClipper(),
+        color: _bg,
+        elevation: 10,
+        shadowColor: _accent.withValues(alpha: 0.5),
         child: tile,
       );
     }
 
     return LoreTap(
-      onTap: isEditing ? block.onLongPress : block.onTap, // In edit mode, tap opens style sheet
-      onLongPress: isEditing ? null : block.onLongPress, // In edit mode, no long press needed
+      onTap: isEditing ? block.onLongPress : block.onTap,
+      onLongPress: isEditing ? null : block.onLongPress,
       child: Stack(
         children: [
           tile,
@@ -169,7 +249,7 @@ class _HomeGridTile extends StatelessWidget {
               right: 8,
               child: Container(
                 padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: cGold,
                   shape: BoxShape.circle,
                 ),
@@ -186,30 +266,42 @@ class _HomeGridTile extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(children: [
-          Icon(block.icon, size: 18, color: _accent),
-          const Spacer(),
-          if (block.badge != null && block.badge! > 0 && !isEditing)
-            _badge()
-          else if (!isEditing)
-            const Icon(Icons.chevron_right, size: 16, color: cSmoke),
-        ]),
+        Row(
+          children: [
+            Icon(block.icon, size: 18, color: _accent),
+            const Spacer(),
+            if (block.badge != null && block.badge! > 0 && !isEditing)
+              _badge()
+            else if (!isEditing)
+              const Icon(Icons.chevron_right, size: 16, color: cSmoke),
+          ],
+        ),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(block.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 14, color: cMist,
-                    fontWeight: FontWeight.w300, letterSpacing: 0.3)),
+            Text(
+              block.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 14,
+                color: cMist,
+                fontWeight: FontWeight.w300,
+                letterSpacing: 0.3,
+              ),
+            ),
             const SizedBox(height: 2),
-            Text(block.subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontFamily: 'monospace', fontSize: 9,
-                    color: cSmoke, letterSpacing: 1)),
+            Text(
+              block.subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 9,
+                color: cSmoke,
+                letterSpacing: 1,
+              ),
+            ),
           ],
         ),
       ],
@@ -217,36 +309,49 @@ class _HomeGridTile extends StatelessWidget {
   }
 
   Widget _fullWidthLayout() {
-    return Row(children: [
-      Icon(block.icon, size: 18, color: _accent),
-      const SizedBox(width: 12),
-      Expanded(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(block.title,
+    return Row(
+      children: [
+        Icon(block.icon, size: 18, color: _accent),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                block.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    fontSize: 14, color: cMist,
-                    fontWeight: FontWeight.w300, letterSpacing: 0.3)),
-            if (block.subtitle.isNotEmpty) ...[
-              const SizedBox(height: 1),
-              Text(block.subtitle,
+                  fontSize: 14,
+                  color: cMist,
+                  fontWeight: FontWeight.w300,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              if (block.subtitle.isNotEmpty) ...[
+                const SizedBox(height: 1),
+                Text(
+                  block.subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontFamily: 'monospace', fontSize: 9,
-                      color: cSmoke, letterSpacing: 1)),
+                    fontFamily: 'monospace',
+                    fontSize: 9,
+                    color: cSmoke,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
-      if (block.badge != null && block.badge! > 0 && !isEditing) _badge(),
-      if (!isEditing) const SizedBox(width: 4),
-      if (!isEditing) const Icon(Icons.chevron_right, size: 16, color: cSmoke),
-    ]);
+        if (block.badge != null && block.badge! > 0 && !isEditing) _badge(),
+        if (!isEditing) const SizedBox(width: 4),
+        if (!isEditing)
+          const Icon(Icons.chevron_right, size: 16, color: cSmoke),
+      ],
+    );
   }
 
   Widget _badge() {
@@ -256,9 +361,14 @@ class _HomeGridTile extends StatelessWidget {
         color: _accent,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text('${block.badge}',
-          style: const TextStyle(fontSize: 10, color: cVoid,
-              fontWeight: FontWeight.w500)),
+      child: Text(
+        '${block.badge}',
+        style: const TextStyle(
+          fontSize: 10,
+          color: cVoid,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
     );
   }
 }

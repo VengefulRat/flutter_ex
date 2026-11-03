@@ -56,6 +56,7 @@ dependencies:
   flutter_shaders_ui: ^1.3.0
   animated_reorderable: ^2.10.1
   flutter_reorderable_grid_view: ^5.9.0
+  sensors_plus: ^7.1.1
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +65,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  shaders:
+  - shaders/foil_overlay.frag
 
   assets:
     - assets/images/lore_wordmark.jpg
