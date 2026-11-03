@@ -7671,19 +7671,20 @@ class _RPSelectionCard extends StatelessWidget {
                     children: [
                       // 1. Background Image (if any)
                       if (rp.backgroundUrl != null)
-                        Image.network(rp.backgroundUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox()),
-                      
-                      // 2. Dark Scrim
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Colors.black.withValues(alpha: 0.8), Colors.black.withValues(alpha: 0.5), Colors.black.withValues(alpha: 0.9)],
-                            stops: const [0.0, 0.4, 1.0],
+                        Image.network(
+                          rp.backgroundUrl!,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return const Center(child: CircularProgressIndicator(color: cGold, strokeWidth: 1.5));
+                          },
+                          errorBuilder: (_, _, _) => Container(
+                            color: cInk, // Fallback background
+                            child: const Center(
+                              child: Icon(Icons.broken_image_outlined, color: cAsh, size: 24),
+                            ),
                           ),
                         ),
-                      ),
 
                       // 3. Content
                       Padding(
