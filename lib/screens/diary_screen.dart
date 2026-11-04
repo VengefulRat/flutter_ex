@@ -10,6 +10,8 @@ import '../settings.dart';
 import '../models/world.dart';
 import 'sandbox_screen.dart';
 import '../services/auth_service.dart';
+import '../widgets/card_frame.dart';
+import '../widgets/holo_card_v2.dart';
 
 // ─────────────────────────────────────────
 // NOTIFICATIONS SETUP
@@ -120,18 +122,33 @@ class DiaryStorage {
   }
 
   // ── Firestore sync ──
+    // ── Firestore sync ──
   static Future<void> syncToFirestore(
       String userCode, List<DiaryEntry> entries) async {
     final db = FirebaseFirestore.instance;
+    final collection = db.collection('users').doc(userCode).collection('diary');
+    
+    // 1. Get all existing documents from Firestore
+    final existingDocs = await collection.get();
+    
+    // 2. Create a set of IDs that we currently have locally
+    final localIds = entries.map((e) => e.id).toSet();
+    
     final batch = db.batch();
+    
+    // 3. If an existing Firestore doc is NOT in our local list, delete it!
+    for (final doc in existingDocs.docs) {
+      if (!localIds.contains(doc.id)) {
+        batch.delete(doc.reference);
+      }
+    }
+    
+    // 4. Add or update all our local entries
     for (final e in entries) {
-      final ref = db
-          .collection('users')
-          .doc(userCode)
-          .collection('diary')
-          .doc(e.id);
+      final ref = collection.doc(e.id);
       batch.set(ref, e.toJson());
     }
+    
     await batch.commit();
   }
 
@@ -165,6 +182,8 @@ class DiaryEntry {
   List<String> linkedWorldIds;
   final DateTime createdAt;
   DateTime updatedAt;
+  bool isFolder; 
+  String? parentId;
 
   DiaryEntry({
     required this.id,
@@ -176,6 +195,8 @@ class DiaryEntry {
     List<DiaryChapter>? chapters,
     List<String>? linkedCharacterIds,
     List<String>? linkedWorldIds,
+    this.isFolder = false, // Default to false (it's a book)
+    this.parentId,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : chapters = chapters ?? [],
@@ -206,6 +227,8 @@ class DiaryEntry {
     'chapters': chapters.map((c) => c.toJson()).toList(),
     'linkedCharacterIds': linkedCharacterIds,
     'linkedWorldIds': linkedWorldIds,
+    'isFolder': isFolder,     // NEW
+    'parentId': parentId,     // NEW
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
   };
@@ -223,6 +246,8 @@ class DiaryEntry {
         .toList(),
     linkedCharacterIds: List<String>.from(j['linkedCharacterIds'] ?? []),
     linkedWorldIds: List<String>.from(j['linkedWorldIds'] ?? []),
+    isFolder: j['isFolder'] as bool? ?? false, // NEW
+    parentId: j['parentId'] as String?,        // NEW
     createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ?? DateTime.now(),
     updatedAt: DateTime.tryParse(j['updatedAt'] as String? ?? '') ?? DateTime.now(),
   );
@@ -276,6 +301,8 @@ class _DiaryScreenState extends State<DiaryScreen> {
   TimeOfDay _reminderTime = const TimeOfDay(hour: 20, minute: 0);
   int _streak = 0;
   final _auth = AuthService();
+  String? _currentFolderId; 
+  List<CharacterEntry> _allChars = [];
 
   @override
   void initState() {
@@ -288,6 +315,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
     final reminderEnabled = await DiaryStorage.getReminderEnabled();
     final reminderTime = await DiaryStorage.getReminderTime();
     final streak = await DiaryStorage.getStreak();
+    final chars = await SandboxStorage.loadCharacters(); 
 
     // Merge with Firestore
     final code = _auth.currentCode;
@@ -324,6 +352,41 @@ class _DiaryScreenState extends State<DiaryScreen> {
     }
   }
 
+  void _deleteEntry(String id) {
+    setState(() => _entries.removeWhere((e) => e.id == id));
+    _saveEntries();
+  }
+
+  Future<void> _toggleReminder(bool v) async {
+    setState(() => _reminderEnabled = v);
+    await DiaryStorage.saveReminder(v, _reminderTime);
+    if (v) {
+      await scheduleDiaryReminder(_reminderTime);
+    } else {
+      await cancelDiaryReminder();
+    }
+  }
+
+  Future<void> _pickReminderTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _reminderTime,
+      builder: (ctx, child) => Theme(
+        data: ThemeData.dark().copyWith(
+          colorScheme: const ColorScheme.dark(primary: cGold, surface: cInk), 
+          dialogTheme: const DialogThemeData(backgroundColor: cInk),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      setState(() => _reminderTime = picked);
+      await DiaryStorage.saveReminder(_reminderEnabled, picked);
+      if (_reminderEnabled) await scheduleDiaryReminder(picked);
+    }
+  }
+
+
   void _openEntry(DiaryEntry entry) {
     Navigator.of(context).push(fadeRoute(_EntryScreen(
       entry: entry,
@@ -346,47 +409,47 @@ class _DiaryScreenState extends State<DiaryScreen> {
     )));
   }
 
-  void _newEntry() {
-    Navigator.of(context).push(fadeRoute(_NewEntrySetup(
-      onStart: (entry) {
-        setState(() => _entries.insert(0, entry));
-        _saveEntries();
-        _openEntry(entry);
-      },
-    )));
-  }
-
-  void _deleteEntry(String id) {
-    setState(() => _entries.removeWhere((e) => e.id == id));
-    _saveEntries();
-  }
-
-  Future<void> _toggleReminder(bool v) async {
-    setState(() => _reminderEnabled = v);
-    await DiaryStorage.saveReminder(v, _reminderTime);
-    if (v) {
-      await scheduleDiaryReminder(_reminderTime);
-    } else {
-      await cancelDiaryReminder();
-    }
-  }
-
-  Future<void> _pickReminderTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _reminderTime,
-      builder: (ctx, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(primary: cGold, surface: cInk), dialogTheme: DialogThemeData(backgroundColor: cInk),
-        ),
-        child: child!,
+      void _newEntry() async {
+    // 1. Wait for the wizard to finish and return a DiaryEntry
+    // We use PageRouteBuilder directly to guarantee the type is <DiaryEntry>
+    final newEntry = await Navigator.of(context).push<DiaryEntry>(
+      PageRouteBuilder<DiaryEntry>(
+        pageBuilder: (context, animation, secondaryAnimation) => const _NewEntrySetup(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
       ),
     );
-    if (picked != null) {
-      setState(() => _reminderTime = picked);
-      await DiaryStorage.saveReminder(_reminderEnabled, picked);
-      if (_reminderEnabled) await scheduleDiaryReminder(picked);
+
+    if (newEntry == null) return; // User backed out of the wizard
+
+    // 2. Duplicate Check
+    final cleanNewTitle = newEntry.title.trim().toLowerCase();
+    if (cleanNewTitle.isNotEmpty) {
+      final isDuplicate = _entries.any((e) => 
+        e.parentId == _currentFolderId && 
+        e.title.trim().toLowerCase() == cleanNewTitle
+      );
+      
+      if (isDuplicate) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            backgroundColor: cEmber,
+            duration: Duration(seconds: 4),
+            content: Text(
+              'A book with this title already exists here!', 
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ));
+        }
+        return; // 🛑 Stop here
+      }
     }
+
+    // 3. Save and Open
+    setState(() => _entries.insert(0, newEntry));
+    _saveEntries();
+    _openEntry(newEntry);
   }
 
   @override
@@ -455,23 +518,63 @@ class _DiaryScreenState extends State<DiaryScreen> {
       ),
 
       // Entries list
-      Expanded(child: !_loaded
-        ? const Center(child: SizedBox(width: 20, height: 20,
-            child: CircularProgressIndicator(strokeWidth: 1.5, color: cSmoke)))
-        : _entries.isEmpty
-          ? _emptyState()
-          : ScrollConfiguration(
-              behavior: NoGlowBehavior(),
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: _entries.length,
-                itemBuilder: (_, i) => _EntryCard(
-                  entry: _entries[i],
-                  onTap: () => _openEntry(_entries[i]),
-                  onDelete: () => _deleteEntry(_entries[i].id),
-                ),
-              ),
-            ),
+            // Entries list
+      Expanded(
+        child: !_loaded
+            ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 1.5, color: cSmoke)))
+            : _entries.where((e) => e.parentId == _currentFolderId).isEmpty
+                ? _emptyState()
+                : ScrollConfiguration(
+                    behavior: NoGlowBehavior(),
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+                      children: [
+                        // Back Button if we are inside a folder
+                        if (_currentFolderId != null)
+                          GestureDetector(
+                            onTap: () => setState(() => _currentFolderId = null),
+                            child: Container(
+                              width: 80,
+                              margin: const EdgeInsets.only(right: 16),
+                              decoration: BoxDecoration(
+                                color: cInk,
+                                border: Border.all(color: cAsh),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.arrow_back, color: cGold, size: 24),
+                                  SizedBox(height: 8),
+                                  Text('BACK', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 2)),
+                                ],
+                              ),
+                            ),
+                          ),
+                          
+                        // The Cards
+                        ..._entries
+                            .where((e) => e.parentId == _currentFolderId)
+                            .map((e) {
+                              // Find linked characters for this entry
+                              final linkedChars = _allChars.where((c) => e.linkedCharacterIds.contains(c.id)).toList();
+                              return _DiaryCard(
+                                entry: e,
+                                linkedChars: linkedChars,
+                                onTap: () {
+                                  if (e.isFolder) {
+                                    setState(() => _currentFolderId = e.id);
+                                  } else {
+                                    _openEntry(e);
+                                  }
+                                },
+                                onDelete: () => _deleteEntry(e.id),
+                              );
+                            }),
+                      ],
+                    ),
+                  ),
       ),
 
       // New Entry button
@@ -508,67 +611,168 @@ class _DiaryScreenState extends State<DiaryScreen> {
 // ─────────────────────────────────────────
 // ENTRY CARD
 // ─────────────────────────────────────────
-class _EntryCard extends StatelessWidget {
+class _DiaryCard extends StatelessWidget {
   final DiaryEntry entry;
+  final List<CharacterEntry> linkedChars;
   final VoidCallback onTap;
   final VoidCallback onDelete;
-  const _EntryCard({required this.entry, required this.onTap,
-      required this.onDelete});
+
+  const _DiaryCard({
+    required this.entry,
+    required this.linkedChars,
+    required this.onTap,
+    required this.onDelete,
+  });
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    onLongPress: () => _showActions(context),
-    child: Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-          color: cInk, border: Border.all(color: cAsh)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(child: Text(entry.displayTitle, style: const TextStyle(
-              fontSize: 16, fontWeight: FontWeight.w300,
-              fontStyle: FontStyle.italic, color: cParchment))),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(border: Border.all(color: cAsh)),
-            child: Text(entry.mode == DiaryMode.chapters ? 'CHAPTERS' : 'BOOK',
-                style: const TextStyle(fontFamily: 'monospace',
-                    fontSize: 8, color: cSmoke, letterSpacing: 2)),
+  Widget build(BuildContext context) {
+    final seed = entry.id.hashCode;
+    // Use the first linked character's color, or a default gold
+    final accent = linkedChars.isNotEmpty ? linkedChars.first.accentColor : cGold;
+
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: () => _showActions(context),
+      child: Padding(
+        padding: const EdgeInsets.only(right: 16),
+        child: HoloCardV2(
+          accent: accent,
+          intensity: 0.4,
+          seed: seed,
+          bgColor: cInk,
+          child: Container(
+            width: 200, // Width of the card
+            decoration: BoxDecoration(
+              color: cInk,
+              border: Border.all(color: accent.withValues(alpha: 0.4), width: 1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: CardFrame(
+                spec: CardFrameSpec(seed: seed, accent: accent, ornate: true, glow: false),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Background: Use the first character's avatar if it's a folder, else a gradient
+                      if (entry.isFolder && linkedChars.isNotEmpty && linkedChars.first.avatarUrl != null)
+                        Image.network(linkedChars.first.avatarUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox())
+                      else
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [cInk, accent.withValues(alpha: 0.2)],
+                            ),
+                          ),
+                        ),
+
+                      // Scrim
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.95)],
+                            stops: const [0.3, 1.0],
+                          ),
+                        ),
+                      ),
+
+                      // Top Badge (Folder vs Book)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            border: Border.all(color: accent.withValues(alpha: 0.5)),
+                          ),
+                          child: Icon(
+                            entry.isFolder ? Icons.folder_outlined : Icons.menu_book_outlined,
+                            size: 12, color: accent,
+                          ),
+                        ),
+                      ),
+
+                      // Text Info
+                      Positioned(
+                        bottom: 10,
+                        left: 10,
+                        right: 10,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              entry.displayTitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontFamily: 'serif',
+                                fontSize: 16,
+                                fontWeight: FontWeight.w300,
+                                fontStyle: FontStyle.italic,
+                                color: cParchment,
+                                height: 1.1,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              entry.isFolder 
+                                  ? '${entry.chapters.length} entries' // Just using chapters length as a placeholder for folder items count
+                                  : '${entry.chapters.length} chapters · ${entry.chapters.fold(0, (s, c) => s + c.wordCount)} words',
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 8,
+                                color: cSmoke,
+                              ),
+                            ),
+                            // Character Avatar Chips
+                            if (linkedChars.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                height: 20,
+                                child: Stack(
+                                  children: linkedChars.take(3).toList().asMap().entries.map((mapEntry) {
+                                    final i = mapEntry.key;
+                                    final c = mapEntry.value;
+                                    return Positioned(
+                                      left: i * 14.0,
+                                      child: Container(
+                                        width: 20, height: 20,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: cInk, width: 1.5),
+                                          image: c.avatarUrl != null 
+                                              ? DecorationImage(image: NetworkImage(c.avatarUrl!), fit: BoxFit.cover)
+                                              : null,
+                                          color: c.avatarUrl == null ? c.accentColor : null,
+                                        ),
+                                        child: c.avatarUrl == null 
+                                            ? Center(child: Text(c.name[0].toUpperCase(), style: const TextStyle(fontSize: 10, color: cVoid)))
+                                            : null,
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ]),
-        if (entry.genre.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(entry.genre, style: const TextStyle(fontFamily: 'monospace',
-              fontSize: 10, color: cGold, letterSpacing: 2)),
-        ],
-        const SizedBox(height: 10),
-        Row(children: [
-          _pill('${entry.chapters.length} chapters', cSmoke),
-          const SizedBox(width: 6),
-          _pill('${entry.chapters.fold(0, (s, c) => s + c.wordCount)} words', cSmoke),
-          const Spacer(),
-          Text(_formatDate(entry.updatedAt),
-              style: const TextStyle(fontFamily: 'monospace',
-                  fontSize: 9, color: cSmoke)),
-        ]),
-      ]),
-    ),
-  );
-
-  Widget _pill(String label, Color color) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    decoration: BoxDecoration(border: Border.all(color: color.withValues(alpha: 0.4))),
-    child: Text(label, style: TextStyle(fontFamily: 'monospace',
-        fontSize: 9, color: color, letterSpacing: 1)),
-  );
-
-  String _formatDate(DateTime d) {
-    final now = DateTime.now();
-    final diff = now.difference(d);
-    if (diff.inDays == 0) return 'Today';
-    if (diff.inDays == 1) return 'Yesterday';
-    return '${d.day}/${d.month}/${d.year}';
+        ),
+      ),
+    );
   }
 
   void _showActions(BuildContext context) => showModalBottomSheet(
@@ -576,15 +780,15 @@ class _EntryCard extends StatelessWidget {
     backgroundColor: cInk,
     builder: (_) => Padding(
       padding: const EdgeInsets.all(24),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 32, height: 3,
-            decoration: BoxDecoration(color: cAsh,
-                borderRadius: BorderRadius.circular(2))),
-        const SizedBox(height: 20),
-        _sheetAction(context, Icons.edit_outlined, 'Open entry', onTap),
-        _sheetAction(context, Icons.delete_outline, 'Delete entry',
-            onDelete, color: cEmber),
-      ]),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(width: 32, height: 3, decoration: BoxDecoration(color: cAsh, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 20),
+          _sheetAction(context, Icons.edit_outlined, 'Open', onTap),
+          _sheetAction(context, Icons.delete_outline, 'Delete', onDelete, color: cEmber),
+        ],
+      ),
     ),
   );
 }
@@ -593,8 +797,7 @@ class _EntryCard extends StatelessWidget {
 // NEW ENTRY SETUP
 // ─────────────────────────────────────────
 class _NewEntrySetup extends StatefulWidget {
-  final void Function(DiaryEntry) onStart;
-  const _NewEntrySetup({required this.onStart});
+  const _NewEntrySetup();
   @override State<_NewEntrySetup> createState() => _NewEntrySetupState();
 }
 
@@ -637,7 +840,7 @@ class _NewEntrySetupState extends State<_NewEntrySetup> {
     super.dispose();
   }
 
-  void _start() {
+    void _start() {
     final entry = DiaryEntry(
       id: const Uuid().v4(),
       title: _titleCtrl.text.trim(),
@@ -652,7 +855,7 @@ class _NewEntrySetupState extends State<_NewEntrySetup> {
       linkedCharacterIds: _selectedCharIds,
       linkedWorldIds: _selectedWorldIds,
     );
-    widget.onStart(entry);
+    Navigator.of(context).pop(entry); // Return the entry!
   }
 
   void _skip() {
@@ -660,7 +863,7 @@ class _NewEntrySetupState extends State<_NewEntrySetup> {
       id: const Uuid().v4(),
       chapters: [DiaryChapter(id: const Uuid().v4(), title: 'Chapter 1')],
     );
-    widget.onStart(entry);
+    Navigator.of(context).pop(entry); // Return the entry!
   }
 
   @override
@@ -1019,6 +1222,90 @@ class _EntryScreenState extends State<_EntryScreen> {
     _entry = widget.entry;
   }
 
+    void _showLinkSelector() async {
+    // 1. Load sandbox data
+    final allChars = await SandboxStorage.loadCharacters();
+    final allWorlds = await SandboxStorage.loadWorlds();
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cInk,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.7,
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('LINK TO STORY', style: TextStyle(fontFamily: 'monospace', fontSize: 11, color: cGold, letterSpacing: 3)),
+                const SizedBox(height: 16),
+                const Text('These characters and worlds will be attached to this book.', style: TextStyle(fontSize: 12, color: cSmoke)),
+                const SizedBox(height: 24),
+                
+                Expanded(
+                  child: ListView(
+                    children: [
+                      const Text('CHARACTERS', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 2)),
+                      const SizedBox(height: 12),
+                      ...allChars.map((c) {
+                        final selected = _entry.linkedCharacterIds.contains(c.id);
+                        return CheckboxListTile(
+                          title: Text(c.name, style: TextStyle(color: selected ? cGold : cParchment)),
+                          activeColor: cGold,
+                          checkColor: cVoid,
+                          value: selected,
+                          onChanged: (v) {
+                            setModalState(() {
+                              if (v == true) {
+                                _entry.linkedCharacterIds.add(c.id);
+                              } else {
+                                _entry.linkedCharacterIds.remove(c.id);
+                              }
+                            });
+                            widget.onSave(_entry); // Auto-save when changed
+                          },
+                        );
+                      }),
+                      
+                      const SizedBox(height: 24),
+                      const Text('WORLDS', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 2)),
+                      const SizedBox(height: 12),
+                      ...allWorlds.map((w) {
+                        final selected = _entry.linkedWorldIds.contains(w.id);
+                        return CheckboxListTile(
+                          title: Text(w.name, style: TextStyle(color: selected ? cGold : cParchment)),
+                          activeColor: cGold,
+                          checkColor: cVoid,
+                          value: selected,
+                          onChanged: (v) {
+                            setModalState(() {
+                              if (v == true) {
+                                _entry.linkedWorldIds.add(w.id);
+                              } else {
+                                _entry.linkedWorldIds.remove(w.id);
+                              }
+                            });
+                            widget.onSave(_entry); // Auto-save when changed
+                          },
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  
+
   void _saveAndPop() {
     _entry.updatedAt = DateTime.now();
     widget.onSave(_entry);
@@ -1056,14 +1343,33 @@ class _EntryScreenState extends State<_EntryScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: const BoxDecoration(
             border: Border(bottom: BorderSide(color: cAsh))),
-        child: Row(children: [
-          GestureDetector(onTap: _saveAndPop,
-              child: const Icon(Icons.arrow_back_ios, color: cSmoke, size: 16)),
+                        child: Row(children: [
+          // 1. Go to Book List Button (Replaces the back arrow)
+          GestureDetector(
+            onTap: _saveAndPop,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                border: Border.all(color: cGold.withValues(alpha: 0.5)),
+                color: cGold.withValues(alpha: 0.1),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.library_books_outlined, size: 14, color: cGold),
+                  SizedBox(width: 6),
+                  Text('ALL BOOKS', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 1)),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(width: 12),
+          
           Expanded(child: Text(_entry.displayTitle, style: const TextStyle(
               fontSize: 18, fontWeight: FontWeight.w300,
               fontStyle: FontStyle.italic, color: cParchment),
               overflow: TextOverflow.ellipsis)),
+
+          // 2. Scroll / Page Toggle
           if (_entry.mode == DiaryMode.book)
             GestureDetector(
               onTap: () => setState(() => _bookScrollMode = !_bookScrollMode),
@@ -1075,6 +1381,23 @@ class _EntryScreenState extends State<_EntryScreen> {
                         fontSize: 8, color: cSmoke, letterSpacing: 2)),
               ),
             ),
+
+          // 3. Link Button
+          const SizedBox(width: 12),
+          GestureDetector(
+            onTap: _showLinkSelector,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(border: Border.all(color: cGold.withValues(alpha: 0.5))),
+              child: const Row(
+                children: [
+                  Icon(Icons.link, size: 14, color: cGold),
+                  SizedBox(width: 6),
+                  Text('LINK', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 1)),
+                ],
+              ),
+            ),
+          ),
         ]),
       ),
 
@@ -1320,10 +1643,27 @@ class _ChapterEditorState extends State<_ChapterEditor> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: const BoxDecoration(
             border: Border(bottom: BorderSide(color: cAsh))),
-        child: Row(children: [
-          GestureDetector(onTap: _save,
-              child: const Icon(Icons.arrow_back_ios, color: cSmoke, size: 16)),
+                        child: Row(children: [
+          // 1. Back to Chapters
+          GestureDetector(
+            onTap: _save,
+            child: const Icon(Icons.arrow_back_ios, color: cSmoke, size: 16),
+          ),
           const SizedBox(width: 12),
+          
+          // 2. Escape hatch directly to the Book List
+          GestureDetector(
+            onTap: () {
+              _save(); // Save this chapter
+              // Pop twice: Once to leave editor, once to leave the book
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (context.mounted) Navigator.of(context).pop();
+              });
+            },
+            child: const Icon(Icons.library_books_outlined, color: cGold, size: 18),
+          ),
+          const SizedBox(width: 12),
+
           Expanded(child: TextField(
             controller: _titleCtrl,
             style: const TextStyle(fontSize: 18, color: cParchment,
