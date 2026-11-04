@@ -15,6 +15,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_selector/file_selector.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class IdeaGenerator {
   static final _rnd = Random();
@@ -535,32 +536,86 @@ class _SandboxScreenState extends State<SandboxScreen>
         ],
       ),
     ),
-            floatingActionButton: AnimatedBuilder(
+        floatingActionButton: AnimatedBuilder(
       animation: _tab,
-      builder: (context, _) => Stack(
-        children: [
-          // The new Decode Button (Only shows on the Characters tab)
-          if (_tab.index == 1)
+      builder: (context, child) {
+        return Stack(
+          children: [
+            // Left Button (Decode JSON)
+            if (_tab.index == 1)
+              Positioned(
+                left: 16,
+                bottom: 16,
+                child: FloatingActionButton(
+                  heroTag: 'decodeBtn',
+                  backgroundColor: cInk,
+                  shape: const CircleBorder(side: BorderSide(color: cGold)),
+                  onPressed: _copyDeorumJsonFromFile,
+                  child: const Icon(Icons.file_download_outlined, color: cGold),
+                ),
+              ),
+
+            // Middle Button (Visit Deorum)
+            if (_tab.index == 1)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 18, // Slightly adjusted to align with the FABs
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () async {
+                      final Uri url = Uri.parse('https://deorum.vercel.app/');
+                      try {
+                        if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                          throw 'Could not launch $url';
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            backgroundColor: cEmber,
+                            content: Text('Could not open browser: $e'),
+                          ));
+                        }
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: cInk,
+                        border: Border.all(color: cGold.withValues(alpha: 0.5)),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: const Text(
+                        'DEORUM',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 11,
+                          color: cGold,
+                          letterSpacing: 2,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            
+            // Right Button (+)
             Positioned(
-              left: 16,
+              right: 16,
               bottom: 16,
-              child: FloatingActionButton(
-                heroTag: 'decodeBtn',
-                backgroundColor: cInk,
-                shape: const CircleBorder(side: BorderSide(color: cGold)),
-                onPressed: _copyDeorumJsonFromFile,
-                child: const Icon(Icons.file_download_outlined, color: cGold),
+              child: GestureDetector(
+                onTap: _tab.index == 0 ? _addWorld : _addCharacter,
+                child: Container(
+                  width: 52, height: 52,
+                  decoration: BoxDecoration(color: cInk, border: Border.all(color: cGold), shape: BoxShape.circle),
+                  child: const Icon(Icons.add, color: cGold, size: 22),
+                ),
               ),
             ),
-          
-          // Your existing + Button
-          Positioned(
-            right: 16,
-            bottom: 16,
-            child: _buildFAB(),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     ),
   );
 
@@ -727,6 +782,7 @@ class _SandboxScreenState extends State<SandboxScreen>
       }
     }
   }
+  
 
   // 1. IMPORT DIRECTLY FROM FILE
   Future<void> _importFromClipboard() async {
