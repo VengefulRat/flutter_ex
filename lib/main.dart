@@ -1683,6 +1683,8 @@ class _HomeScreenState extends State<HomeScreen>
                 
                 // ── FLOATING BOTTOM BAR ──
                 Container(
+                  // ADD THIS LINE: Force the bar to be tall enough for the floating button
+                  constraints: const BoxConstraints(minHeight: 96),
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: Stack(
                     clipBehavior: Clip.none,

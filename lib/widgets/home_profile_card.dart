@@ -113,7 +113,7 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
       animation: appSettings,
       builder: (_, _) {
         return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           child: HoloCardV2(
             accent: appSettings.profileBorderColor,
             intensity: 0.55,

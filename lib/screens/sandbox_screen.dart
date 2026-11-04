@@ -13,7 +13,6 @@ import 'dart:math';
 import 'map_selection_screen.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 import 'package:file_selector/file_selector.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -658,18 +657,6 @@ class _SandboxScreenState extends State<SandboxScreen>
       unselectedLabelColor: cSmoke,
       labelStyle: const TextStyle(fontFamily: 'monospace', fontSize: 10, letterSpacing: 3),
       tabs: const [Tab(text: 'WORLDS'), Tab(text: 'CHARACTERS')],
-    ),
-  );
-
-  Widget _buildFAB() => AnimatedBuilder(
-    animation: _tab,
-    builder: (_, _) => GestureDetector(
-      onTap: _tab.index == 0 ? _addWorld : _addCharacter,
-      child: Container(
-        width: 52, height: 52,
-        decoration: BoxDecoration(color: cInk, border: Border.all(color: cGold), shape: BoxShape.circle),
-        child: const Icon(Icons.add, color: cGold, size: 22),
-      ),
     ),
   );
 

@@ -12,6 +12,12 @@ import 'sandbox_screen.dart';
 import '../services/auth_service.dart';
 import '../widgets/card_frame.dart';
 import '../widgets/holo_card_v2.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+
 
 // ─────────────────────────────────────────
 // NOTIFICATIONS SETUP
@@ -184,6 +190,8 @@ class DiaryEntry {
   DateTime updatedAt;
   bool isFolder; 
   String? parentId;
+  Color accentColor;
+  String? coverImageUrl;
 
   DiaryEntry({
     required this.id,
@@ -195,6 +203,8 @@ class DiaryEntry {
     List<DiaryChapter>? chapters,
     List<String>? linkedCharacterIds,
     List<String>? linkedWorldIds,
+    Color? accentColor,
+    this.coverImageUrl,
     this.isFolder = false, // Default to false (it's a book)
     this.parentId,
     DateTime? createdAt,
@@ -202,6 +212,7 @@ class DiaryEntry {
   })  : chapters = chapters ?? [],
         linkedCharacterIds = linkedCharacterIds ?? [],
         linkedWorldIds = linkedWorldIds ?? [],
+        accentColor = accentColor ?? Color(0xFFC9A96E),
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
@@ -231,6 +242,8 @@ class DiaryEntry {
     'parentId': parentId,     // NEW
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
+    'accentColor': accentColor.toARGB32(),
+    'coverImageUrl': coverImageUrl,
   };
 
   factory DiaryEntry.fromJson(Map<String, dynamic> j) => DiaryEntry(
@@ -250,6 +263,8 @@ class DiaryEntry {
     parentId: j['parentId'] as String?,        // NEW
     createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ?? DateTime.now(),
     updatedAt: DateTime.tryParse(j['updatedAt'] as String? ?? '') ?? DateTime.now(),
+    accentColor: j['accentColor'] != null ? Color(j['accentColor'] as int) : null,
+    coverImageUrl: j['coverImageUrl'] as String?,
   );
 }
 
@@ -302,7 +317,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
   int _streak = 0;
   final _auth = AuthService();
   String? _currentFolderId; 
-  List<CharacterEntry> _allChars = [];
+  final List<CharacterEntry> _allChars = [];
 
   @override
   void initState() {
@@ -314,8 +329,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
     final local = await DiaryStorage.loadEntries();
     final reminderEnabled = await DiaryStorage.getReminderEnabled();
     final reminderTime = await DiaryStorage.getReminderTime();
-    final streak = await DiaryStorage.getStreak();
-    final chars = await SandboxStorage.loadCharacters(); 
+    final streak = await DiaryStorage.getStreak(); 
 
     // Merge with Firestore
     final code = _auth.currentCode;
@@ -624,11 +638,16 @@ class _DiaryCard extends StatelessWidget {
     required this.onDelete,
   });
 
-  @override
+    @override
   Widget build(BuildContext context) {
     final seed = entry.id.hashCode;
-    // Use the first linked character's color, or a default gold
-    final accent = linkedChars.isNotEmpty ? linkedChars.first.accentColor : cGold;
+    final accent = entry.accentColor;
+    
+    // Get your profile name for the "Author" field
+    final authorName = AuthService().currentName ?? 'Unknown Author';
+    
+    // Calculate total words across all chapters
+    final totalWords = entry.chapters.fold<int>(0, (sum, ch) => sum + ch.wordCount);
 
     return GestureDetector(
       onTap: onTap,
@@ -641,7 +660,7 @@ class _DiaryCard extends StatelessWidget {
           seed: seed,
           bgColor: cInk,
           child: Container(
-            width: 200, // Width of the card
+            width: 200,
             decoration: BoxDecoration(
               color: cInk,
               border: Border.all(color: accent.withValues(alpha: 0.4), width: 1),
@@ -656,8 +675,10 @@ class _DiaryCard extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      // Background: Use the first character's avatar if it's a folder, else a gradient
-                      if (entry.isFolder && linkedChars.isNotEmpty && linkedChars.first.avatarUrl != null)
+                      // Background Image or Gradient
+                      if (entry.coverImageUrl != null && entry.coverImageUrl!.isNotEmpty)
+                        Image.network(entry.coverImageUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox())
+                      else if (entry.isFolder && linkedChars.isNotEmpty && linkedChars.first.avatarUrl != null)
                         Image.network(linkedChars.first.avatarUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox())
                       else
                         Container(
@@ -670,14 +691,18 @@ class _DiaryCard extends StatelessWidget {
                           ),
                         ),
 
-                      // Scrim
+                      // Dark Scrim for Readability
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.95)],
-                            stops: const [0.3, 1.0],
+                            colors: [
+                              Colors.black.withValues(alpha: 0.4), // Slight tint at top
+                              Colors.black.withValues(alpha: 0.85), // Darker in middle
+                              Colors.black.withValues(alpha: 0.95), // Almost solid at bottom
+                            ],
+                            stops: const [0.0, 0.5, 1.0],
                           ),
                         ),
                       ),
@@ -699,38 +724,70 @@ class _DiaryCard extends StatelessWidget {
                         ),
                       ),
 
-                      // Text Info
+                      // Book Cover Text Layout
                       Positioned(
-                        bottom: 10,
-                        left: 10,
-                        right: 10,
+                        bottom: 12,
+                        left: 12,
+                        right: 12,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Author Name (like a book spine/cover)
+                            Text(
+                              authorName.toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 7,
+                                color: accent.withValues(alpha: 0.8),
+                                letterSpacing: 1.5,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            
+                            // Book Title
                             Text(
                               entry.displayTitle,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontFamily: 'serif',
-                                fontSize: 16,
+                                fontSize: 18, // Slightly larger
                                 fontWeight: FontWeight.w300,
                                 fontStyle: FontStyle.italic,
                                 color: cParchment,
                                 height: 1.1,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              entry.isFolder 
-                                  ? '${entry.chapters.length} entries' // Just using chapters length as a placeholder for folder items count
-                                  : '${entry.chapters.length} chapters · ${entry.chapters.fold(0, (s, c) => s + c.wordCount)} words',
-                              style: const TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 8,
-                                color: cSmoke,
-                              ),
+                            
+                            const SizedBox(height: 6),
+                            
+                            // Stats Row (Chapters & Words)
+                            Row(
+                              children: [
+                                if (entry.isFolder)
+                                  Text(
+                                    '${entry.chapters.length} entries',
+                                    style: const TextStyle(fontFamily: 'monospace', fontSize: 8, color: cSmoke),
+                                  )
+                                else ...[
+                                  Text(
+                                    '${entry.chapters.length} CH',
+                                    style: const TextStyle(fontFamily: 'monospace', fontSize: 8, color: cSmoke),
+                                  ),
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 4),
+                                    child: Text('·', style: TextStyle(fontSize: 8, color: cSmoke)),
+                                  ),
+                                  Text(
+                                    '${(totalWords / 1000).toStringAsFixed(1)}K WORDS',
+                                    style: const TextStyle(fontFamily: 'monospace', fontSize: 8, color: cSmoke),
+                                  ),
+                                ],
+                              ],
                             ),
+
                             // Character Avatar Chips
                             if (linkedChars.isNotEmpty) ...[
                               const SizedBox(height: 8),
@@ -1222,6 +1279,150 @@ class _EntryScreenState extends State<_EntryScreen> {
     _entry = widget.entry;
   }
 
+  void _showCustomizeSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cInk,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          bool isUploading = false; 
+          return Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('CUSTOMIZE BOOK', style: TextStyle(fontFamily: 'monospace', fontSize: 11, color: cGold, letterSpacing: 3)),
+                const SizedBox(height: 20),
+                const Text('Accent Colour', style: TextStyle(color: cSmoke, fontSize: 12)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 10,
+                  children: [cGold, cIce, cEmber, cMagic, cVine, Colors.blueAccent, Colors.purpleAccent].map((color) {
+                    return GestureDetector(
+                      onTap: () {
+                        setModalState(() => _entry.accentColor = color);
+                        widget.onSave(_entry); // Auto-save
+                      },
+                      child: Container(
+                        width: 30, height: 30,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: _entry.accentColor == color ? Colors.white : Colors.transparent, width: 2),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+                                GestureDetector(
+                  onTap: () async {
+                    final picker = ImagePicker();
+                    final image = await picker.pickImage(source: ImageSource.gallery);
+                    if (image != null) {
+                      // Show a loading state instead of a fake URL
+                      setModalState(() => isUploading = true); 
+                      try {
+                        final bytes = await image.readAsBytes();
+                        final ref = FirebaseStorage.instance.ref().child('diary_covers/${_entry.id}.jpg');
+                        await ref.putData(bytes);
+                        final url = await ref.getDownloadURL();
+                        
+                        setModalState(() {
+                          _entry.coverImageUrl = url;
+                          isUploading = false;
+                        });
+                        widget.onSave(_entry); // Save to local storage/Firestore
+                        
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                            backgroundColor: cVine, // Green for success
+                            content: Text('Cover image updated!', style: TextStyle(color: Colors.white)),
+                          ));
+                        }
+                      } catch (e) {
+                        setModalState(() => isUploading = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            backgroundColor: cEmber,
+                            content: Text('Upload failed: $e'),
+                          ));
+                        }
+                      }
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    width: double.infinity,
+                    decoration: BoxDecoration(border: Border.all(color: cAsh)),
+                    child: Center(
+                      child: isUploading 
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: cGold, strokeWidth: 2))
+                          : const Text('Upload Cover Image', style: TextStyle(color: cGold)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  Future<void> _exportToPdf() async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) => pw.Center(
+          child: pw.Column(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            children: [
+              pw.Text(_entry.displayTitle, style: pw.TextStyle(fontSize: 30, fontWeight: pw.FontWeight.bold)),
+              if (_entry.genre.isNotEmpty) ...[
+                pw.SizedBox(height: 20),
+                pw.Text(_entry.genre, style: const pw.TextStyle(fontSize: 18, color: PdfColors.grey)),
+              ]
+            ],
+          ),
+        ),
+      ),
+    );
+
+    for (final chapter in _entry.chapters) {
+      pdf.addPage(
+        pw.Page(
+          build: (pw.Context context) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(chapter.title, style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 20),
+              pw.Text(chapter.plainText, style: const pw.TextStyle(fontSize: 14, lineSpacing: 4)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    try {
+      await Printing.sharePdf(
+        bytes: await pdf.save(),
+        filename: '${_entry.displayTitle.replaceAll(' ', '_')}.pdf',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: cEmber,
+          content: Text('Export failed: $e'),
+        ));
+      }
+    }
+  }
+
+
+
     void _showLinkSelector() async {
     // 1. Load sandbox data
     final allChars = await SandboxStorage.loadCharacters();
@@ -1396,6 +1597,27 @@ class _EntryScreenState extends State<_EntryScreen> {
                   Text('LINK', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 1)),
                 ],
               ),
+            ),
+          ),
+                    // 4. Customize Button
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: _showCustomizeSheet,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(border: Border.all(color: cGold.withValues(alpha: 0.5))),
+              child: const Icon(Icons.color_lens_outlined, size: 14, color: cGold),
+            ),
+          ),
+
+          // 5. Export Button
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: _exportToPdf,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(border: Border.all(color: cGold.withValues(alpha: 0.5))),
+              child: const Icon(Icons.download_outlined, size: 14, color: cGold),
             ),
           ),
         ]),
@@ -1580,7 +1802,6 @@ class _ChapterEditorState extends State<_ChapterEditor> {
   late TextEditingController _titleCtrl;
   final _editorFocus = FocusNode();
   final _editorScroll = ScrollController();
-  bool _toolbarVisible = false;
   int _wordCount = 0;
 
   @override
@@ -1683,11 +1904,6 @@ class _ChapterEditorState extends State<_ChapterEditor> {
                   letterSpacing: 1)),
           const SizedBox(width: 10),
           // Toolbar toggle
-          GestureDetector(
-            onTap: () => setState(() => _toolbarVisible = !_toolbarVisible),
-            child: Icon(Icons.text_format,
-                size: 18, color: _toolbarVisible ? cGold : cSmoke),
-          ),
           const SizedBox(width: 10),
           GestureDetector(
             onTap: _save,
@@ -1702,11 +1918,12 @@ class _ChapterEditorState extends State<_ChapterEditor> {
         ]),
       ),
 
-      // Quill toolbar (shown/hidden)
-      if (_toolbarVisible)
-        Container(
-          decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: cAsh))),
+            // Quill toolbar (Always visible)
+      Container(
+        decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: cAsh))),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
           child: QuillSimpleToolbar(
             controller: _quill,
             config: const QuillSimpleToolbarConfig(
@@ -1739,6 +1956,7 @@ class _ChapterEditorState extends State<_ChapterEditor> {
             ),
           ),
         ),
+      ),
 
       // Quill editor
       Expanded(child: ScrollConfiguration(
