@@ -20,6 +20,9 @@ import '../services/crypto_service.dart';
 import '../services/sound_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:ui' as ui;
+import '../widgets/holo_card_v2.dart';
+import '../widgets/card_frame.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // ─────────────────────────────────────────
 // DISPLAY MODE
@@ -256,14 +259,18 @@ class MoodEngine {
     if (genreScore >= 4) return genreMood;
 
     if (genreScore >= 1) {
-      if (genreMood == StoryMood.warm && comparative > 0.3)
+      if (genreMood == StoryMood.warm && comparative > 0.3) {
         return StoryMood.warm;
-      if (genreMood == StoryMood.dark && comparative < -0.3)
+      }
+      if (genreMood == StoryMood.dark && comparative < -0.3) {
         return StoryMood.dark;
-      if (genreMood == StoryMood.tense && comparative < -0.1)
+      }
+      if (genreMood == StoryMood.tense && comparative < -0.1) {
         return StoryMood.tense;
-      if (genreMood == StoryMood.eerie && comparative < -0.2)
+      }
+      if (genreMood == StoryMood.eerie && comparative < -0.2) {
         return StoryMood.eerie;
+      }
       if (genreScore >= 2) return genreMood;
     }
 
@@ -1007,9 +1014,37 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     });
   }
 
-  Future<void> _loadSandboxData() async {
+    Future<void> _loadSandboxData() async {
     final worlds = await SandboxStorage.loadWorlds();
     final chars = await SandboxStorage.loadCharacters();
+    
+    // Load saved import IDs from Firestore
+    if (widget.sessionId.isNotEmpty) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('sessions').doc(widget.sessionId).get();
+        final data = doc.data();
+        if (data != null) {
+          final charIds = List<String>.from(data['importedCharacterIds'] ?? []);
+          final worldIds = List<String>.from(data['importedWorldIds'] ?? []);
+          
+          for (final id in charIds) {
+            final match = chars.where((c) => c.id == id).firstOrNull;
+            if (match != null && !_importedCharacters.any((c) => c.id == id)) {
+              _importedCharacters.add(match);
+            }
+          }
+          for (final id in worldIds) {
+            final match = worlds.where((w) => w.id == id).firstOrNull;
+            if (match != null && !_importedWorlds.any((w) => w.id == id)) {
+              _importedWorlds.add(match);
+            }
+          }
+        }
+      } catch (e) {
+        print('Failed to load imports: $e');
+      }
+    }
+
     if (mounted) {
       setState(() {
         _sandboxWorlds = worlds;
@@ -1655,7 +1690,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     return _buildMobileLayout();
   }
 
-  Widget _buildDesktopLayout() {
+    Widget _buildDesktopLayout() {
     return AnimatedBuilder(
       animation: _moodCtrl,
       builder: (_, child) {
@@ -1667,18 +1702,12 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               Positioned.fill(
                 child: LayoutBuilder(
                   builder: (_, constraints) {
-                    _canvasSize = Size(
-                      constraints.maxWidth,
-                      constraints.maxHeight,
-                    );
+                    _canvasSize = Size(constraints.maxWidth, constraints.maxHeight);
                     return RepaintBoundary(
                       child: ValueListenableBuilder<int>(
                         valueListenable: _particleTick,
                         builder: (_, _, _) => CustomPaint(
-                          painter: MoodParticlePainter(
-                            _particles,
-                            _currentMood,
-                          ),
+                          painter: MoodParticlePainter(_particles, _currentMood),
                         ),
                       ),
                     );
@@ -1693,6 +1722,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          // Left Sidebar (Session Log)
                           SizedBox(
                             width: 300,
                             child: Container(
@@ -1704,12 +1734,11 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                             ),
                           ),
 
+                          // Center (Posts + Editor)
                           Expanded(
                             child: Center(
                               child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 800,
-                                ),
+                                constraints: const BoxConstraints(maxWidth: 800),
                                 child: Column(
                                   children: [
                                     Expanded(child: _buildPostList()),
@@ -1720,6 +1749,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                             ),
                           ),
 
+                          // Right Sidebar (Tools + OOC)
                           SizedBox(
                             width: 320,
                             child: Container(
@@ -1742,50 +1772,45 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                       availableCharacters: _sandboxCharacters,
                                       onDiceRolled: (msg) {
                                         if (widget.sessionId.isNotEmpty) {
-                                          _fs.addOocMessage(
-                                            sessionId: widget.sessionId,
-                                            content: msg,
-                                            isSystem: true,
-                                          );
-                                          _log.addEvent(
-                                            title: 'Dice roll',
-                                            body: msg,
-                                            source: 'dice',
-                                          );
+                                          _fs.addOocMessage(sessionId: widget.sessionId, content: msg, isSystem: true);
+                                          _log.addEvent(title: 'Dice roll', body: msg, source: 'dice');
                                         }
                                       },
-                                      onMyStatsChanged: (block) =>
-                                          _saveMyStats(block),
+                                      onMyStatsChanged: (block) => _saveMyStats(block),
                                       onImportWorld: (w) {
                                         setState(() {
-                                          if (!_importedWorlds.any(
-                                            (x) => x.id == w.id,
-                                          ))
+                                          if (!_importedWorlds.any((x) => x.id == w.id)) {
                                             _importedWorlds.add(w);
+                                          }
                                         });
-                                        if (widget.sessionId.isNotEmpty)
+                                        if (widget.sessionId.isNotEmpty) {
                                           _log.addWorldEntry(w);
+                                          _fs.saveImportedItems(widget.sessionId, _importedCharacters.map((c) => c.id).toList(), _importedWorlds.map((w) => w.id).toList());
+                                        }
                                       },
                                       onImportCharacter: (c) {
                                         setState(() {
-                                          if (!_importedCharacters.any(
-                                            (x) => x.id == c.id,
-                                          ))
+                                          if (!_importedCharacters.any((x) => x.id == c.id)) {
                                             _importedCharacters.add(c);
+                                          }
                                         });
-                                        if (widget.sessionId.isNotEmpty)
+                                        if (widget.sessionId.isNotEmpty) {
                                           _log.addCharacterEntry(c);
+                                          _fs.saveImportedItems(widget.sessionId, _importedCharacters.map((c) => c.id).toList(), _importedWorlds.map((w) => w.id).toList());
+                                        }
                                       },
-                                      onRemoveWorld: (w) => setState(
-                                        () => _importedWorlds.removeWhere(
-                                          (x) => x.id == w.id,
-                                        ),
-                                      ),
-                                      onRemoveCharacter: (c) => setState(
-                                        () => _importedCharacters.removeWhere(
-                                          (x) => x.id == c.id,
-                                        ),
-                                      ),
+                                      onRemoveWorld: (w) {
+                                        setState(() => _importedWorlds.removeWhere((x) => x.id == w.id));
+                                        if (widget.sessionId.isNotEmpty) {
+                                          _fs.saveImportedItems(widget.sessionId, _importedCharacters.map((c) => c.id).toList(), _importedWorlds.map((w) => w.id).toList());
+                                        }
+                                      },
+                                      onRemoveCharacter: (c) {
+                                        setState(() => _importedCharacters.removeWhere((x) => x.id == c.id));
+                                        if (widget.sessionId.isNotEmpty) {
+                                          _fs.saveImportedItems(widget.sessionId, _importedCharacters.map((c) => c.id).toList(), _importedWorlds.map((w) => w.id).toList());
+                                        }
+                                      },
                                     ),
                                   ),
                                   const Divider(color: cAsh, height: 1),
@@ -1799,46 +1824,24 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                           color: cInk,
                                           child: InkWell(
                                             onTap: () {
-                                              setState(
-                                                () => _desktopOOCExpanded =
-                                                    !_desktopOOCExpanded,
-                                              );
-                                              if (_desktopOOCExpanded)
-                                                _scrollOocToBottom();
+                                              setState(() => _desktopOOCExpanded = !_desktopOOCExpanded);
+                                              if (_desktopOOCExpanded) _scrollOocToBottom();
                                             },
                                             child: Container(
                                               height: 50,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 16,
-                                                  ),
+                                              padding: const EdgeInsets.symmetric(horizontal: 16),
                                               decoration: const BoxDecoration(
-                                                border: Border(
-                                                  bottom: BorderSide(
-                                                    color: cAsh,
-                                                  ),
-                                                ),
+                                                border: Border(bottom: BorderSide(color: cAsh)),
                                               ),
                                               child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                 children: [
                                                   const Text(
                                                     'OOC CHAT',
-                                                    style: TextStyle(
-                                                      fontFamily: 'monospace',
-                                                      fontSize: 11,
-                                                      color: cIce,
-                                                      letterSpacing: 4,
-                                                    ),
+                                                    style: TextStyle(fontFamily: 'monospace', fontSize: 11, color: cIce, letterSpacing: 4),
                                                   ),
                                                   Icon(
-                                                    _desktopOOCExpanded
-                                                        ? Icons
-                                                              .keyboard_arrow_down
-                                                        : Icons
-                                                              .keyboard_arrow_up,
+                                                    _desktopOOCExpanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up,
                                                     size: 16,
                                                     color: cSmoke,
                                                   ),
@@ -1848,9 +1851,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                           ),
                                         ),
                                         if (_desktopOOCExpanded)
-                                          Expanded(
-                                            child: _buildOOCDesktopWidget(),
-                                          ),
+                                          Expanded(child: _buildOOCDesktopWidget()),
                                       ],
                                     ),
                                   ),
@@ -1864,18 +1865,17 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   ],
                 ),
               ),
-              if (!kIsWeb &&
-                  _selectedText.isNotEmpty &&
-                  !_desktopOOCExpanded &&
-                  !_settingsOpen)
+              
+              // Bottom selection pill
+              if (!kIsWeb && _selectedText.isNotEmpty && !_desktopOOCExpanded && !_settingsOpen)
                 Positioned(
                   left: 300,
                   right: 320,
                   bottom: 100,
                   child: _buildSelectionPill(),
                 ),
-
-              // ── SETTINGS PANEL OVERLAY ──
+              
+              // Settings Overlay
               if (_settingsOpen)
                 Positioned(
                   right: 0,
@@ -2012,8 +2012,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.4), // More transparent
-            border: const Border(bottom: BorderSide(color: cAsh)),
+            color: cInk.withValues(alpha: 0.65), // More transparent
+            border: const Border(bottom: BorderSide(color: Color.fromARGB(255, 209, 212, 30))),
           ),
           child: Row(
             children: [
@@ -2655,6 +2655,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               });
               if (widget.sessionId.isNotEmpty) {
                 _log.addWorldEntry(w);
+                _fs.saveImportedItems(widget.sessionId, _importedCharacters.map((c) => c.id).toList(), _importedWorlds.map((w) => w.id).toList());
               }
               setModalState(() {});
             },
@@ -2662,6 +2663,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               setState(() {
                 if (!_importedCharacters.any((x) => x.id == c.id)) {
                   _importedCharacters.add(c);
+                  _fs.saveImportedItems(widget.sessionId, _importedCharacters.map((c) => c.id).toList(), _importedWorlds.map((w) => w.id).toList());
                 }
               });
               if (widget.sessionId.isNotEmpty) {
@@ -2671,12 +2673,16 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             },
             onRemoveWorld: (w) {
               setState(() => _importedWorlds.removeWhere((x) => x.id == w.id));
+              if (widget.sessionId.isNotEmpty) {
+                _fs.saveImportedItems(widget.sessionId, _importedCharacters.map((c) => c.id).toList(), _importedWorlds.map((w) => w.id).toList());
+              }
               setModalState(() {});
             },
             onRemoveCharacter: (c) {
-              setState(
-                () => _importedCharacters.removeWhere((x) => x.id == c.id),
-              );
+              setState(() => _importedCharacters.removeWhere((x) => x.id == c.id));
+              if (widget.sessionId.isNotEmpty) {
+                _fs.saveImportedItems(widget.sessionId, _importedCharacters.map((c) => c.id).toList(), _importedWorlds.map((w) => w.id).toList());
+              }
               setModalState(() {});
             },
           ),
@@ -2768,139 +2774,99 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     );
   }
 
-  void _showCharacterSwitcher() {
-    final characters = [null, ..._importedCharacters];
+    void _showCharacterSwitcher() {
     showModalBottomSheet(
       context: context,
       backgroundColor: cInk,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(),
       builder: (_) => Container(
-        padding: const EdgeInsets.all(24),
+        height: 340,
+        padding: const EdgeInsets.fromLTRB(0, 16, 0, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 32,
-              height: 3,
-              margin: const EdgeInsets.only(bottom: 20, left: 0),
-              decoration: BoxDecoration(
-                color: cAsh,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Row(
-              children: [
-                const Text(
-                  'WRITING AS',
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 9,
-                    color: cSmoke,
-                    letterSpacing: 3,
-                  ),
-                ),
-                const Spacer(),
-                if (_activeCharacter != null)
-                  GestureDetector(
-                    onTap: () {
-                      setState(() => _activeCharacter = null);
-                      Navigator.pop(context);
-                    },
-                    child: const Text(
-                      'Reset to self',
-                      style: TextStyle(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  const Text(
+                    'WRITING AS',
+                    style: TextStyle(
                         fontFamily: 'monospace',
                         fontSize: 9,
                         color: cSmoke,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
+                        letterSpacing: 3),
                   ),
-              ],
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: const Icon(Icons.close, size: 18, color: cSmoke),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
-            if (characters.length == 1)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 16),
-                child: Text(
-                  'Import characters from the Tools panel first to use character switching.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: cSmoke,
-                    fontStyle: FontStyle.italic,
-                    height: 1.6,
-                  ),
-                ),
-              ),
-            ...characters.map((c) {
-              final isSelected = c == null
-                  ? _activeCharacter == null
-                  : _activeCharacter?.id == c.id;
-              return GestureDetector(
-                onTap: () {
-                  setState(() => _activeCharacter = c);
-                  Navigator.pop(context);
-                  if (c != null && widget.sessionId.isNotEmpty) {
-                    _log.addEvent(
-                      title: 'Writing as ${c.name}',
-                      body: 'Switched to ${c.name}.',
-                      source: 'character',
-                      meta: {'characterId': c.id, 'characterName': c.name},
+            
+            // ── THE CARD DECK ──
+            Expanded(
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _importedCharacters.length + 1, // +1 for "Myself"
+                itemBuilder: (context, index) {
+                  // First item is always "Myself"
+                  if (index == 0) {
+                    final isSelected = _activeCharacter == null;
+                    return _CharacterSwitcherCard(
+                      isSelected: isSelected,
+                      name: _auth.currentName ?? 'Myself',
+                      pronouns: 'You',
+                      avatarUrl: null, // Fallback to icon
+                      accent: cGold,
+                      onTap: () {
+                        setState(() => _activeCharacter = null);
+                        Navigator.pop(context);
+                      },
                     );
                   }
+
+                  // The rest are imported characters
+                  final c = _importedCharacters[index - 1];
+                  final isSelected = _activeCharacter?.id == c.id;
+                  
+                  return _CharacterSwitcherCard(
+                    isSelected: isSelected,
+                    name: c.name,
+                    pronouns: '${c.pronouns} · ${c.age}',
+                    avatarUrl: c.avatarUrl,
+                    accent: c.accentColor,
+                    onTap: () {
+                      setState(() => _activeCharacter = c);
+                      Navigator.pop(context);
+                      if (widget.sessionId.isNotEmpty) {
+                        _log.addEvent(
+                          title: 'Writing as ${c.name}',
+                          body: 'Switched to ${c.name}.',
+                          source: 'character',
+                          meta: {'characterId': c.id, 'characterName': c.name},
+                        );
+                      }
+                    },
+                  );
                 },
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: isSelected ? (c?.accentColor ?? cGold) : cAsh,
-                    ),
-                    color: isSelected
-                        ? (c?.accentColor ?? cGold).withValues(alpha: 0.06)
-                        : Colors.transparent,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 10,
-                        height: 10,
-                        margin: const EdgeInsets.only(right: 12),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: c?.accentColor ?? cParchment,
-                          border: Border.all(color: cAsh),
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          c?.name ?? 'Myself',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w300,
-                            fontStyle: c != null
-                                ? FontStyle.italic
-                                : FontStyle.normal,
-                            color: isSelected
-                                ? (c?.accentColor ?? cGold)
-                                : cMist,
-                          ),
-                        ),
-                      ),
-                      if (isSelected)
-                        Icon(
-                          Icons.check,
-                          size: 14,
-                          color: c?.accentColor ?? cGold,
-                        ),
-                    ],
-                  ),
+              ),
+            ),
+            
+            if (_importedCharacters.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 10, 20, 0),
+                child: Text(
+                  'Import characters from the Tools panel first to use character switching.',
+                  style: TextStyle(fontSize: 12, color: cSmoke, fontStyle: FontStyle.italic),
                 ),
-              );
-            }),
+              ),
           ],
         ),
       ),
@@ -4343,7 +4309,145 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       ],
     );
   }
-} // <--- CLOSES _RPRoomScreenState
+    }
+
+class _CharacterSwitcherCard extends StatelessWidget {
+  final bool isSelected;
+  final String name;
+  final String pronouns;
+  final String? avatarUrl;
+  final Color accent;
+  final VoidCallback onTap;
+
+  const _CharacterSwitcherCard({
+    required this.isSelected,
+    required this.name,
+    required this.pronouns,
+    this.avatarUrl,
+    required this.accent,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final seed = name.hashCode;
+    
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 12),
+        child: HoloCardV2(
+          accent: isSelected ? cGold : accent,
+          intensity: isSelected ? 0.6 : 0.3,
+          seed: seed,
+          bgColor: cInk,
+          child: Container(
+            width: 140,
+            decoration: BoxDecoration(
+              color: cInk,
+              border: Border.all(
+                color: isSelected ? cGold : accent.withValues(alpha: 0.3),
+                width: isSelected ? 2 : 1,
+              ),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: CardFrame(
+                spec: CardFrameSpec(
+                  seed: seed,
+                  accent: isSelected ? cGold : accent,
+                  ornate: isSelected,
+                  glow: false,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Image (supports GIFs automatically)
+                      if (avatarUrl != null)
+                        Image.network(avatarUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox())
+                      else
+                        Container(
+                          color: cInk,
+                          child: const Center(
+                            child: Icon(Icons.person, size: 40, color: cSmoke),
+                          ),
+                        ),
+                      
+                      // Scrim
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.9)],
+                            stops: const [0.4, 1.0],
+                          ),
+                        ),
+                      ),
+
+                      // Text
+                      Positioned(
+                        bottom: 8,
+                        left: 8,
+                        right: 8,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'serif',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w300,
+                                fontStyle: FontStyle.italic,
+                                color: isSelected ? cGold : cParchment,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              pronouns,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 7.5,
+                                color: cSmoke,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Selected Checkmark
+                      if (isSelected)
+                        Positioned(
+                          top: 6,
+                          right: 6,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: cGold,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.check, size: 12, color: cVoid),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+  ); // <--- Closes GestureDetector
+  } // <--- Closes build method
+} // <--- Closes _CharacterSwitcherCard (Changed comment)
 
 class _OocMediaPreview extends StatefulWidget {
   final String url;
@@ -4392,17 +4496,19 @@ class _OocMediaPreviewState extends State<_OocMediaPreview> {
 
       if (decrypted == null) throw 'Decryption failed';
 
-      if (mounted)
+      if (mounted) {
         setState(() {
           _decryptedBytes = decrypted;
           _loading = false;
         });
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _error = e.toString();
           _loading = false;
         });
+      }
     }
   }
 
@@ -4441,18 +4547,20 @@ class _OocMediaPreviewState extends State<_OocMediaPreview> {
   @override
   Widget build(BuildContext context) {
     if (widget.isEncrypted) {
-      if (_loading)
+      if (_loading) {
         return const SizedBox(
           height: 100,
           child: Center(
             child: CircularProgressIndicator(strokeWidth: 1, color: cGold),
           ),
         );
-      if (_error != null)
+      }
+      if (_error != null) {
         return Text(
           '[Encrypted image failed: $_error]',
           style: const TextStyle(fontSize: 11, color: cEmber),
         );
+      }
       if (_decryptedBytes != null) {
         return GestureDetector(
           onTap: () => _openFullScreen(context, MemoryImage(_decryptedBytes!)),

@@ -1358,6 +1358,9 @@ class _HomeScreenState extends State<HomeScreen>
         onUnarchive: (rp) async {
           await _fs.updateSessionStatus(rp.id, 'active');
         },
+        onDelete: (rp) async {
+          await _fs.deleteSessionCompletely(rp.id);
+        },
         onBlock: (rp) {
           showBlockDialog(
             context: context,
@@ -1437,12 +1440,12 @@ class _HomeScreenState extends State<HomeScreen>
     final stats = <ProfileStat>[];
     for (final key in visible) {
       switch (key) {
-        case AppSettings.statActiveRPs:
+                case AppSettings.statActiveRPs:
           stats.add(
             ProfileStat(
               key: key,
               label: 'Active RPs',
-              value: '${_roleplays.length}',
+              value: '${_roleplays.where((r) => !r.isArchived).length}',
             ),
           );
           break;
@@ -1867,15 +1870,18 @@ class _HomeScreenState extends State<HomeScreen>
             BlockStyleSheet.show(context, AppSettings.blockNotifications),
       ),
       FloatingMenuItem(
-        blockKey: AppSettings.blockRoleplays,
-        label: 'Roleplays',
-        icon: Icons.auto_stories_outlined,
-        accent: cGold,
-        badge: _roleplays.isEmpty ? null : _roleplays.length,
-        onTap: _openRoleplays,
-        onLongPress: () =>
-            BlockStyleSheet.show(context, AppSettings.blockRoleplays),
-      ),
+      blockKey: AppSettings.blockRoleplays,
+      label: 'Roleplays',
+      icon: Icons.auto_stories_outlined,
+      accent: cGold,
+      // FIX: Only count active roleplays!
+      badge: _roleplays.where((r) => !r.isArchived).isEmpty 
+          ? null 
+          : _roleplays.where((r) => !r.isArchived).length,
+      onTap: _openRoleplays,
+      onLongPress: () =>
+          BlockStyleSheet.show(context, AppSettings.blockRoleplays),
+    ),
       FloatingMenuItem(
         blockKey: AppSettings.blockBrainstorms,
         label: 'Preludes',
@@ -5224,12 +5230,17 @@ class _RoleplaysContent extends StatefulWidget {
   final Future<void> Function(_RPData rp)? onArchive;
   final Future<void> Function(_RPData rp)? onUnarchive;
   final void Function(_RPData rp)? onBlock;
+  final Future<void> Function(_RPData rp)? onDelete;
+
+
+
   const _RoleplaysContent({
     required this.roleplays,
     required this.onEnter,
     this.onArchive,
     this.onUnarchive,
     this.onBlock,
+    this.onDelete,
   });
   @override
   State<_RoleplaysContent> createState() => _RoleplaysContentState();
@@ -5298,6 +5309,63 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
     );
   }
 
+  Future<void> _confirmDelete(_RPData rp) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: cInk,
+        shape: const RoundedRectangleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('DELETE STORY PERMANENTLY', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cEmber, letterSpacing: 4)),
+              const SizedBox(height: 12),
+              Text('Are you sure you want to delete the story with ${rp.partner}?\n\nThis will permanently erase all posts, OOC chats, and images. This cannot be undone.', style: const TextStyle(fontSize: 13, color: cMist, fontStyle: FontStyle.italic, height: 1.6)),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(child: GestureDetector(
+                    onTap: () => Navigator.pop(ctx, false),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(border: Border.all(color: cAsh)),
+                      child: const Center(child: Text('Cancel', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 2))),
+                    ),
+                  )),
+                  const SizedBox(width: 8),
+                  Expanded(child: GestureDetector(
+                    onTap: () => Navigator.pop(ctx, true),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      color: cEmber.withValues(alpha: 0.8),
+                      child: const Center(child: Text('Delete', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cParchment, letterSpacing: 2))),
+                    ),
+                  )),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirm == true) {
+      await widget.onDelete?.call(rp);
+      if (!mounted) return;
+      setState(() {
+        _items.removeWhere((x) => x.id == rp.id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        backgroundColor: cInk,
+        content: Text('Story deleted.', style: TextStyle(color: cParchment, fontSize: 13)),
+      ));
+    }
+  }
+  // ───────────────
+
     void _openMenu(_RPData rp) {
     showModalBottomSheet(
       context: context,
@@ -5320,6 +5388,16 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
               ),
             ),
             const SizedBox(height: 20),
+            _menuTile(
+              icon: Icons.delete_forever,
+              title: 'Delete Story',
+              subtitle: 'Permanently erase all messages and images.',
+              color: cEmber,
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _confirmDelete(rp);
+              },
+            ),
             
             // Header Info
             if (rp.hasTitle) ...[

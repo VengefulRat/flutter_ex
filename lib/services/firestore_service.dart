@@ -5,6 +5,7 @@ import '../models/world.dart';
 import 'auth_service.dart';
 import 'crypto_service.dart';
 import '../settings.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class FirestoreService {
   static final FirestoreService _instance = FirestoreService._internal();
@@ -32,6 +33,51 @@ class FirestoreService {
       }
       return key;
     }
+
+      Future<void> deleteSessionCompletely(String sessionId) async {
+    try {
+      // 1. Delete subcollections (chunked to avoid timeouts)
+      final subcollections = ['posts', 'ooc', 'brainstorm', 'stats'];
+      for (var sub in subcollections) {
+        final snap = await _db.collection('sessions').doc(sessionId).collection(sub).get();
+        final batch = _db.batch();
+        for (var doc in snap.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+      }
+
+      // 2. Delete all files in Firebase Storage for this session
+      try {
+        final storageRef = FirebaseStorage.instance.ref().child('sessions/$sessionId');
+        final listResult = await storageRef.listAll();
+        
+        // Delete items directly in the folder (e.g., background.jpg)
+        for (var item in listResult.items) {
+          await item.delete();
+        }
+        
+        // Delete nested files (e.g., media/123.jpg, media/456.enc)
+        for (var prefix in listResult.prefixes) {
+          final nestedList = await prefix.listAll();
+          for (var file in nestedList.items) {
+            await file.delete();
+          }
+        }
+      } catch (e) {
+        // Folder might not exist if no images were ever sent, that's fine.
+        print('[deleteSession] Storage delete warning: $e');
+      }
+
+      // 3. Finally, delete the main session document
+      await _db.collection('sessions').doc(sessionId).delete();
+      
+      print('[deleteSession] Successfully deleted session $sessionId');
+    } catch (e) {
+      print('[deleteSession] FAILED: $e');
+      rethrow;
+    }
+  }
 
     // Private key is being unlocked (post-transfer, post-PIN-entry).
     // Poll briefly. 10 × 500ms = 5s ceiling. Bail immediately if the
@@ -1062,11 +1108,69 @@ class FirestoreService {
     final data = <String, dynamic>{
       'title': title,
       'summary': summary,
-      if (backgroundUrl != null) 'backgroundUrl': backgroundUrl,
+      'backgroundUrl': ?backgroundUrl,
       'titleUpdatedAt': FieldValue.serverTimestamp(),
     };
     await _db.collection('sessions').doc(sessionId).update(data);
   }
+
+    Future<void> saveImportedItems(String sessionId, List<String> characterIds, List<String> worldIds) async {
+    try {
+      await _db.collection('sessions').doc(sessionId).update({
+        'importedCharacterIds': characterIds,
+        'importedWorldIds': worldIds,
+      });
+    } catch (e) {
+      print('[saveImportedItems] failed: $e');
+    }
+  }
+
+    Future<void> deleteSessionCompletely(String sessionId) async {
+    try {
+      // 1. Delete subcollections (chunked to avoid timeouts)
+      final subcollections = ['posts', 'ooc', 'brainstorm', 'stats'];
+      for (var sub in subcollections) {
+        final snap = await _db.collection('sessions').doc(sessionId).collection(sub).get();
+        final batch = _db.batch();
+        for (var doc in snap.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+      }
+
+      // 2. Delete all files in Firebase Storage for this session
+      try {
+        final storageRef = FirebaseStorage.instance.ref().child('sessions/$sessionId');
+        final listResult = await storageRef.listAll();
+        
+        // Delete items directly in the folder (e.g., background.jpg)
+        for (var item in listResult.items) {
+          await item.delete();
+        }
+        
+        // Delete nested files (e.g., media/123.jpg, media/456.enc)
+        for (var prefix in listResult.prefixes) {
+          final nestedList = await prefix.listAll();
+          for (var file in nestedList.items) {
+            await file.delete();
+          }
+        }
+      } catch (e) {
+        // Folder might not exist if no images were ever sent, that's fine.
+        print('[deleteSession] Storage delete warning: $e');
+      }
+
+      // 3. Finally, delete the main session document
+      await _db.collection('sessions').doc(sessionId).delete();
+      
+      print('[deleteSession] Successfully deleted session $sessionId');
+    } catch (e) {
+      print('[deleteSession] FAILED: $e');
+      rethrow;
+    }
+  }
 }
+
+
 
  

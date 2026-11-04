@@ -62,6 +62,7 @@ class WorldEntry {
   String notes;
   final DateTime createdAt;
   bool isDraft;
+  String? mapUrl;
 
   WorldEntry({
     required this.id,
@@ -76,6 +77,7 @@ class WorldEntry {
     this.notes = '',
     DateTime? createdAt,
     this.isDraft = true,
+    this.mapUrl,
   })  : locations = locations ?? [],
         factions = factions ?? [],
         createdAt = createdAt ?? DateTime.now();
@@ -85,6 +87,7 @@ class WorldEntry {
     'tone': tone, 'history': history, 'rules': rules, 'notes': notes,
     'isDraft': isDraft,
     'createdAt': createdAt.millisecondsSinceEpoch,
+    'mapUrl': mapUrl,
     'locations': locations.map((l) => {'name': l.name, 'description': l.description}).toList(),
     'factions': factions.map((f) => {'name': f.name, 'description': f.description}).toList(),
   };
@@ -98,6 +101,7 @@ class WorldEntry {
     history: j['history'] as String? ?? '',
     rules: j['rules'] as String? ?? '',
     notes: j['notes'] as String? ?? '',
+    mapUrl: j['mapUrl'] as String?,
     isDraft: j['isDraft'] as bool? ?? true,
     createdAt: j['createdAt'] != null ? DateTime.fromMillisecondsSinceEpoch(j['createdAt'] as int) : null,
     locations: (j['locations'] as List? ?? []).map((l) => WorldLocation(name: l['name'] as String? ?? '', description: l['description'] as String? ?? '')).toList(),
@@ -134,6 +138,7 @@ class CharacterEntry {
   String? linkedWorldId;
   final DateTime createdAt;
   Color accentColor;
+  String? avatarUrl; // <--- Added
 
   CharacterEntry({
     required this.id,
@@ -149,6 +154,7 @@ class CharacterEntry {
     this.linkedWorldId,
     DateTime? createdAt,
     Color? accentColor,
+    this.avatarUrl, // <--- Added
   })  : createdAt = createdAt ?? DateTime.now(),
         accentColor = accentColor ?? const Color(0xFFC9A96E);
 
@@ -160,6 +166,7 @@ class CharacterEntry {
     'linkedWorldId': linkedWorldId,
     'createdAt': createdAt.millisecondsSinceEpoch,
     'accentColor': accentColor.toARGB32(),
+    'avatarUrl': avatarUrl, // <--- Added
   };
 
   factory CharacterEntry.fromJson(Map<String, dynamic> j) => CharacterEntry(
@@ -174,9 +181,13 @@ class CharacterEntry {
     notes: j['notes'] as String? ?? '',
     type: CharacterType.values[j['type'] as int? ?? 0],
     linkedWorldId: j['linkedWorldId'] as String?,
-    createdAt: j['createdAt'] != null
-        ? DateTime.fromMillisecondsSinceEpoch(j['createdAt'] as int) : null,
-    accentColor: j['accentColor'] != null ? Color(j['accentColor'] as int) : null,
+    createdAt: j['createdAt'] != null 
+        ? DateTime.fromMillisecondsSinceEpoch(j['createdAt'] as int) 
+        : null,
+    accentColor: j['accentColor'] != null 
+        ? Color(j['accentColor'] as int) 
+        : null,
+    avatarUrl: j['avatarUrl'] as String?, // <--- Added
   );
 }
 

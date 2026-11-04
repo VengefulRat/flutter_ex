@@ -57,6 +57,8 @@ dependencies:
   animated_reorderable: ^2.10.1
   flutter_reorderable_grid_view: ^5.9.0
   sensors_plus: ^7.1.1
+  webview_flutter: ^4.14.1
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
