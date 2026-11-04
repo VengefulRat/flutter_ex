@@ -14,6 +14,7 @@ import 'map_selection_screen.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:file_selector/file_selector.dart';
 
 class IdeaGenerator {
   static final _rnd = Random();
@@ -436,6 +437,7 @@ class _SandboxScreenState extends State<SandboxScreen>
   List<WorldEntry> _worlds = [];
   List<CharacterEntry> _characters = [];
   bool _loaded = false;
+  bool _isImporting = false;
 
   @override
   void initState() {
@@ -470,45 +472,96 @@ class _SandboxScreenState extends State<SandboxScreen>
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: appSettings.bgColor,
     body: SafeArea(
-      child: Column(
+      child: Stack(
         children: [
-          _buildTopBar(),
-          _buildTabBar(),
-          Expanded(
-            child: !_loaded
-                ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 1.5, color: cSmoke)))
-                : TabBarView(
-                    controller: _tab,
-                    children: [
-                      _WorldsTab(
-                        worlds: _worlds,
-                        onAdd: _addWorld,
-                        onEdit: _editWorld,
-                        onDelete: _deleteWorld,
-                        onUpdate: _updateWorldSilently,
+          // 1. Your main screen content
+          Column(
+            children: [
+              _buildTopBar(),
+              _buildTabBar(),
+              Expanded(
+                child: !_loaded
+                    ? const Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            color: cSmoke,
+                          ),
+                        ),
+                      )
+                    : TabBarView(
+                        controller: _tab,
+                        children: [
+                          _WorldsTab(
+                            worlds: _worlds,
+                            onAdd: _addWorld,
+                            onEdit: _editWorld,
+                            onDelete: _deleteWorld,
+                            onUpdate: _updateWorldSilently,
+                          ),
+                          _CharactersTab(
+                            characters: _characters,
+                            worlds: _worlds,
+                            onAdd: _addCharacter,
+                            onEdit: _editCharacter,
+                            onDelete: _deleteCharacter,
+                            onUpdateCharacter: (updatedChar) {
+                              setState(() {
+                                final i = _characters.indexWhere((x) => x.id == updatedChar.id);
+                                if (i != -1) _characters[i] = updatedChar;
+                              });
+                              SandboxStorage.saveCharacters(_characters);
+                              SandboxSync.pushCharacters(_characters);
+                            },
+                          ),
+                        ],
                       ),
-                      _CharactersTab(
-                        characters: _characters,
-                        worlds: _worlds,
-                        onAdd: _addCharacter,
-                        onEdit: _editCharacter,
-                        onDelete: _deleteCharacter,
-                        onUpdateCharacter: (updatedChar) {
-                          setState(() {
-                            final i = _characters.indexWhere((x) => x.id == updatedChar.id);
-                            if (i != -1) _characters[i] = updatedChar;
-                          });
-                          SandboxStorage.saveCharacters(_characters);
-                          SandboxSync.pushCharacters(_characters);
-                        },
-                      ),
-                    ],
-                  ),
+              ),
+            ],
+          ),
+          
+          // 2. The Loading Overlay (Drawn on top of the Column)
+          if (_isImporting)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.6),
+                child: const Center(
+                  child: CircularProgressIndicator(color: cGold),
+                ),
+              ),
+            ),
+        ],
+      ),
+    ),
+            floatingActionButton: AnimatedBuilder(
+      animation: _tab,
+      builder: (context, _) => Stack(
+        children: [
+          // The new Decode Button (Only shows on the Characters tab)
+          if (_tab.index == 1)
+            Positioned(
+              left: 16,
+              bottom: 16,
+              child: FloatingActionButton(
+                heroTag: 'decodeBtn',
+                backgroundColor: cInk,
+                shape: const CircleBorder(side: BorderSide(color: cGold)),
+                onPressed: _copyDeorumJsonFromFile,
+                child: const Icon(Icons.file_download_outlined, color: cGold),
+              ),
+            ),
+          
+          // Your existing + Button
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: _buildFAB(),
           ),
         ],
       ),
     ),
-    floatingActionButton: _buildFAB(),
   );
 
   Widget _buildTopBar() => Container(
@@ -605,7 +658,7 @@ class _SandboxScreenState extends State<SandboxScreen>
     )));
   }
 
-      void _addCharacter() {
+  void _addCharacter() {
     showModalBottomSheet(
       context: context,
       backgroundColor: cInk,
@@ -618,12 +671,12 @@ class _SandboxScreenState extends State<SandboxScreen>
             Container(width: 32, height: 3, decoration: BoxDecoration(color: cAsh, borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 20),
             _sheetAction(context, Icons.edit_outlined, 'Create Custom Character', () {
-              Navigator.pop(ctx);
+              // Navigator.pop(ctx); <--- REMOVED THIS
               _openCharacterEditor(null);
             }),
             _sheetAction(context, Icons.paste, 'Import from Clipboard', () {
-              Navigator.pop(ctx);
-              _importFromClipboard(); // Call the new clipboard method
+              // Navigator.pop(ctx); <--- REMOVED THIS
+              _importFromClipboard(); 
             }, color: cIce),
           ],
         ),
@@ -640,9 +693,43 @@ class _SandboxScreenState extends State<SandboxScreen>
     _fs.incrementUserCounter('charactersCreated', -1);
   }
 
+  Future<void> _copyDeorumJsonFromFile() async {
+    try {
+      const typeGroup = XTypeGroup(
+        label: 'JSON',
+        extensions: <String>['json', 'txt'],
+        mimeTypes: <String>['*/*'],
+      );
+      final XFile? file = await openFile(acceptedTypeGroups: <XTypeGroup>[typeGroup]);
+      if (file == null) return;
+
+      final text = await file.readAsString();
+      
+      // Copy the raw text to the clipboard
+      await Clipboard.setData(ClipboardData(text: text));
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          backgroundColor: cGold,
+          duration: Duration(seconds: 4),
+          content: Text(
+            'JSON copied to clipboard! Tap + to import.', 
+            style: TextStyle(color: cVoid, fontWeight: FontWeight.bold),
+          ),
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: cEmber,
+          content: Text('Failed to read file: $e', style: const TextStyle(color: Colors.white)),
+        ));
+      }
+    }
+  }
+
   // 1. IMPORT DIRECTLY FROM FILE
-   Future<void> _importFromClipboard() async {
-    // 1. Read the clipboard
+  Future<void> _importFromClipboard() async {
     final ClipboardData? clipData = await Clipboard.getData(Clipboard.kTextPlain);
     final String? jsonString = clipData?.text;
 
@@ -656,32 +743,18 @@ class _SandboxScreenState extends State<SandboxScreen>
       return;
     }
 
-    // 2. Show loading spinner
     if (!mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator(color: cGold)),
-    );
+    
+    // 1. Show the custom loading overlay
+    setState(() => _isImporting = true);
 
     try {
-      // 3. Clean the text
       String cleanJson = jsonString.trim();
-      if (cleanJson.startsWith('\uFEFF')) {
-        cleanJson = cleanJson.substring(1);
-      }
+      if (cleanJson.startsWith('\uFEFF')) cleanJson = cleanJson.substring(1);
 
-      // 4. Decode JSON
       dynamic decoded = jsonDecode(cleanJson);
       Map<String, dynamic> data = (decoded is List) ? decoded.first : decoded;
 
-      String? externalAvatarUrl;
-      final imgVal = data['image'] ?? data['avatar'];
-      if (imgVal != null && imgVal.toString().isNotEmpty) {
-        externalAvatarUrl = 'https://deorum.vercel.app/api/files/$imgVal';
-      }
-
-      // 5. Create Character
       final newChar = CharacterEntry(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: data['name'] ?? data['char_name'] ?? 'Unknown Name',
@@ -691,72 +764,55 @@ class _SandboxScreenState extends State<SandboxScreen>
         personality: 'Archetype: ${data['archetype'] ?? ''}\nBackground: ${data['background'] ?? ''}',
         backstory: data['bio'] ?? data['backstory'] ?? '',
         notes: 'Imported from Deorum',
-        avatarUrl: null, // Leave null for now, we fetch it safely later
+        avatarUrl: null, // Image fetching is completely removed
       );
 
-      // 6. Close the loading spinner
-      if (mounted) Navigator.of(context).pop();
-
-      // 7. Save and update UI
       if (mounted) {
-        setState(() => _characters.insert(0, newChar));
+        setState(() {
+          _characters.insert(0, newChar);
+          _isImporting = false; // Hide loading overlay
+        });
         
         try { await SandboxStorage.saveCharacters(_characters); } catch (e) { debugPrint("Storage save failed: $e"); }
         try { SandboxSync.pushCharacters(_characters); } catch (e) { debugPrint("Sync failed: $e"); }
         try { _fs.incrementUserCounter('charactersCreated', 1); } catch (e) { debugPrint("Counter failed: $e"); }
         
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          backgroundColor: cGold,
-          duration: const Duration(seconds: 4),
-          content: Text('${newChar.name} imported successfully!', style: const TextStyle(color: cVoid, fontWeight: FontWeight.bold)),
-        ));
-
-        // 8. Fetch the image in the background (Does not block the UI)
-        if (externalAvatarUrl != null) {
-          _fetchImageInBackground(newChar, externalAvatarUrl);
-        }
+        // 2. The Pop-Up Box (No more SnackBars)
+        showDialog(
+          context: context,
+          barrierDismissible: false, 
+          builder: (ctx) => AlertDialog(
+            backgroundColor: cInk,
+            shape: RoundedRectangleBorder(
+              side: const BorderSide(color: cGold, width: 0.5),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            title: const Text('Import Successful', style: TextStyle(color: cGold, fontSize: 18, fontStyle: FontStyle.italic)),
+            content: const Text(
+              'Your character has been added to the Sandbox!\n\n'
+              'Note: Deorum locks images to their own servers. If you want the character portrait, please download it directly from Deorum and add it manually in the character editor.',
+              style: TextStyle(color: cParchment, fontSize: 14, height: 1.5),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Confirm', style: TextStyle(color: cGold, fontWeight: FontWeight.bold, letterSpacing: 1)),
+              ),
+            ],
+          ),
+        );
       }
 
     } catch (e) {
-      // 9. If parsing fails, close spinner and show error
-      if (mounted) Navigator.of(context).pop();
-      
       if (mounted) {
+        setState(() => _isImporting = false); // Hide overlay on error
+        
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           backgroundColor: cEmber, 
           duration: const Duration(seconds: 10), 
           content: Text('Parse Error: $e', style: const TextStyle(color: Colors.white, fontSize: 16)),
         ));
       }
-    }
-  }
-
-  // Separate method to handle the image download/upload safely
-    Future<void> _fetchImageInBackground(CharacterEntry char, String externalUrl) async {
-    try {
-      debugPrint("Downloading image from Deorum...");
-      final response = await http.get(Uri.parse(externalUrl)).timeout(const Duration(seconds: 10));
-      
-      if (response.statusCode == 200) {
-        debugPrint("Uploading image to Firebase...");
-        final ref = FirebaseStorage.instance.ref().child('characters/${char.id}.webp');
-        await ref.putData(response.bodyBytes);
-        final firebaseUrl = await ref.getDownloadURL();
-        
-        // Update the character with the new image URL
-        if (mounted) {
-          setState(() {
-            char.avatarUrl = firebaseUrl;
-          });
-          await SandboxStorage.saveCharacters(_characters);
-          SandboxSync.pushCharacters(_characters);
-          debugPrint("Image updated successfully!");
-        }
-      } else {
-        debugPrint("Deorum blocked the image. Status: ${response.statusCode}");
-      }
-    } catch (e) {
-      debugPrint("Image download/upload failed: $e");
     }
   }
 
