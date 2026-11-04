@@ -1,12 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:http/http.dart' as http;
 import '../theme.dart';
 import '../models/world.dart';
 import '../services/sandbox_sync.dart';
-import '../settings.dart';
 
 class WorldMapScreen extends StatefulWidget {
   final WorldEntry world;

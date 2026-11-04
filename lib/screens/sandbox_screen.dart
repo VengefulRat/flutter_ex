@@ -9,13 +9,11 @@ import '../services/sandbox_sync.dart';
 import '../widgets/colour_picker.dart';
 import '../widgets/card_frame.dart';
 import '../widgets/holo_card_v2.dart';
-import 'world_map_screen.dart'; // <--- Added for the map
 import 'dart:math';
-import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
 import 'map_selection_screen.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 
 class IdeaGenerator {
   static final _rnd = Random();
@@ -373,7 +371,6 @@ class IdeaGenerator {
   static String get randomRelationship => _relationships[_rnd.nextInt(_relationships.length)];
 
   // ── COMPOSITE GENERATORS ──
-
   static Map<String, String> generateWorld() => {
     'name': randomWorldName,
     'genre': randomGenre,
@@ -388,7 +385,7 @@ class IdeaGenerator {
     'location': randomLocation,
   };
 
-   static Map<String, String> generateCharacter() => {
+  static Map<String, String> generateCharacter() => {
     'name': randomCharName,
     'occupation': randomOccupation,
     'pronouns': randomPronouns,
@@ -414,7 +411,6 @@ class IdeaGenerator {
     };
   }
 
-  // This is the magic one for your button
   static String generatePlot({Map<String, String>? world, Map<String, String>? character}) {
     world ??= generateWorld();
     character ??= generateCharacter();
@@ -425,8 +421,7 @@ class IdeaGenerator {
         "They must face ${world['conflict']} while hunted by ${world['faction']} "
         "at ${world['location']}. They hold ${world['artifact']}.";
   }
-
-} // <--- Closes IdeaGenerator
+}
 
 class SandboxScreen extends StatefulWidget {
   const SandboxScreen({super.key});
@@ -570,13 +565,6 @@ class _SandboxScreenState extends State<SandboxScreen>
     ),
   );
 
-    void _updateWorldSilently(WorldEntry updatedWorld) {
-    setState(() {
-      final i = _worlds.indexWhere((w) => w.id == updatedWorld.id);
-      if (i != -1) _worlds[i] = updatedWorld;
-    });
-  }
-
   void _addWorld() => _openWorldEditor(null);
   void _editWorld(WorldEntry w) => _openWorldEditor(w);
   void _deleteWorld(String id) {
@@ -584,6 +572,13 @@ class _SandboxScreenState extends State<SandboxScreen>
     SandboxStorage.saveWorlds(_worlds);
     SandboxSync.pushWorlds(_worlds);
     _fs.incrementUserCounter('worldsCreated', -1);
+  }
+
+  void _updateWorldSilently(WorldEntry updatedWorld) {
+    setState(() {
+      final i = _worlds.indexWhere((w) => w.id == updatedWorld.id);
+      if (i != -1) _worlds[i] = updatedWorld;
+    });
   }
 
   void _openWorldEditor(WorldEntry? existing) {
@@ -610,13 +605,159 @@ class _SandboxScreenState extends State<SandboxScreen>
     )));
   }
 
-  void _addCharacter() => _openCharacterEditor(null);
+      void _addCharacter() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cInk,
+      shape: const RoundedRectangleBorder(),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 32, height: 3, decoration: BoxDecoration(color: cAsh, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 20),
+            _sheetAction(context, Icons.edit_outlined, 'Create Custom Character', () {
+              Navigator.pop(ctx);
+              _openCharacterEditor(null);
+            }),
+            _sheetAction(context, Icons.paste, 'Import from Clipboard', () {
+              Navigator.pop(ctx);
+              _importFromClipboard(); // Call the new clipboard method
+            }, color: cIce),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _editCharacter(CharacterEntry c) => _openCharacterEditor(c);
+
   void _deleteCharacter(String id) {
     setState(() => _characters.removeWhere((c) => c.id == id));
     SandboxStorage.saveCharacters(_characters);
     SandboxSync.pushCharacters(_characters);
     _fs.incrementUserCounter('charactersCreated', -1);
+  }
+
+  // 1. IMPORT DIRECTLY FROM FILE
+   Future<void> _importFromClipboard() async {
+    // 1. Read the clipboard
+    final ClipboardData? clipData = await Clipboard.getData(Clipboard.kTextPlain);
+    final String? jsonString = clipData?.text;
+
+    if (jsonString == null || jsonString.trim().isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          backgroundColor: cEmber, 
+          content: Text('Clipboard is empty! Copy the JSON text first.'),
+        ));
+      }
+      return;
+    }
+
+    // 2. Show loading spinner
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator(color: cGold)),
+    );
+
+    try {
+      // 3. Clean the text
+      String cleanJson = jsonString.trim();
+      if (cleanJson.startsWith('\uFEFF')) {
+        cleanJson = cleanJson.substring(1);
+      }
+
+      // 4. Decode JSON
+      dynamic decoded = jsonDecode(cleanJson);
+      Map<String, dynamic> data = (decoded is List) ? decoded.first : decoded;
+
+      String? externalAvatarUrl;
+      final imgVal = data['image'] ?? data['avatar'];
+      if (imgVal != null && imgVal.toString().isNotEmpty) {
+        externalAvatarUrl = 'https://deorum.vercel.app/api/files/$imgVal';
+      }
+
+      // 5. Create Character
+      final newChar = CharacterEntry(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: data['name'] ?? data['char_name'] ?? 'Unknown Name',
+        pronouns: data['gender'] ?? data['pronouns'] ?? '',
+        age: data['age']?.toString() ?? '',
+        appearance: 'Race: ${data['race'] ?? ''}\nHeight: ${data['height'] ?? '?'}cm\nWeight: ${data['weight'] ?? '?'}kg',
+        personality: 'Archetype: ${data['archetype'] ?? ''}\nBackground: ${data['background'] ?? ''}',
+        backstory: data['bio'] ?? data['backstory'] ?? '',
+        notes: 'Imported from Deorum',
+        avatarUrl: null, // Leave null for now, we fetch it safely later
+      );
+
+      // 6. Close the loading spinner
+      if (mounted) Navigator.of(context).pop();
+
+      // 7. Save and update UI
+      if (mounted) {
+        setState(() => _characters.insert(0, newChar));
+        
+        try { await SandboxStorage.saveCharacters(_characters); } catch (e) { debugPrint("Storage save failed: $e"); }
+        try { SandboxSync.pushCharacters(_characters); } catch (e) { debugPrint("Sync failed: $e"); }
+        try { _fs.incrementUserCounter('charactersCreated', 1); } catch (e) { debugPrint("Counter failed: $e"); }
+        
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: cGold,
+          duration: const Duration(seconds: 4),
+          content: Text('${newChar.name} imported successfully!', style: const TextStyle(color: cVoid, fontWeight: FontWeight.bold)),
+        ));
+
+        // 8. Fetch the image in the background (Does not block the UI)
+        if (externalAvatarUrl != null) {
+          _fetchImageInBackground(newChar, externalAvatarUrl);
+        }
+      }
+
+    } catch (e) {
+      // 9. If parsing fails, close spinner and show error
+      if (mounted) Navigator.of(context).pop();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: cEmber, 
+          duration: const Duration(seconds: 10), 
+          content: Text('Parse Error: $e', style: const TextStyle(color: Colors.white, fontSize: 16)),
+        ));
+      }
+    }
+  }
+
+  // Separate method to handle the image download/upload safely
+    Future<void> _fetchImageInBackground(CharacterEntry char, String externalUrl) async {
+    try {
+      debugPrint("Downloading image from Deorum...");
+      final response = await http.get(Uri.parse(externalUrl)).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        debugPrint("Uploading image to Firebase...");
+        final ref = FirebaseStorage.instance.ref().child('characters/${char.id}.webp');
+        await ref.putData(response.bodyBytes);
+        final firebaseUrl = await ref.getDownloadURL();
+        
+        // Update the character with the new image URL
+        if (mounted) {
+          setState(() {
+            char.avatarUrl = firebaseUrl;
+          });
+          await SandboxStorage.saveCharacters(_characters);
+          SandboxSync.pushCharacters(_characters);
+          debugPrint("Image updated successfully!");
+        }
+      } else {
+        debugPrint("Deorum blocked the image. Status: ${response.statusCode}");
+      }
+    } catch (e) {
+      debugPrint("Image download/upload failed: $e");
+    }
   }
 
   void _openCharacterEditor(CharacterEntry? existing) {
@@ -644,7 +785,7 @@ class _SandboxScreenState extends State<SandboxScreen>
     )));
   }
 
-    void _saveWorldDirectly(Map<String, String> map) {
+  void _saveWorldDirectly(Map<String, String> map) {
     final newWorld = _mapToWorldEntry(map);
     setState(() => _worlds.insert(0, newWorld));
     SandboxStorage.saveWorlds(_worlds);
@@ -665,8 +806,7 @@ class _SandboxScreenState extends State<SandboxScreen>
     _fs.incrementUserCounter('charactersCreated', 1);
   }
 
-      void _showIdeaGenerator() {
-    // We generate all three at once to keep them linked
+  void _showIdeaGenerator() {
     Map<String, String> currentWorld = IdeaGenerator.generateWorld();
     Map<String, String> currentChar = IdeaGenerator.generateCharacter();
     String currentPlot = IdeaGenerator.generatePlot(world: currentWorld, character: currentChar);
@@ -690,7 +830,6 @@ class _SandboxScreenState extends State<SandboxScreen>
                 const Text('SPARK AN IDEA', style: TextStyle(fontFamily: 'monospace', fontSize: 11, color: cGold, letterSpacing: 4)),
                 const SizedBox(height: 16),
                 
-                // 3-Way Toggle
                 Row(
                   children: [
                     _sparkTab('WORLD', 0, activeTab, () => setModalState(() => activeTab = 0)),
@@ -702,7 +841,6 @@ class _SandboxScreenState extends State<SandboxScreen>
                 ),
                 const SizedBox(height: 16),
                 
-                // Content Area
                 Expanded(
                   child: SingleChildScrollView(
                     child: Container(
@@ -719,7 +857,6 @@ class _SandboxScreenState extends State<SandboxScreen>
                 ),
                 const SizedBox(height: 24),
                 
-                // Buttons
                 Row(
                   children: [
                     Expanded(
@@ -731,7 +868,6 @@ class _SandboxScreenState extends State<SandboxScreen>
                             } else if (activeTab == 1) {
                               currentChar = IdeaGenerator.generateCharacter();
                             } else {
-                              // Rerolling the plot rerolls the world and char to match
                               currentWorld = IdeaGenerator.generateWorld();
                               currentChar = IdeaGenerator.generateCharacter();
                               currentPlot = IdeaGenerator.generatePlot(world: currentWorld, character: currentChar);
@@ -755,7 +891,6 @@ class _SandboxScreenState extends State<SandboxScreen>
                           } else if (activeTab == 1) {
                             _openCharacterEditor(_mapToCharacterEntry(currentChar));
                           } else {
-                            // If on Plot tab, save everything to Sandbox directly
                             _saveWorldDirectly(currentWorld);
                             _saveCharacterDirectly(currentChar, plotText: currentPlot);
                             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -853,14 +988,12 @@ class _SandboxScreenState extends State<SandboxScreen>
         Text(plot, style: const TextStyle(fontSize: 15, color: cParchment, height: 1.7, fontStyle: FontStyle.italic)),
         const SizedBox(height: 24),
         
-        // ── LINKED ASSETS ──
         const Text('LINKED ASSETS', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 2)),
         const SizedBox(height: 8),
         Text('World: ${world['name']}', style: const TextStyle(fontSize: 13, color: cMist)),
         Text('Character: ${char['name']}', style: const TextStyle(fontSize: 13, color: cMist)),
         const SizedBox(height: 16),
         
-        // ── INDIVIDUAL SAVE BUTTONS ──
         Row(
           children: [
             Expanded(
@@ -914,7 +1047,6 @@ class _SandboxScreenState extends State<SandboxScreen>
     );
   }
 
-  // Helper methods to convert Maps to Entries
   WorldEntry _mapToWorldEntry(Map<String, String> map) => WorldEntry(
     id: DateTime.now().millisecondsSinceEpoch.toString(),
     name: map['name']!,
@@ -948,14 +1080,14 @@ class _WorldsTab extends StatelessWidget {
   final VoidCallback onAdd;
   final void Function(WorldEntry) onEdit;
   final void Function(String) onDelete;
-  final void Function(WorldEntry) onUpdate; // <--- The variable
+  final void Function(WorldEntry) onUpdate;
 
   const _WorldsTab({
     required this.worlds, 
     required this.onAdd, 
     required this.onEdit, 
     required this.onDelete,
-    required this.onUpdate, // <--- Added to constructor
+    required this.onUpdate,
   });
 
   @override
@@ -969,7 +1101,7 @@ class _WorldsTab extends StatelessWidget {
         itemBuilder: (_, i) => _WorldCard(
           world: worlds[i], 
           onTap: () => onEdit(worlds[i]), 
-          onDelete: () => onDelete(worlds[i].id), // <--- Fixed the bracket here!
+          onDelete: () => onDelete(worlds[i].id),
           onUpdate: onUpdate, 
         ),
       ),
@@ -1034,7 +1166,7 @@ class _WorldCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-                            if (world.mapUrl != null)
+              if (world.mapUrl != null)
                 GestureDetector(
                   onTap: () => showDialog(
                     context: context,
@@ -1314,7 +1446,6 @@ class _WorldEditorScreenState extends State<WorldEditorScreen>
   late TabController _tab;
   late WorldEntry _working;
 
-  // Map uploader variables
   String? _mapUrl;
   bool _uploadingMap = false;
 
@@ -1333,7 +1464,7 @@ class _WorldEditorScreenState extends State<WorldEditorScreen>
           )
         : WorldEntry(id: DateTime.now().millisecondsSinceEpoch.toString(), name: '');
     
-    _mapUrl = _working.mapUrl; // Initialize the map url
+    _mapUrl = _working.mapUrl;
     
     _nameCtrl = TextEditingController(text: _working.name);
     _genreCtrl = TextEditingController(text: _working.genre);
@@ -1390,7 +1521,7 @@ class _WorldEditorScreenState extends State<WorldEditorScreen>
     _working.rules = _rulesCtrl.text.trim();
     _working.notes = _notesCtrl.text.trim();
     
-    _working.mapUrl = _mapUrl; // Save the uploaded map URL
+    _working.mapUrl = _mapUrl;
 
     widget.onSave(_working);
     Navigator.of(context).pop();
@@ -1419,7 +1550,6 @@ class _WorldEditorScreenState extends State<WorldEditorScreen>
                 ),
                 Row(
                   children: [
-                    // ── THE MAP BUTTON ──
                     GestureDetector(
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
@@ -1482,7 +1612,6 @@ class _WorldEditorScreenState extends State<WorldEditorScreen>
             child: TabBarView(
               controller: _tab,
               children: [
-                // ── OVERVIEW TAB (Includes Map Uploader) ──
                 _editorScrollable([
                   const Text('WORLD MAP IMAGE', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 3)),
                   const SizedBox(height: 8),
@@ -1516,13 +1645,11 @@ class _WorldEditorScreenState extends State<WorldEditorScreen>
                   ),
                   const SizedBox(height: 24),
                   
-                  // Regular fields
                   _field('Genre', _genreCtrl, hint: 'e.g. Dark Fantasy, Sci-Fi Noir'), 
                   _field('Overview', _overviewCtrl, maxLines: 6, hint: 'The world in a paragraph...'), 
                   _field('Tone', _toneCtrl, hint: 'e.g. Dark, morally grey, slow burn')
                 ]),
                 
-                // ── OTHER TABS ──
                 _ListEditor<WorldLocation>(items: _working.locations, labelField: (l) => l.name, descField: (l) => l.description, emptyLabel: 'No locations yet', addLabel: 'Add location', newItem: () => WorldLocation(name: ''), onUpdate: () => setState(() {})),
                 _ListEditor<WorldFaction>(items: _working.factions, labelField: (f) => f.name, descField: (f) => f.description, emptyLabel: 'No factions yet', addLabel: 'Add faction', newItem: () => WorldFaction(name: ''), onUpdate: () => setState(() {})),
                 _editorScrollable([_field('History', _historyCtrl, maxLines: 12, hint: 'What happened before the story begins...')]),
