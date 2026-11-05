@@ -1641,7 +1641,7 @@ class _HomeScreenState extends State<HomeScreen>
   // The same layout as before, just extracted into its own method so
   // the outer build can decide what to show. Nothing inside this
   // method changed.
-    Widget _buildMobileBody() {
+      Widget _buildMobileBody() {
     final isDesktop = MediaQuery.sizeOf(context).width >= 900;
 
     return Center(
@@ -1651,204 +1651,216 @@ class _HomeScreenState extends State<HomeScreen>
         ),
         child: Stack(
           children: [
-            Column(
-              children: [
-                Expanded(
-                  child: isDesktop
-                      ? Center(
-                          child: HomeProfileCard(
-                            name: _auth.currentName ?? '—',
-                            code: _auth.currentCode ?? '—',
-                            bio: _profile?['bio'] as String? ?? '',
-                            subtitle: _buildProfileSubtitle(),
-                            stats: _computeStats(),
-                            avatarUrl: _profile?['avatarUrl'] as String?, // <-- New Avatar Image
-                            onTap: _openProfile,
-                            onLongPress: () => ProfileStyleSheet.show(context),
-                            fillHeight: false,
-                          ),
-                        )
-                      : HomeProfileCard(
-                          name: _auth.currentName ?? '—',
-                          code: _auth.currentCode ?? '—',
-                          bio: _profile?['bio'] as String? ?? '',
-                          subtitle: _buildProfileSubtitle(),
-                          stats: _computeStats(),
-                          avatarUrl: _profile?['avatarUrl'] as String?, // <-- New Avatar Image
-                          onTap: _openProfile,
-                          onLongPress: () => ProfileStyleSheet.show(context),
-                          fillHeight: true,
-                        ),
-                ),
-                
-                // ── FLOATING BOTTOM BAR ──
-                Container(
-                  // ADD THIS LINE: Force the bar to be tall enough for the floating button
-                  constraints: const BoxConstraints(minHeight: 96),
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.bottomCenter,
-                    children: [
-                      Row(
+            // 1. We wrap the whole layout in a LayoutBuilder + SingleChildScrollView
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight, // Fill the screen if tall
+                    ),
+                    child: IntrinsicHeight(
+                      child: Column(
                         children: [
                           Expanded(
-                            child: HoloCardV2(
-                              accent: cSmoke,
-                              intensity: 0.35,
-                              seed: 'sandbox_btn'.hashCode,
-                              bgColor: appSettings.surfaceColor,
-                              child: LoreTap(
-                                onTap: () async {
-                                  await Navigator.of(context).push(fadeRoute(const SandboxScreen()));
-                                  if (mounted) await _refreshProfile();
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  decoration: BoxDecoration(
-                                    color: appSettings.surfaceColor,
-                                    border: Border.all(color: cAsh, width: 1.5),
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.6),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 6),
-                                      ),
-                                    ],
+                            child: isDesktop
+                                ? Center(
+                                    child: HomeProfileCard(
+                                      name: _auth.currentName ?? '—',
+                                      code: _auth.currentCode ?? '—',
+                                      bio: _profile?['bio'] as String? ?? '',
+                                      subtitle: _buildProfileSubtitle(),
+                                      stats: _computeStats(),
+                                      avatarUrl: _profile?['avatarUrl'] as String?,
+                                      onTap: _openProfile,
+                                      onLongPress: () => ProfileStyleSheet.show(context),
+                                      fillHeight: false,
+                                    ),
+                                  )
+                                : HomeProfileCard(
+                                    name: _auth.currentName ?? '—',
+                                    code: _auth.currentCode ?? '—',
+                                    bio: _profile?['bio'] as String? ?? '',
+                                    subtitle: _buildProfileSubtitle(),
+                                    stats: _computeStats(),
+                                    avatarUrl: _profile?['avatarUrl'] as String?,
+                                    onTap: _openProfile,
+                                    onLongPress: () => ProfileStyleSheet.show(context),
+                                    fillHeight: true, // Card will expand to fill tall screens
                                   ),
-                                  child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.public_outlined, size: 16, color: cSmoke),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Sandbox',
-                                        style: TextStyle(
-                                          fontFamily: 'monospace',
-                                          fontSize: 11,
-                                          color: cSmoke,
-                                          letterSpacing: 1,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
                           ),
-                          const SizedBox(width: 90),
-                          Expanded(
-                            child: HoloCardV2(
-                              accent: cGold,
-                              intensity: 0.4,
-                              seed: 'find_btn'.hashCode,
-                              bgColor: appSettings.surfaceColor,
-                              child: LoreTap(
-                                onTap: () => Navigator.of(context).push(fadeRoute(const CardDiscoveryScreen())),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  decoration: BoxDecoration(
-                                    color: appSettings.surfaceColor,
-                                    border: Border.all(color: cGold.withValues(alpha: 0.5), width: 1.5),
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.6),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 6),
-                                      ),
-                                      BoxShadow(
-                                        color: cGold.withValues(alpha: 0.15),
-                                        blurRadius: 20,
-                                        offset: const Offset(0, 8),
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.explore_outlined, size: 16, color: cGold),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Find Partners',
-                                        style: TextStyle(
-                                          fontFamily: 'monospace',
-                                          fontSize: 11,
-                                          color: cGold,
-                                          letterSpacing: 1,
-                                          fontWeight: FontWeight.w600,
+                          
+                          // ── FLOATING BOTTOM BAR ──
+                          Container(
+                            constraints: const BoxConstraints(minHeight: 96),
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              alignment: Alignment.bottomCenter,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: HoloCardV2(
+                                        accent: cSmoke,
+                                        intensity: 0.35,
+                                        seed: 'sandbox_btn'.hashCode,
+                                        bgColor: appSettings.surfaceColor,
+                                        child: LoreTap(
+                                          onTap: () async {
+                                            await Navigator.of(context).push(fadeRoute(const SandboxScreen()));
+                                            if (mounted) await _refreshProfile();
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                            decoration: BoxDecoration(
+                                              color: appSettings.surfaceColor,
+                                              border: Border.all(color: cAsh, width: 1.5),
+                                              borderRadius: BorderRadius.circular(12),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withValues(alpha: 0.6),
+                                                  blurRadius: 12,
+                                                  offset: const Offset(0, 6),
+                                                ),
+                                              ],
+                                            ),
+                                            child: const Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.public_outlined, size: 16, color: cSmoke),
+                                                SizedBox(width: 8),
+                                                Text(
+                                                  'Sandbox',
+                                                  style: TextStyle(
+                                                    fontFamily: 'monospace',
+                                                    fontSize: 11,
+                                                    color: cSmoke,
+                                                    letterSpacing: 1,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ],
+                                    ),
+                                    const SizedBox(width: 90),
+                                    Expanded(
+                                      child: HoloCardV2(
+                                        accent: cGold,
+                                        intensity: 0.4,
+                                        seed: 'find_btn'.hashCode,
+                                        bgColor: appSettings.surfaceColor,
+                                        child: LoreTap(
+                                          onTap: () => Navigator.of(context).push(fadeRoute(const CardDiscoveryScreen())),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                            decoration: BoxDecoration(
+                                              color: appSettings.surfaceColor,
+                                              border: Border.all(color: cGold.withValues(alpha: 0.5), width: 1.5),
+                                              borderRadius: BorderRadius.circular(12),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withValues(alpha: 0.6),
+                                                  blurRadius: 12,
+                                                  offset: const Offset(0, 6),
+                                                ),
+                                                BoxShadow(
+                                                  color: cGold.withValues(alpha: 0.15),
+                                                  blurRadius: 20,
+                                                  offset: const Offset(0, 8),
+                                                ),
+                                              ],
+                                            ),
+                                            child: const Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.explore_outlined, size: 16, color: cGold),
+                                                SizedBox(width: 8),
+                                                Text(
+                                                  'Find Partners',
+                                                  style: TextStyle(
+                                                    fontFamily: 'monospace',
+                                                    fontSize: 11,
+                                                    color: cGold,
+                                                    letterSpacing: 1,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Positioned(
+                                  bottom: 0,
+                                  child: HoloCardV2(
+                                    accent: cGold,
+                                    intensity: 0.6,
+                                    seed: 'diary_btn'.hashCode,
+                                    bgColor: appSettings.bgColor,
+                                    maxTiltDegrees: 15,
+                                    child: LoreTap(
+                                      onTap: () => Navigator.of(context).push(fadeRoute(const DiaryScreen())),
+                                      child: Container(
+                                        width: 82,
+                                        height: 82,
+                                        decoration: BoxDecoration(
+                                          color: appSettings.bgColor,
+                                          border: Border.all(color: cGold.withValues(alpha: 0.7), width: 1.5),
+                                          borderRadius: BorderRadius.circular(16),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.8),
+                                              blurRadius: 16,
+                                              offset: const Offset(0, 8),
+                                            ),
+                                            BoxShadow(
+                                              color: cGold.withValues(alpha: 0.25),
+                                              blurRadius: 30,
+                                              offset: const Offset(0, 12),
+                                              spreadRadius: -2,
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.menu_book_outlined, size: 24, color: cGold),
+                                            SizedBox(height: 6),
+                                            Text(
+                                              'Diary',
+                                              style: TextStyle(
+                                                fontFamily: 'monospace',
+                                                fontSize: 10,
+                                                color: cGold,
+                                                letterSpacing: 2,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      Positioned(
-                        bottom: 0,
-                        child: HoloCardV2(
-                          accent: cGold,
-                          intensity: 0.6,
-                          seed: 'diary_btn'.hashCode,
-                          bgColor: appSettings.bgColor,
-                          maxTiltDegrees: 15,
-                          child: LoreTap(
-                            onTap: () => Navigator.of(context).push(fadeRoute(const DiaryScreen())),
-                            child: Container(
-                              width: 82,
-                              height: 82,
-                              decoration: BoxDecoration(
-                                color: appSettings.bgColor,
-                                border: Border.all(color: cGold.withValues(alpha: 0.7), width: 1.5),
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.8),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                  BoxShadow(
-                                    color: cGold.withValues(alpha: 0.25),
-                                    blurRadius: 30,
-                                    offset: const Offset(0, 12),
-                                    spreadRadius: -2,
-                                  ),
-                                ],
-                              ),
-                              child: const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.menu_book_outlined, size: 24, color: cGold),
-                                  SizedBox(height: 6),
-                                  Text(
-                                    'Diary',
-                                    style: TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 10,
-                                      color: cGold,
-                                      letterSpacing: 2,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                );
+              },
             ),
             
             // ── THE FLOATING MENU BUTTON ──
-            // This must be the last child in the Stack so it floats above everything else
             FloatingMenuButton(
               items: _buildMenuItems(),
             ),
