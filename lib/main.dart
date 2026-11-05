@@ -1868,7 +1868,7 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       ),
     );
-  }
+      }
 
   List<FloatingMenuItem> _buildMenuItems() {
     final unread = _notifications.where((n) => !n.read).length;
@@ -3424,7 +3424,7 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
     );
   }
 
-  @override
+    @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: appSettings.bgColor,
     body: SafeArea(
@@ -3501,7 +3501,7 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
           ),
           const SizedBox(height: 12),
 
-          // ── THE NEW CARD PAGE VIEW ──
+          // ── THE SWIPEABLE CARD DECK ──
           Expanded(
             child: _loading
                 ? const Center(
@@ -3523,9 +3523,8 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
                   )
                 : PageView.builder(
                     controller: _pageController,
-                    physics:
-                        const NeverScrollableScrollPhysics(), // Card handles its own touch
                     itemCount: _filtered.length,
+                    // Removed NeverScrollableScrollPhysics so we can swipe!
                     onPageChanged: (i) => setState(() => _currentIndex = i),
                     itemBuilder: (_, i) {
                       return Center(
@@ -3539,8 +3538,20 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
                   ),
           ),
 
-          // ── THE NEW SCRUBBER ──
-          if (!_loading && _filtered.isNotEmpty) _buildScrubber(),
+          // A small minimalist indicator at the bottom instead of the big slider
+          if (!_loading && _filtered.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16, top: 8),
+              child: Text(
+                'CARD ${_currentIndex + 1} OF ${_filtered.length}',
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 10,
+                  color: cSmoke,
+                  letterSpacing: 3,
+                ),
+              ),
+            ),
         ],
       ),
     ),
@@ -3713,36 +3724,41 @@ class _DiscoveryCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.only(bottom: 24),
         child: Center(
-          child: SizedBox(
-            width: 320, // Fixed width makes it look like a physical card
-            child: HoloCardV2(
-              accent: data.accentColor,
-              intensity: 0.4,
-              seed: data.frameSeed,
-              gyroEnabled: false, // Stable while scrolling
-              child: RequestCardView(
-                name: data.name,
-                code: data.code,
-                genre: data.genre,
-                bio: data.seeking,
-                writingStyle: data.writingStyle,
-                frequency: data.frequency,
-                ageRating: data.ageRating,
-                isOpen: data.isOpen,
-                tags: data.extraTags,
+          // FittedBox automatically scales the card down if the screen is too short (landscape)
+          child: FittedBox(
+            fit: BoxFit.contain,
+            child: SizedBox(
+              width: 320,
+              height: 448, // 5:7 ratio
+              child: HoloCardV2(
                 accent: data.accentColor,
-                bgTint: data.bgTint,
-                avatarUrl: data.avatarUrl,
-                frame: CardFrameSpec(
-                  seed: data.frameSeed,
+                intensity: 0.4,
+                seed: data.frameSeed,
+                gyroEnabled: false, 
+                child: RequestCardView(
+                  name: data.name,
+                  code: data.code,
+                  genre: data.genre,
+                  bio: data.seeking,
+                  writingStyle: data.writingStyle,
+                  frequency: data.frequency,
+                  ageRating: data.ageRating,
+                  isOpen: data.isOpen,
+                  tags: data.extraTags,
                   accent: data.accentColor,
-                  glow: data.frameGlow,
-                  ornate: data.frameOrnate,
-                  dense: data.frameDense,
+                  bgTint: data.bgTint,
+                  avatarUrl: data.avatarUrl,
+                  frame: CardFrameSpec(
+                    seed: data.frameSeed,
+                    accent: data.accentColor,
+                    glow: data.frameGlow,
+                    ornate: data.frameOrnate,
+                    dense: data.frameDense,
+                  ),
+                  foilEnabled: data.foilEnabled,
+                  foilSeed: data.frameSeed,
+                  foilIntensity: data.foilIntensity,
                 ),
-                foilEnabled: data.foilEnabled,
-                foilSeed: data.frameSeed,
-                foilIntensity: data.foilIntensity,
               ),
             ),
           ),

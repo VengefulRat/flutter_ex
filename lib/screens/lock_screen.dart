@@ -167,7 +167,7 @@ class _LockScreenState extends State<LockScreen> {
     super.dispose();
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
@@ -180,7 +180,6 @@ class _LockScreenState extends State<LockScreen> {
     return Focus(
       autofocus: true,
       onKeyEvent: (node, event) {
-        // Only listen if we are on the PIN screen (not the unique code screen)
         if (_mode != 'pin' || _verifying) return KeyEventResult.ignored;
 
         if (event is KeyDownEvent) {
@@ -200,37 +199,50 @@ class _LockScreenState extends State<LockScreen> {
       child: Scaffold(
         backgroundColor: cVoid,
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(children: [
-              const Spacer(),
-              const Text('L o r e', style: TextStyle(fontSize: 13,
-                  color: cGold, letterSpacing: 6, fontWeight: FontWeight.w300)),
-              const SizedBox(height: 48),
-              if (_mode == 'pin') _buildPinPrompt() else _buildCodePrompt(),
-              const Spacer(),
-              if (_mode == 'pin') ...[
-                GestureDetector(
-                  onTap: () => setState(() { _mode = 'code'; _error = null; }),
-                  child: const Text('Forgot PIN — use unique code',
-                      style: TextStyle(fontFamily: 'monospace', fontSize: 9,
-                          color: cSmoke, letterSpacing: 1)),
+          // We add LayoutBuilder + SingleChildScrollView + IntrinsicHeight
+          // This keeps the Spacer() working on tall screens, but allows scrolling on short ones
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Column(children: [
+                        const Spacer(),
+                        const Text('L o r e', style: TextStyle(fontSize: 13,
+                            color: cGold, letterSpacing: 6, fontWeight: FontWeight.w300)),
+                        const SizedBox(height: 48),
+                        if (_mode == 'pin') _buildPinPrompt() else _buildCodePrompt(),
+                        const Spacer(),
+                        if (_mode == 'pin') ...[
+                          GestureDetector(
+                            onTap: () => setState(() { _mode = 'code'; _error = null; }),
+                            child: const Text('Forgot PIN — use unique code',
+                                style: TextStyle(fontFamily: 'monospace', fontSize: 9,
+                                    color: cSmoke, letterSpacing: 1)),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        if (_mode == 'code') ...[
+                          GestureDetector(
+                            onTap: () => setState(() {
+                              _mode = 'pin'; _error = null; _codeCtrl.clear();
+                            }),
+                            child: const Text('← Back to PIN',
+                                style: TextStyle(fontFamily: 'monospace', fontSize: 9,
+                                    color: cSmoke, letterSpacing: 1)),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        const SizedBox(height: 32),
+                      ]),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 16),
-              ],
-              if (_mode == 'code') ...[
-                GestureDetector(
-                  onTap: () => setState(() {
-                    _mode = 'pin'; _error = null; _codeCtrl.clear();
-                  }),
-                  child: const Text('← Back to PIN',
-                      style: TextStyle(fontFamily: 'monospace', fontSize: 9,
-                          color: cSmoke, letterSpacing: 1)),
-                ),
-                const SizedBox(height: 16),
-              ],
-              const SizedBox(height: 32),
-            ]),
+              );
+            }
           ),
         ),
       ),
@@ -767,30 +779,32 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
     }
 
     final title = isConfirm ? 'Confirm your PIN' : 'Set your PIN';
-    return Column(children: [
-      Text(title, style: const TextStyle(fontSize: 20, color: cParchment,
-          fontWeight: FontWeight.w300, fontStyle: FontStyle.italic)),
-      const SizedBox(height: 32),
-      Row(mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(_pinLength, (i) => Container(
-          margin: const EdgeInsets.symmetric(horizontal: 8),
-          width: 14, height: 14,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: i < _pinInput.length ? cGold : Colors.transparent,
-            border: Border.all(color: i < _pinInput.length ? cGold : cAsh),
-          ),
-        )),
-      ),
-      if (_error != null) ...[
-        const SizedBox(height: 16),
-        Text(_error!, textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 11,
-                color: cEmber, fontStyle: FontStyle.italic)),
-      ],
-      const SizedBox(height: 40),
-      _buildNumpad(),
-    ]);
+    return SingleChildScrollView(
+      child: Column(children: [
+        Text(title, style: const TextStyle(fontSize: 20, color: cParchment,
+            fontWeight: FontWeight.w300, fontStyle: FontStyle.italic)),
+        const SizedBox(height: 32),
+        Row(mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(_pinLength, (i) => Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            width: 14, height: 14,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: i < _pinInput.length ? cGold : Colors.transparent,
+              border: Border.all(color: i < _pinInput.length ? cGold : cAsh),
+            ),
+          )),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 16),
+          Text(_error!, textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 11,
+                  color: cEmber, fontStyle: FontStyle.italic)),
+        ],
+        const SizedBox(height: 40),
+        _buildNumpad(),
+      ]),
+    );
   }
 
   Widget _buildTimingEdit() {
