@@ -57,3 +57,6 @@ app.*.map.json
 # OS noise
 Thumbs.db
 .DS_Store
+
+android/key.properties
+android/app/upload-keystore.jks
