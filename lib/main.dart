@@ -334,7 +334,7 @@ class _LandingScreenState extends State<LandingScreen>
                           ).push(fadeRoute(const LoginScreen())),
                         ),
                         const SizedBox(height: 16),
-                        LoreTap(
+                                                LoreTap(
                           onTap: () => Navigator.of(context).push(
                             fadeRoute(const LoginScreen(startOnLogin: true)),
                           ),
@@ -349,6 +349,38 @@ class _LandingScreenState extends State<LandingScreen>
                             ),
                           ),
                         ),
+                        
+                        const SizedBox(height: 32),
+                        
+                        // ── DOWNLOAD ANDROID APP BUTTON ──
+                        LoreTap(
+                          onTap: () => _showDownloadDialog(context),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: cGold.withValues(alpha: 0.3)),
+                              color: cGold.withValues(alpha: 0.05),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.android, size: 16, color: cGold),
+                                SizedBox(width: 10),
+                                Text(
+                                  'DOWNLOAD ANDROID APP',
+                                  style: TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 10,
+                                    color: cGold,
+                                    letterSpacing: 2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        
                         const SizedBox(height: 48),
                       ],
                     ),
@@ -361,6 +393,86 @@ class _LandingScreenState extends State<LandingScreen>
       ),
     ),
   );
+    void _showDownloadDialog(BuildContext context) {
+    // ⚠️ REPLACE THIS URL WITH YOUR ACTUAL GITHUB RELEASE APK LINK! ⚠️
+    const String apkUrl = 'https://github.com/YOUR_USERNAME/YOUR_REPO/releases/download/v1.0.0/app-release.apk'; 
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: cInk,
+        shape: const RoundedRectangleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'ANDROID APK',
+                style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 4),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Lore is available for Android devices. Since we are an independent platform, you will need to side-load the app.',
+                style: TextStyle(fontSize: 13, color: cMist, fontStyle: FontStyle.italic, height: 1.7),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(border: Border.all(color: cAsh)),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('HOW TO INSTALL:', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 2)),
+                    SizedBox(height: 8),
+                    Text('1. Tap "Download APK" below.\n2. Open the downloaded file.\n3. If prompted, allow "Install from Unknown Sources" in your settings.\n4. Install and open Lore.', style: TextStyle(fontSize: 12, color: cParchment, height: 1.6)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(border: Border.all(color: cAsh)),
+                        child: const Center(child: Text('Cancel', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 2))),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () async {
+                        Navigator.pop(ctx);
+                        final uri = Uri.parse(apkUrl);
+                        if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                              backgroundColor: cInk,
+                              content: Text('Could not open download link.', style: TextStyle(color: cEmber)),
+                            ));
+                          }
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        color: cParchment,
+                        child: const Center(child: Text('Download APK', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cVoid, letterSpacing: 1))),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ════════════════════════════════════════
@@ -1662,19 +1774,23 @@ class _HomeScreenState extends State<HomeScreen>
                     child: IntrinsicHeight(
                       child: Column(
                         children: [
-                                                    if (isDesktop)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 24, bottom: 24),
-                              child: HomeProfileCard(
-                                name: _auth.currentName ?? '—',
-                                code: _auth.currentCode ?? '—',
-                                bio: _profile?['bio'] as String? ?? '',
-                                subtitle: _buildProfileSubtitle(),
-                                stats: _computeStats(),
-                                avatarUrl: _profile?['avatarUrl'] as String?,
-                                onTap: _openProfile,
-                                onLongPress: () => ProfileStyleSheet.show(context),
-                                fillHeight: false, // Natural height on desktop!
+                          if (isDesktop)
+                            Expanded(
+                              child: Center( // <-- SingleChildScrollView removed here
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 24, bottom: 24),
+                                  child: HomeProfileCard(
+                                    name: _auth.currentName ?? '—',
+                                    code: _auth.currentCode ?? '—',
+                                    bio: _profile?['bio'] as String? ?? '',
+                                    subtitle: _buildProfileSubtitle(),
+                                    stats: _computeStats(),
+                                    avatarUrl: _profile?['avatarUrl'] as String?,
+                                    onTap: _openProfile,
+                                    onLongPress: () => ProfileStyleSheet.show(context),
+                                    fillHeight: false, // Natural height on desktop!
+                                  ),
+                                ),
                               ),
                             )
                           else
@@ -1933,8 +2049,13 @@ class _HomeScreenState extends State<HomeScreen>
   // Same content as mobile, centered at a comfortable reading width
   // so a 4K monitor doesn't stretch the profile card across the whole
   // screen.
-  Widget _buildDesktopFullBody() {
-    return Center(child: SizedBox(width: 900, child: _buildMobileBody()));
+    Widget _buildDesktopFullBody() {
+    return Center(
+      child: SizedBox(
+        width: 900, 
+        child: _buildMobileBody(),
+      ),
+    );
   }
 
   // ── DESKTOP: SPLIT ──────────────────────
