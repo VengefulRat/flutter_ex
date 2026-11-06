@@ -1662,33 +1662,36 @@ class _HomeScreenState extends State<HomeScreen>
                     child: IntrinsicHeight(
                       child: Column(
                         children: [
-                          Expanded(
-                            child: isDesktop
-                                ? Center(
-                                    child: HomeProfileCard(
-                                      name: _auth.currentName ?? '—',
-                                      code: _auth.currentCode ?? '—',
-                                      bio: _profile?['bio'] as String? ?? '',
-                                      subtitle: _buildProfileSubtitle(),
-                                      stats: _computeStats(),
-                                      avatarUrl: _profile?['avatarUrl'] as String?,
-                                      onTap: _openProfile,
-                                      onLongPress: () => ProfileStyleSheet.show(context),
-                                      fillHeight: false,
-                                    ),
-                                  )
-                                : HomeProfileCard(
-                                    name: _auth.currentName ?? '—',
-                                    code: _auth.currentCode ?? '—',
-                                    bio: _profile?['bio'] as String? ?? '',
-                                    subtitle: _buildProfileSubtitle(),
-                                    stats: _computeStats(),
-                                    avatarUrl: _profile?['avatarUrl'] as String?,
-                                    onTap: _openProfile,
-                                    onLongPress: () => ProfileStyleSheet.show(context),
-                                    fillHeight: true, // Card will expand to fill tall screens
-                                  ),
-                          ),
+                          Expanded
+                           if (isDesktop)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 24, bottom: 24),
+                              child: HomeProfileCard(
+                                name: _auth.currentName ?? '—',
+                                code: _auth.currentCode ?? '—',
+                                bio: _profile?['bio'] as String? ?? '',
+                                subtitle: _buildProfileSubtitle(),
+                                stats: _computeStats(),
+                                avatarUrl: _profile?['avatarUrl'] as String?,
+                                onTap: _openProfile,
+                                onLongPress: () => ProfileStyleSheet.show(context),
+                                fillHeight: false, // Natural height on desktop!
+                              ),
+                            )
+                          else
+                            Expanded(
+                              child: HomeProfileCard(
+                                name: _auth.currentName ?? '—',
+                                code: _auth.currentCode ?? '—',
+                                bio: _profile?['bio'] as String? ?? '',
+                                subtitle: _buildProfileSubtitle(),
+                                stats: _computeStats(),
+                                avatarUrl: _profile?['avatarUrl'] as String?,
+                                onTap: _openProfile,
+                                onLongPress: () => ProfileStyleSheet.show(context),
+                                fillHeight: true, // Fill screen on mobile
+                              ),
+                            ),
                           
                           // ── FLOATING BOTTOM BAR ──
                           Container(
@@ -3501,43 +3504,45 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
           ),
           const SizedBox(height: 12),
 
-          // ── THE SWIPEABLE CARD DECK ──
+                    // ── THE SWIPEABLE CARD DECK ──
           Expanded(
             child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      color: cGold,
-                      strokeWidth: 1,
-                    ),
-                  )
+                ? const Center(child: CircularProgressIndicator(color: cGold, strokeWidth: 1))
                 : _filtered.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No cards found.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: cSmoke,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  )
-                : PageView.builder(
-                    controller: _pageController,
-                    itemCount: _filtered.length,
-                    // Removed NeverScrollableScrollPhysics so we can swipe!
-                    onPageChanged: (i) => setState(() => _currentIndex = i),
-                    itemBuilder: (_, i) {
-                      return Center(
-                        child: _DiscoveryCard(
-                          key: ValueKey('${_filtered[i].code}_$i'),
-                          data: _filtered[i],
-                          onTap: () => _openCardSheet(_filtered[i]),
+                ? const Center(child: Text('No cards found.', style: TextStyle(fontSize: 14, color: cSmoke, fontStyle: FontStyle.italic)))
+                : MediaQuery.sizeOf(context).width >= 900
+                    ? GridView.builder(
+                        padding: const EdgeInsets.all(24),
+                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 340, // Max width of a card
+                          childAspectRatio: 5 / 7, // Keeps the TCG ratio
+                          crossAxisSpacing: 24,
+                          mainAxisSpacing: 24,
                         ),
-                      );
-                    },
-                  ),
+                        itemCount: _filtered.length,
+                        itemBuilder: (_, i) {
+                          return _DiscoveryCard(
+                            key: ValueKey(_filtered[i].code),
+                            data: _filtered[i],
+                            onTap: () => _openCardSheet(_filtered[i]),
+                          );
+                        },
+                      )
+                    : PageView.builder(
+                        controller: _pageController,
+                        itemCount: _filtered.length,
+                        onPageChanged: (i) => setState(() => _currentIndex = i),
+                        itemBuilder: (_, i) {
+                          return Center(
+                            child: _DiscoveryCard(
+                              key: ValueKey('${_filtered[i].code}_$i'),
+                              data: _filtered[i],
+                              onTap: () => _openCardSheet(_filtered[i]),
+                            ),
+                          );
+                        },
+                      ),
           ),
-
           // A small minimalist indicator at the bottom instead of the big slider
           if (!_loading && _filtered.isNotEmpty)
             Padding(

@@ -549,62 +549,93 @@ class _DiaryScreenState extends State<DiaryScreen> {
 
       // Entries list
             // Entries list
-      Expanded(
+            Expanded(
         child: !_loaded
             ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 1.5, color: cSmoke)))
             : _entries.where((e) => e.parentId == _currentFolderId).isEmpty
                 ? _emptyState()
-                : ScrollConfiguration(
-                    behavior: NoGlowBehavior(),
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-                      children: [
-                        // Back Button if we are inside a folder
-                        if (_currentFolderId != null)
-                          GestureDetector(
-                            onTap: () => setState(() => _currentFolderId = null),
-                            child: Container(
-                              width: 80,
-                              margin: const EdgeInsets.only(right: 16),
-                              decoration: BoxDecoration(
-                                color: cInk,
-                                border: Border.all(color: cAsh),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.arrow_back, color: cGold, size: 24),
-                                  SizedBox(height: 8),
-                                  Text('BACK', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 2)),
-                                ],
-                              ),
-                            ),
+                : MediaQuery.sizeOf(context).width >= 900
+                    ? ScrollConfiguration(
+                        behavior: NoGlowBehavior(),
+                        child: GridView.builder(
+                          padding: const EdgeInsets.all(24),
+                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 220, // Approx width of the diary card
+                            childAspectRatio: 0.45, // Height ratio
+                            crossAxisSpacing: 20,
+                            mainAxisSpacing: 20,
                           ),
-                          
-                        // The Cards
-                        ..._entries
-                            .where((e) => e.parentId == _currentFolderId)
-                            .map((e) {
-                              // Find linked characters for this entry
-                              final linkedChars = _allChars.where((c) => e.linkedCharacterIds.contains(c.id)).toList();
-                              return _DiaryCard(
-                                entry: e,
-                                linkedChars: linkedChars,
-                                onTap: () {
-                                  if (e.isFolder) {
-                                    setState(() => _currentFolderId = e.id);
-                                  } else {
-                                    _openEntry(e);
-                                  }
-                                },
-                                onDelete: () => _deleteEntry(e.id),
-                              );
-                            }),
-                      ],
-                    ),
-                  ),
+                          itemCount: _entries.where((e) => e.parentId == _currentFolderId).length,
+                          itemBuilder: (context, index) {
+                            final filtered = _entries.where((e) => e.parentId == _currentFolderId).toList();
+                            final e = filtered[index];
+                            final linkedChars = _allChars.where((c) => e.linkedCharacterIds.contains(c.id)).toList();
+                            
+                            return _DiaryCard(
+                              entry: e,
+                              linkedChars: linkedChars,
+                              onTap: () {
+                                if (e.isFolder) {
+                                  setState(() => _currentFolderId = e.id);
+                                } else {
+                                  _openEntry(e);
+                                }
+                              },
+                              onDelete: () => _deleteEntry(e.id),
+                            );
+                          },
+                        ),
+                      )
+                    : ScrollConfiguration(
+                        behavior: NoGlowBehavior(),
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+                          children: [
+                            // Back Button if we are inside a folder
+                            if (_currentFolderId != null)
+                              GestureDetector(
+                                onTap: () => setState(() => _currentFolderId = null),
+                                child: Container(
+                                  width: 80,
+                                  margin: const EdgeInsets.only(right: 16),
+                                  decoration: BoxDecoration(
+                                    color: cInk,
+                                    border: Border.all(color: cAsh),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.arrow_back, color: cGold, size: 24),
+                                      SizedBox(height: 8),
+                                      Text('BACK', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 2)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              
+                            // The Cards
+                            ..._entries
+                                .where((e) => e.parentId == _currentFolderId)
+                                .map((e) {
+                                  final linkedChars = _allChars.where((c) => e.linkedCharacterIds.contains(c.id)).toList();
+                                  return _DiaryCard(
+                                    entry: e,
+                                    linkedChars: linkedChars,
+                                    onTap: () {
+                                      if (e.isFolder) {
+                                        setState(() => _currentFolderId = e.id);
+                                      } else {
+                                        _openEntry(e);
+                                      }
+                                    },
+                                    onDelete: () => _deleteEntry(e.id),
+                                  );
+                                }),
+                          ],
+                        ),
+                      ),
       ),
 
       // New Entry button
