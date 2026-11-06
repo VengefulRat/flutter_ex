@@ -18,6 +18,11 @@ import 'package:printing/printing.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
+/// Scales a base font size by the user's Settings text-size preference.
+/// Medium (14pt, `appSettings.baseFontSize == 14.0`) is the reference.
+/// Content surfaces only — mono chrome stays fixed so labels stay crisp.
+double _dSize(double base) => base * (appSettings.baseFontSize / 14.0);
+
 
 // ─────────────────────────────────────────
 // NOTIFICATIONS SETUP
@@ -319,10 +324,21 @@ class _DiaryScreenState extends State<DiaryScreen> {
   String? _currentFolderId; 
   final List<CharacterEntry> _allChars = [];
 
-  @override
+    @override
   void initState() {
     super.initState();
+    appSettings.addListener(_onSettingsChanged);
     _loadAll();
+  }
+
+  void _onSettingsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    appSettings.removeListener(_onSettingsChanged);
+    super.dispose();
   }
 
   Future<void> _loadAll() async {
@@ -747,13 +763,13 @@ class _DiaryCard extends StatelessWidget {
                             const SizedBox(height: 4),
                             
                             // Book Title
-                            Text(
+                              Text(
                               entry.displayTitle,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFamily: 'serif',
-                                fontSize: 18, // Slightly larger
+                                fontSize: _dSize(18),
                                 fontWeight: FontWeight.w300,
                                 fontStyle: FontStyle.italic,
                                 color: cParchment,
@@ -1011,7 +1027,7 @@ class _NewEntrySetupState extends State<_NewEntrySetup> {
     const SizedBox(height: 8),
     TextField(
       controller: _titleCtrl,
-      style: const TextStyle(fontSize: 14, color: cParchment,
+      style: TextStyle(fontSize: appSettings.baseFontSize, color: cParchment,
           fontStyle: FontStyle.italic),
       decoration: const InputDecoration(
           hintText: 'Leave blank to auto-title from content...',
@@ -1273,10 +1289,21 @@ class _EntryScreenState extends State<_EntryScreen> {
   late DiaryEntry _entry;
   bool _bookScrollMode = true; // true=scroll, false=page flip
 
-  @override
+    @override
   void initState() {
     super.initState();
     _entry = widget.entry;
+    appSettings.addListener(_onSettingsChanged);
+  }
+
+  void _onSettingsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    appSettings.removeListener(_onSettingsChanged);
+    super.dispose();
   }
 
   void _showCustomizeSheet() {
@@ -1565,8 +1592,8 @@ class _EntryScreenState extends State<_EntryScreen> {
           ),
           const SizedBox(width: 12),
           
-          Expanded(child: Text(_entry.displayTitle, style: const TextStyle(
-              fontSize: 18, fontWeight: FontWeight.w300,
+                    Expanded(child: Text(_entry.displayTitle, style: TextStyle(
+              fontSize: _dSize(18), fontWeight: FontWeight.w300,
               fontStyle: FontStyle.italic, color: cParchment),
               overflow: TextOverflow.ellipsis)),
 
@@ -1681,7 +1708,7 @@ class _EntryScreenState extends State<_EntryScreen> {
                   Text(ch.plainText.length > 80
                       ? '${ch.plainText.substring(0, 80)}...'
                       : ch.plainText,
-                      style: const TextStyle(fontSize: 12, color: cMist,
+                      style: TextStyle(fontSize: _dSize(12), color: cMist,
                           fontStyle: FontStyle.italic, height: 1.5)),
                 ],
                 const SizedBox(height: 10),
@@ -1823,6 +1850,11 @@ class _ChapterEditorState extends State<_ChapterEditor> {
     }
     _wordCount = widget.chapter.wordCount;
     _quill.addListener(_onTextChanged);
+    appSettings.addListener(_onSettingsChanged);
+  }
+
+  void _onSettingsChanged() {
+    if (mounted) setState(() {});
   }
 
   void _onTextChanged() {
@@ -1834,6 +1866,7 @@ class _ChapterEditorState extends State<_ChapterEditor> {
 
   @override
   void dispose() {
+    appSettings.removeListener(_onSettingsChanged);
     _quill.removeListener(_onTextChanged);
     _quill.dispose();
     _titleCtrl.dispose();
@@ -1887,12 +1920,12 @@ class _ChapterEditorState extends State<_ChapterEditor> {
 
           Expanded(child: TextField(
             controller: _titleCtrl,
-            style: const TextStyle(fontSize: 18, color: cParchment,
+            style: TextStyle(fontSize: _dSize(18), color: cParchment,
                 fontWeight: FontWeight.w300, fontStyle: FontStyle.italic),
             decoration: InputDecoration(
                 hintText: 'Chapter ${widget.chapterNumber}',
-                hintStyle: const TextStyle(color: cSmoke,
-                    fontStyle: FontStyle.italic, fontSize: 18,
+                hintStyle: TextStyle(color: cSmoke,
+                    fontStyle: FontStyle.italic, fontSize: _dSize(18),
                     fontWeight: FontWeight.w300),
                 border: InputBorder.none),
             cursorColor: cGold,
