@@ -10,7 +10,7 @@ import '../settings.dart';
 import '../services/sandbox_sync.dart';
 import '../services/firestore_service.dart';
 import '../widgets/support_link.dart';
-import '../main.dart' show HomeScreen;
+import '../main.dart' show HomeScreen, showDownloadDialog;
 import 'lock_screen.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -820,8 +820,48 @@ class _WebQRPanelState extends State<_WebQRPanel> {
                     height: 1.6,
                   ),
                 ),
-                const SizedBox(height: 48),
+                                const SizedBox(height: 48),
                 if (_approved) _buildPinEntry() else _buildQrOrManual(),
+                const SizedBox(height: 48),
+                
+                // ── DOWNLOAD ANDROID APP BUTTON ──
+                const Text(
+                  'OR',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 10,
+                    color: cSmoke,
+                    letterSpacing: 2,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                LoreTap(
+                  onTap: () => showDownloadDialog(context),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: cGold.withValues(alpha: 0.3)),
+                      color: cGold.withValues(alpha: 0.05),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.android, size: 16, color: cGold),
+                        SizedBox(width: 10),
+                        Text(
+                          'DOWNLOAD ANDROID APP',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 10,
+                            color: cGold,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 48),
               ],
             ),

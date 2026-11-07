@@ -354,7 +354,7 @@ class _LandingScreenState extends State<LandingScreen>
                         
                         // ── DOWNLOAD ANDROID APP BUTTON ──
                         LoreTap(
-                          onTap: () => _showDownloadDialog(context),
+                          onTap: () => showDownloadDialog(context),
                           child: Container(
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -393,87 +393,7 @@ class _LandingScreenState extends State<LandingScreen>
       ),
     ),
   );
-    void _showDownloadDialog(BuildContext context) {
-    // ⚠️ REPLACE THIS URL WITH YOUR ACTUAL GITHUB RELEASE APK LINK! ⚠️
-    const String apkUrl = 'https://github.com/YOUR_USERNAME/YOUR_REPO/releases/download/v1.0.0/app-release.apk'; 
-
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: cInk,
-        shape: const RoundedRectangleBorder(),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'ANDROID APK',
-                style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 4),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Lore is available for Android devices. Since we are an independent platform, you will need to side-load the app.',
-                style: TextStyle(fontSize: 13, color: cMist, fontStyle: FontStyle.italic, height: 1.7),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(border: Border.all(color: cAsh)),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('HOW TO INSTALL:', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 2)),
-                    SizedBox(height: 8),
-                    Text('1. Tap "Download APK" below.\n2. Open the downloaded file.\n3. If prompted, allow "Install from Unknown Sources" in your settings.\n4. Install and open Lore.', style: TextStyle(fontSize: 12, color: cParchment, height: 1.6)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(ctx),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(border: Border.all(color: cAsh)),
-                        child: const Center(child: Text('Cancel', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 2))),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () async {
-                        Navigator.pop(ctx);
-                        final uri = Uri.parse(apkUrl);
-                        if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                              backgroundColor: cInk,
-                              content: Text('Could not open download link.', style: TextStyle(color: cEmber)),
-                            ));
-                          }
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        color: cParchment,
-                        child: const Center(child: Text('Download APK', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cVoid, letterSpacing: 1))),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+    }
 
 // ════════════════════════════════════════
 // INTRO FLOW
@@ -1691,13 +1611,13 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final isDesktop = width >= 900;
     final inSplitMode = isDesktop && _activeBlock != null;
 
-        return Scaffold(
+    return Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: RadialGradient(
@@ -1718,7 +1638,38 @@ class _HomeScreenState extends State<HomeScreen>
                   onLogoTap: () {
                     if (inSplitMode) setState(() => _activeBlock = null);
                   },
-                  trailing: null, // EDIT button removed
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (kIsWeb)
+                        LoreTap(
+                          onTap: () => _showDownloadDialog(context),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            margin: const EdgeInsets.only(right: 16),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: cGold.withValues(alpha: 0.3)),
+                              color: cGold.withValues(alpha: 0.05),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.android, size: 14, color: cGold),
+                                SizedBox(width: 6),
+                                Text(
+                                  'GET APP',
+                                  style: TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 9,
+                                    color: cGold,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
                 Expanded(
                   child: AnimatedSwitcher(
@@ -1747,7 +1698,7 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       ),
     );
-  } // THE BUILD METHOD
+  }
 
   // ── MOBILE BODY ─────────────────────────
   // The same layout as before, just extracted into its own method so
@@ -2370,6 +2321,86 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
       ],
+    );
+  }
+    void _showDownloadDialog(BuildContext context) {
+    // ⚠️ REPLACE THIS URL WITH YOUR ACTUAL GITHUB RELEASE APK LINK! ⚠️
+    const String apkUrl = 'https://github.com/VengefulRat/flutter_ex/releases/download/v1.0.0/app-release.apk'; 
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: cInk,
+        shape: const RoundedRectangleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'ANDROID APK',
+                style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 4),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Lore is available for Android devices. Since we are an independent platform, you will need to side-load the app.',
+                style: TextStyle(fontSize: 13, color: cMist, fontStyle: FontStyle.italic, height: 1.7),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(border: Border.all(color: cAsh)),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('HOW TO INSTALL:', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 2)),
+                    SizedBox(height: 8),
+                    Text('1. Tap "Download APK" below.\n2. Open the downloaded file.\n3. If prompted, allow "Install from Unknown Sources" in your settings.\n4. Install and open Lore.', style: TextStyle(fontSize: 12, color: cParchment, height: 1.6)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(border: Border.all(color: cAsh)),
+                        child: const Center(child: Text('Cancel', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 2))),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () async {
+                        Navigator.pop(ctx);
+                        final uri = Uri.parse(apkUrl);
+                        if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                              backgroundColor: cInk,
+                              content: Text('Could not open download link.', style: TextStyle(color: cEmber)),
+                            ));
+                          }
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        color: cParchment,
+                        child: const Center(child: Text('Download APK', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cVoid, letterSpacing: 1))),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -8161,4 +8192,88 @@ class _RPEditorScreenState extends State<_RPEditorScreen> {
       ),
     );
   }
+}
+
+// ════════════════════════════════════════
+// GLOBAL DOWNLOAD DIALOG
+// ════════════════════════════════════════
+void showDownloadDialog(BuildContext context) {
+  // ⚠️ REPLACE THIS URL WITH YOUR ACTUAL GITHUB RELEASE APK LINK! ⚠️
+  const String apkUrl = 'https://github.com/VengefulRat/flutter_ex/releases/download/v8.0.4/app-release.apk'; 
+
+  showDialog(
+    context: context,
+    builder: (ctx) => Dialog(
+      backgroundColor: cInk,
+      shape: const RoundedRectangleBorder(),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'ANDROID APK',
+              style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 4),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Lore is available for Android devices. Since we are an independent platform, you will need to side-load the app.',
+              style: TextStyle(fontSize: 13, color: cMist, fontStyle: FontStyle.italic, height: 1.7),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(border: Border.all(color: cAsh)),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('HOW TO INSTALL:', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 2)),
+                  SizedBox(height: 8),
+                  Text('1. Tap "Download APK" below.\n2. Open the downloaded file.\n3. If prompted, allow "Install from Unknown Sources" in your settings.\n4. Install and open Lore.', style: TextStyle(fontSize: 12, color: cParchment, height: 1.6)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(ctx),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(border: Border.all(color: cAsh)),
+                      child: const Center(child: Text('Cancel', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 2))),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final uri = Uri.parse(apkUrl);
+                      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                            backgroundColor: cInk,
+                            content: Text('Could not open download link.', style: TextStyle(color: cEmber)),
+                          ));
+                        }
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      color: cParchment,
+                      child: const Center(child: Text('Download APK', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cVoid, letterSpacing: 1))),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
