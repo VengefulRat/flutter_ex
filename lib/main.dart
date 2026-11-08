@@ -37,6 +37,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'widgets/holo_card_v2.dart';
 import 'widgets/floating_menu.dart';
+import 'services/update_service.dart';
 
 // Must be top-level for FCM background handling
 @pragma('vm:entry-point')
@@ -966,7 +967,6 @@ class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _fadeCtrl;
   late Animation<double> _fade;
-  bool _loadingData = true;
 
   String _buildProfileSubtitle() {
     final profile = _profile;
@@ -1030,10 +1030,23 @@ class _HomeScreenState extends State<HomeScreen>
   ///
   /// Lock-on-start is now handled by the splash screen before home
   /// mounts, so this only does the remote-sign-out check.
-  Future<void> _initialChecks() async {
+        Future<void> _initialChecks() async {
+    debugPrint('🔍 [MAIN] _initialChecks STARTED');
+    
     final valid = await _auth.verifySessionVersion();
     if (!valid && mounted) {
       await _handleSessionKicked();
+      return; 
+    }
+
+    if (!kIsWeb) {
+      debugPrint('🔍 [MAIN] Android detected. Waiting 2 seconds...');
+      Future.delayed(const Duration(seconds: 2), () {
+        debugPrint('🔍 [MAIN] 2 seconds passed. Calling UpdateService.checkForUpdates...');
+        if (mounted) UpdateService.checkForUpdates(context);
+      });
+    } else {
+      debugPrint('🔍 [MAIN] Web detected. Skipping update check.');
     }
   }
 
@@ -1279,7 +1292,6 @@ class _HomeScreenState extends State<HomeScreen>
         setState(() {
           _roleplays = rps;
           _brainstorms = brains;
-          _loadingData = false;
           _recomputeContinue();
         });
       }
@@ -1592,23 +1604,6 @@ class _HomeScreenState extends State<HomeScreen>
     }
     _continueSession = pool[index];
     appSettings.setContinueLastShown(_continueSession!.id);
-  }
-
-  void _openContinuePrefs() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: cInk,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(),
-      builder: (_) => _ContinuePrefsSheet(
-        roleplays: _roleplays,
-        onChanged: () {
-          if (mounted) {
-            setState(() => _recomputeContinue(advance: true));
-          }
-        },
-      ),
-    );
   }
 
     @override
@@ -3712,105 +3707,6 @@ class _CardDiscoveryScreenState extends State<CardDiscoveryScreen> {
       ),
     ),
   );
-
-  Widget _buildScrubber() {
-    final total = _filtered.length;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      decoration: const BoxDecoration(
-        color: cVoid,
-        border: Border(top: BorderSide(color: cAsh)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'CARD ${_currentIndex + 1} OF $total',
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 10,
-                  color: cSmoke,
-                  letterSpacing: 2,
-                ),
-              ),
-              GestureDetector(
-                onTap: () => _openCardSheet(_filtered[_currentIndex]),
-                child: const Text(
-                  'OPEN FULL CARD',
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 10,
-                    color: cGold,
-                    letterSpacing: 2,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              GestureDetector(
-                onTap: _currentIndex > 0
-                    ? () => _pageController.previousPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOut,
-                      )
-                    : null,
-                child: Icon(
-                  Icons.arrow_back_ios,
-                  size: 16,
-                  color: _currentIndex > 0 ? cGold : cAsh,
-                ),
-              ),
-              Expanded(
-                child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    trackHeight: 2,
-                    thumbShape: const RoundSliderThumbShape(
-                      enabledThumbRadius: 6,
-                    ),
-                    overlayShape: const RoundSliderOverlayShape(
-                      overlayRadius: 16,
-                    ),
-                    activeTrackColor: cGold,
-                    inactiveTrackColor: cAsh,
-                    thumbColor: cGold,
-                  ),
-                  child: Slider(
-                    value: _currentIndex.toDouble(),
-                    min: 0,
-                    max: total > 1 ? (total - 1).toDouble() : 1.0,
-                    divisions: total > 1 ? total - 1 : null,
-                    onChanged: total > 1
-                        ? (v) => _pageController.jumpToPage(v.round())
-                        : null,
-                  ),
-                ),
-              ),
-              GestureDetector(
-                onTap: _currentIndex < total - 1
-                    ? () => _pageController.nextPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOut,
-                      )
-                    : null,
-                child: Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: _currentIndex < total - 1 ? cGold : cAsh,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _FilterRow extends StatelessWidget {
@@ -4808,24 +4704,6 @@ class _ProfileContentState extends State<_ProfileContent> {
         ),
       ),
     ],
-  );
-
-  // ignore: unused_element
-  Widget _textAction(String label, Color color) => LoreTap(
-    onTap: () {},
-    child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 13,
-          color: color,
-          fontWeight: FontWeight.w300,
-          decoration: TextDecoration.underline,
-          decorationColor: color.withValues(alpha: 0.4),
-        ),
-      ),
-    ),
   );
 }
 
@@ -7347,85 +7225,6 @@ class _ExpansionRoute extends StatelessWidget {
   );
 }
 
-class _CornerBracketPainter extends CustomPainter {
-  final Color color;
-  final double pulse;
-  final _CardBorderStyle style;
-  _CornerBracketPainter({
-    required this.color,
-    required this.pulse,
-    required this.style,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const l = 14.0;
-    final w = size.width;
-    final h = size.height;
-
-    final path = Path()
-      ..moveTo(0, l)
-      ..lineTo(0, 0)
-      ..lineTo(l, 0)
-      ..moveTo(w - l, 0)
-      ..lineTo(w, 0)
-      ..lineTo(w, l)
-      ..moveTo(0, h - l)
-      ..lineTo(0, h)
-      ..lineTo(l, h)
-      ..moveTo(w - l, h)
-      ..lineTo(w, h)
-      ..lineTo(w, h - l);
-
-    double opacity;
-    double strokeWidth;
-    bool glow = false;
-    double glowBlur = 0;
-
-    switch (style) {
-      case _CardBorderStyle.solid:
-        opacity = 0.65 + pulse * 0.25;
-        strokeWidth = 1.5;
-        break;
-      case _CardBorderStyle.thick:
-        opacity = 0.85;
-        strokeWidth = 3.0;
-        break;
-      case _CardBorderStyle.faded:
-        opacity = 0.28 + pulse * 0.15;
-        strokeWidth = 1.0;
-        break;
-      case _CardBorderStyle.glow:
-        opacity = 0.85;
-        strokeWidth = 1.8;
-        glow = true;
-        glowBlur = 6 + pulse * 4;
-        break;
-    }
-
-    if (glow) {
-      final glowPaint = Paint()
-        ..color = color.withValues(alpha: opacity * 0.5)
-        ..strokeWidth = strokeWidth * 2.5
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowBlur);
-      canvas.drawPath(path, glowPaint);
-    }
-
-    final paint = Paint()
-      ..color = color.withValues(alpha: opacity)
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _CornerBracketPainter old) =>
-      old.color != color || old.pulse != pulse || old.style != style;
-}
-
 class _ContinuePrefsSheet extends StatefulWidget {
   final List<_RPData> roleplays;
   final VoidCallback onChanged;
@@ -7701,189 +7500,6 @@ class _ContinuePrefsSheetState extends State<_ContinuePrefsSheet> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _ContinueCard extends StatelessWidget {
-  final _RPData? session;
-  final String mode;
-  final bool isLoading;
-  final VoidCallback onOpen;
-  final VoidCallback onLongPress;
-  final VoidCallback onFindPartner;
-
-  const _ContinueCard({
-    required this.session,
-    required this.mode,
-    required this.onOpen,
-    required this.onLongPress,
-    required this.onFindPartner,
-  }) : isLoading = false;
-
-  String _modeLabel() {
-    switch (mode) {
-      case AppSettings.continueModePinned:
-        return 'PINNED';
-      case AppSettings.continueModeCycleSelected:
-        return 'SELECTED';
-      default:
-        return 'ROTATING';
-    }
-  }
-
-  IconData _modeIcon() {
-    switch (mode) {
-      case AppSettings.continueModePinned:
-        return Icons.push_pin;
-      case AppSettings.continueModeCycleSelected:
-        return Icons.filter_alt;
-      default:
-        return Icons.autorenew;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final has = session != null;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 32),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: cAsh)),
-      ),
-      child: LoreTap(
-        onTap: has
-            ? onOpen
-            : isLoading
-            ? null
-            : onFindPartner,
-        onLongPress: has ? onLongPress : null,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-          child: Row(
-            children: [
-              _leadingIcon(has),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _topRow(has),
-                    const SizedBox(height: 6),
-                    _body(has),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              if (isLoading && !has)
-                const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 1.5,
-                    color: cSmoke,
-                  ),
-                )
-              else
-                Icon(
-                  Icons.arrow_forward,
-                  size: 16,
-                  color: has ? cGold : cSmoke,
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _leadingIcon(bool has) {
-    if (isLoading && !has) {
-      return const Icon(Icons.auto_stories_outlined, size: 18, color: cSmoke);
-    }
-    return Icon(
-      has ? Icons.auto_stories_outlined : Icons.explore_outlined,
-      size: 18,
-      color: has ? cGold : cSmoke,
-    );
-  }
-
-  Widget _topRow(bool has) {
-    return Row(
-      children: [
-        Text(
-          has
-              ? 'CONTINUE'
-              : isLoading
-              ? 'LOADING'
-              : 'NO STORIES IN PROGRESS',
-          style: const TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 9,
-            color: cGold,
-            letterSpacing: 3,
-          ),
-        ),
-        if (has) ...[
-          const SizedBox(width: 8),
-          Icon(_modeIcon(), size: 11, color: cGold.withValues(alpha: 0.6)),
-          const SizedBox(width: 4),
-          Text(
-            _modeLabel(),
-            style: TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 8,
-              color: cGold.withValues(alpha: 0.6),
-              letterSpacing: 1,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _body(bool has) {
-    if (has) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'The story with ${session!.partner}',
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w300,
-              fontStyle: FontStyle.italic,
-              color: cParchment,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            '${session!.genre} · ${session!.posts} posts',
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 10,
-              color: cSmoke,
-              letterSpacing: 1,
-            ),
-          ),
-        ],
-      );
-    }
-    if (isLoading) {
-      return const Text(
-        'Fetching your stories…',
-        style: TextStyle(
-          fontSize: 13,
-          color: cMist,
-          fontStyle: FontStyle.italic,
-        ),
-      );
-    }
-    return const Text(
-      'Find a partner to begin one',
-      style: TextStyle(fontSize: 13, color: cMist, fontStyle: FontStyle.italic),
     );
   }
 }

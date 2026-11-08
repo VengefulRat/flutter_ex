@@ -694,7 +694,7 @@ class _DiaryCard extends StatelessWidget {
     final authorName = AuthService().currentName ?? 'Unknown Author';
     
     // Calculate total words across all chapters
-    final totalWords = entry.chapters.fold<int>(0, (sum, ch) => sum + ch.wordCount);
+    final totalWords = entry.chapters.fold<int>(0, (total, ch) => total + ch.wordCount);
 
     return GestureDetector(
       onTap: onTap,
@@ -1337,13 +1337,13 @@ class _EntryScreenState extends State<_EntryScreen> {
     super.dispose();
   }
 
-  void _showCustomizeSheet() {
+    void _showCustomizeSheet() {
+    bool isUploading = false;
     showModalBottomSheet(
       context: context,
       backgroundColor: cInk,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) {
-          bool isUploading = false; 
           return Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -1393,7 +1393,7 @@ class _EntryScreenState extends State<_EntryScreen> {
                         });
                         widget.onSave(_entry); // Save to local storage/Firestore
                         
-                        if (context.mounted) {
+                        if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                             backgroundColor: cVine, // Green for success
                             content: Text('Cover image updated!', style: TextStyle(color: Colors.white)),
@@ -1401,7 +1401,7 @@ class _EntryScreenState extends State<_EntryScreen> {
                         }
                       } catch (e) {
                         setModalState(() => isUploading = false);
-                        if (context.mounted) {
+                        if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             backgroundColor: cEmber,
                             content: Text('Upload failed: $e'),

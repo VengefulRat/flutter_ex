@@ -821,6 +821,7 @@ class _SandboxScreenState extends State<SandboxScreen>
         try { _fs.incrementUserCounter('charactersCreated', 1); } catch (e) { debugPrint("Counter failed: $e"); }
         
         // 2. The Pop-Up Box (No more SnackBars)
+        if (!mounted) return;
         showDialog(
           context: context,
           barrierDismissible: false, 
