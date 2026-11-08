@@ -6,12 +6,20 @@ import '../services/auth_service.dart';
 
 class QRScannerScreen extends StatefulWidget {
   const QRScannerScreen({super.key});
-  @override State<QRScannerScreen> createState() => _QRScannerScreenState();
+  @override
+  State<QRScannerScreen> createState() => _QRScannerScreenState();
 }
 
 class _QRScannerScreenState extends State<QRScannerScreen> {
+  final MobileScannerController _controller = MobileScannerController();
   final _auth = AuthService();
   bool _scanned = false;
+
+  @override
+  void dispose() {
+    _controller.dispose(); // Clean up the camera when leaving the screen
+    super.dispose();
+  }
 
   void _onDetect(BarcodeCapture capture) async {
     if (_scanned) return;
@@ -48,13 +56,14 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         iconTheme: const IconThemeData(color: cSmoke),
       ),
       body: MobileScanner(
+        controller: _controller, // Pass the controller here
         onDetect: _onDetect,
         errorBuilder: (context, error, child) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Text(
-                'Camera Error:\n$error',
+                'Camera Error:\n${error.errorCode}: $error\n\nIf this persists, check your camera permissions or restart the app.',
                 style: const TextStyle(color: Colors.red, fontSize: 14),
                 textAlign: TextAlign.center,
               ),

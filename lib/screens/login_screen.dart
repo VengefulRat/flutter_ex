@@ -13,6 +13,7 @@ import '../widgets/support_link.dart';
 import '../main.dart' show HomeScreen, showDownloadDialog;
 import 'lock_screen.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginScreen extends StatefulWidget {
   final bool startOnLogin;
@@ -773,20 +774,33 @@ class _WebQRPanelState extends State<_WebQRPanel> {
     );
   }
 
-  void _listenToApproval() {
-    _db.collection('web_auth_sessions').doc(_sessionId).snapshots().listen((snap) {
+  Future<void> _listenToApproval() async {
+  // Web must be authed before it can listen, or the rule
+  // `allow read, write: if request.auth != null` rejects it.
+  if (FirebaseAuth.instance.currentUser == null) {
+    try {
+      await FirebaseAuth.instance.signInAnonymously();
+    } catch (e) {
+      debugPrint('web anon sign-in failed: $e');
+    }
+  }
+
+  _db.collection('web_auth_sessions').doc(_sessionId).snapshots().listen(
+    (snap) {
       if (snap.exists && snap.data()?['status'] == 'authorized') {
         if (!mounted) return;
         setState(() {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-          _pinFocus.requestFocus();
-        });
           _approved = true;
           _userCode = snap.data()!['userCode'];
         });
       }
-    });
-  }
+    },
+    onError: (e) {
+      debugPrint('web_auth_sessions listen failed: $e');
+      if (mounted) setState(() => _error = 'Could not listen for approval: $e');
+    },
+  );
+}
 
   @override
   Widget build(BuildContext context) {
