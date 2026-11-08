@@ -64,10 +64,11 @@ android/app/upload-keystore.jks
 *.keystore
 *.jks
 android/key.properties
+android/app/upload-keystore.jks
+
+*.keystore
+*.jks
+android/key.properties
+lib/firebase_options.dart
 **/google-services.json
 **/GoogleService-Info.plist
-.env.*
-secrets.dart
-**/secrets.dart
-lore_code.txt
-project_structure.txt
