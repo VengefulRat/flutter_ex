@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../settings.dart';
 import 'card_frame.dart';
+import 'holo_parallax.dart';
 
 /// The shared "Lore card" chrome. Renders the set bar, name banner,
 /// art zone, optional stats strip, and optional footer — all wrapped
@@ -40,15 +41,18 @@ class LoreCardFace extends StatelessWidget {
     return clean.substring(clean.length - 4);
   }
 
-  TextStyle _mono(double size, Color color, double spacing,
-          [FontWeight w = FontWeight.w400]) =>
-      TextStyle(
-        fontFamily: 'monospace',
-        fontSize: size,
-        letterSpacing: spacing,
-        color: color,
-        fontWeight: w,
-      );
+  TextStyle _mono(
+    double size,
+    Color color,
+    double spacing, [
+    FontWeight w = FontWeight.w400,
+  ]) => TextStyle(
+    fontFamily: 'monospace',
+    fontSize: size,
+    letterSpacing: spacing,
+    color: color,
+    fontWeight: w,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -70,32 +74,16 @@ class LoreCardFace extends StatelessWidget {
           const SizedBox(height: 10),
           _rule(),
           const SizedBox(height: 2),
-          _buildNameBanner(),
-          const SizedBox(height: 2),
-          _rule(),
-          if (subtitle != null && subtitle!.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            _buildSubtitleLine(),
-          ],
+          HoloParallaxLayer(depth: 0.7, child: _buildNameBanner()),
           const SizedBox(height: 12),
           if (fillHeight)
-            Expanded(child: _buildArtZone())
+            Expanded(
+              child: HoloParallaxLayer(depth: 0.4, child: _buildArtZone()),
+            )
           else
-            SizedBox(height: 130, child: _buildArtZone()),
-          if (statsStrip != null) ...[
-            const SizedBox(height: 14),
-            _rule(),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: statsStrip,
-            ),
-            _rule(),
-          ] else
-            const SizedBox(height: 12),
-          if (footer != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: footer!,
+            SizedBox(
+              height: 130,
+              child: HoloParallaxLayer(depth: 0.4, child: _buildArtZone()),
             ),
         ],
       ),
@@ -103,146 +91,156 @@ class LoreCardFace extends StatelessWidget {
 
     // If there's a background image, wrap it all in a Stack
     if (backgroundImageUrl != null && backgroundImageUrl!.isNotEmpty) {
-      content = Stack(
-        fit: StackFit.expand,
-        children: [
-          // 1. The Image
-          ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: Image.network(
-              backgroundImageUrl!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Container(color: Colors.transparent),
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(2),
+        child: Stack(
+          fit: StackFit.expand,
+          clipBehavior:
+              Clip.hardEdge, // <-- THIS is the fix: nothing leaves the card
+          children: [
+            // 1. The Image — overscanned so tilt never reveals black
+            // No inner ClipRRect here anymore — the outer one above does the clipping
+            HoloParallaxLayer(
+              depth: -0.25,
+              child: Transform.scale(
+                scale: 1.18,
+                child: Image.network(
+                  backgroundImageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) =>
+                      Container(color: Colors.transparent),
+                ),
+              ),
             ),
-          ),
-          // 2. The Scrim (Frosted Glass + Dark Gradient)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 0.1, sigmaY: 0.1),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withValues(alpha: 0.85),
-                      Colors.black.withValues(alpha: 0.6),
-                      Colors.black.withValues(alpha: 0.9),
-                    ],
-                    stops: const [0.0, 0.4, 1.0],
+            // 2. The Scrim (Frosted Glass + Dark Gradient)
+            // Keep this exactly as it was — don't change the scrim
+            ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 0.1, sigmaY: 0.1),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.85),
+                        Colors.black.withValues(alpha: 0.6),
+                        Colors.black.withValues(alpha: 0.9),
+                      ],
+                      stops: const [0.0, 0.4, 1.0],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          // 3. The Text/Stats Content
-          content,
-        ],
-      );
-    }
-
-    return CardFrame(
-      spec: spec,
-      child: content,
-    );
-  }
-
-  Widget _rule() => Container(
-        height: 1,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.transparent,
-              accent.withValues(alpha: 0.55),
-              Colors.transparent,
-            ],
-            stops: const [0.0, 0.5, 1.0],
-          ),
-        ),
-      );
-
-  Widget _buildSetBar() => Row(
-        children: [
-          Transform.rotate(
-            angle: math.pi / 4,
-            child: Container(
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                color: accent,
-                borderRadius: BorderRadius.circular(1),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Text('LORE', style: _mono(9, accent, 4, FontWeight.w600)),
-          const SizedBox(width: 8),
-          Text('· RP', style: _mono(9, accent.withValues(alpha: 0.5), 2)),
-          const Spacer(),
-          Text('#$_serial', style: _mono(9, accent.withValues(alpha: 0.7), 1)),
-        ],
-      );
-
-  Widget _buildNameBanner() => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          title,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.w300,
-            fontStyle: FontStyle.italic,
-            color: appSettings.textColourFor('profile_name') ?? cParchment,
-            letterSpacing: 0.5,
-            height: 1.1,
-          ),
-        ),
-      );
-
-  Widget _buildSubtitleLine() => Text(
-        subtitle!.toUpperCase(),
-        textAlign: TextAlign.center,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: _mono(9, appSettings.textColourFor('profile_bio') ?? accent.withValues(alpha: 0.75), 2),
-      );
-
-  Widget _buildArtZone() => Container(
-        padding: const EdgeInsets.fromLTRB(18, 24, 18, 18),
-        decoration: BoxDecoration(
-          border: Border.all(color: accent.withValues(alpha: 0.22), width: 1),
-          gradient: RadialGradient(
-            center: Alignment.topLeft,
-            radius: 1.6,
-            colors: [
-              accent.withValues(alpha: 0.09),
-              Colors.transparent,
-            ],
-          ),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              top: -10,
-              right: -6,
-              child: Text(
-                '✦',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: accent.withValues(alpha: 0.4),
-                ),
-              ),
-            ),
-            Center(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: art,
-              ),
-            ),
+            // 3. The Text/Stats Content
+            content,
           ],
         ),
       );
+    }
+
+    return CardFrame(spec: spec, child: content);
+  }
+
+  Widget _rule() => Container(
+    height: 1,
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          Colors.transparent,
+          accent.withValues(alpha: 0.55),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.5, 1.0],
+      ),
+    ),
+  );
+
+  Widget _buildSetBar() => Row(
+    children: [
+      Transform.rotate(
+        angle: math.pi / 4,
+        child: Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(
+            color: accent,
+            borderRadius: BorderRadius.circular(1),
+          ),
+        ),
+      ),
+      const SizedBox(width: 10),
+      Text('LORE', style: _mono(9, accent, 4, FontWeight.w600)),
+      const SizedBox(width: 8),
+      Text('· RP', style: _mono(9, accent.withValues(alpha: 0.5), 2)),
+      const Spacer(),
+      Text('#$_serial', style: _mono(9, accent.withValues(alpha: 0.7), 1)),
+    ],
+  );
+
+  Widget _buildNameBanner() => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12),
+    child: Text(
+      title,
+      textAlign: TextAlign.center,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontSize: 26,
+        fontWeight: FontWeight.w300,
+        fontStyle: FontStyle.italic,
+        color: appSettings.textColourFor('profile_name') ?? cParchment,
+        letterSpacing: 0.5,
+        height: 1.1,
+      ),
+    ),
+  );
+
+  Widget _buildSubtitleLine() => Text(
+    subtitle!.toUpperCase(),
+    textAlign: TextAlign.center,
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+    style: _mono(
+      9,
+      appSettings.textColourFor('profile_bio') ??
+          accent.withValues(alpha: 0.75),
+      2,
+    ),
+  );
+
+  Widget _buildArtZone() => Container(
+    padding: const EdgeInsets.fromLTRB(18, 24, 18, 18),
+    decoration: BoxDecoration(
+      border: Border.all(color: accent.withValues(alpha: 0.22), width: 1),
+      gradient: RadialGradient(
+        center: Alignment.topLeft,
+        radius: 1.6,
+        colors: [accent.withValues(alpha: 0.09), Colors.transparent],
+      ),
+    ),
+    child: Stack(
+      children: [
+        Positioned(
+          top: -10,
+          right: -6,
+          child: Text(
+            '✦',
+            style: TextStyle(
+              fontSize: 14,
+              color: accent.withValues(alpha: 0.4),
+            ),
+          ),
+        ),
+        Center(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: art,
+          ),
+        ),
+      ],
+    ),
+  );
 }
