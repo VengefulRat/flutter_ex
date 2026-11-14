@@ -5,6 +5,8 @@ import '../settings.dart';
 import 'shared.dart';
 import 'holo_card_v2.dart';
 import 'lore_card_face.dart';
+import 'card_rarity.dart';
+import 'card_shape.dart';
 
 class ProfileStat {
   final String key;
@@ -27,6 +29,7 @@ class HomeProfileCard extends StatefulWidget {
   final VoidCallback? onLongPress;
   final bool fillHeight;
   final String? avatarUrl;
+  final CardRarity rarity;
 
   const HomeProfileCard({
     super.key,
@@ -39,6 +42,8 @@ class HomeProfileCard extends StatefulWidget {
     this.onLongPress,
     this.fillHeight = false,
     this.avatarUrl,
+    // TEMP TEST: Legendary so you can see it. We'll set this back to Common after.
+    this.rarity = CardRarity.legendary,
   });
 
   @override
@@ -92,22 +97,32 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
     if (confirm == true && mounted) {
       await Clipboard.setData(ClipboardData(text: widget.code));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        backgroundColor: cInk,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(),
-        content: Text('Unique code copied. Guard it carefully.',
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: cInk,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(),
+          content: Text(
+            'Unique code copied. Guard it carefully.',
             style: TextStyle(
-                color: cParchment,
-                fontSize: 13,
-                fontStyle: FontStyle.italic)),
-      ));
+              color: cParchment,
+              fontSize: 13,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final seed = _stableSeed(widget.code);
+    final rarity = widget.rarity;
+    // Legendary forces Lore gold. Common / Mythic use your chosen profile colour.
+    final effectiveAccent = rarity == CardRarity.legendary
+        ? Colors.transparent
+        : appSettings.profileBorderColor;
 
     return AnimatedBuilder(
       animation: appSettings,
@@ -115,29 +130,50 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           child: HoloCardV2(
-            accent: appSettings.profileBorderColor,
-            intensity: 0.55,
+            accent: effectiveAccent,
+            intensity: rarity.holoIntensity,
+            maxTiltDegrees: rarity.maxTiltDegrees,
+            parallaxStrength: rarity.parallaxStrength,
             seed: seed,
             child: LoreTap(
               onTap: widget.onTap,
               onLongPress: widget.onLongPress,
-              child: Container(
-                decoration: _cardDecoration(),
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: LoreCardFace(
-                title: widget.name,
-                code: widget.code,
-                subtitle: widget.subtitle,
-                seed: seed,
-                accent: appSettings.profileBorderColor,
-                fillHeight: widget.fillHeight,
-                backgroundImageUrl: widget.avatarUrl, // <--- Add this
-                art: _buildBioText(),
-                    statsStrip:
-                        widget.stats.isEmpty ? null : _buildStatsRow(),
-                    footer: _buildFooterRow(),
-                  ),
+              child: ClipPath(
+                clipper: rarity.shape.clipper,
+                child: Stack(
+                  children: [
+                    Container(
+                      decoration: _cardDecoration(effectiveAccent),
+                      child: Padding(
+                        padding: EdgeInsets.all(
+                          rarity == CardRarity.legendary ? 0 : 6,
+                        ),
+                        child: LoreCardFace(
+                          title: widget.name,
+                          code: widget.code,
+                          subtitle: widget.subtitle,
+                          seed: seed,
+                          accent: effectiveAccent,
+                          fillHeight: widget.fillHeight,
+                          backgroundImageUrl: widget.avatarUrl,
+                          rarity: widget.rarity,
+                          art: _buildBioText(),
+                          statsStrip: widget.stats.isEmpty
+                              ? null
+                              : _buildStatsRow(),
+                          footer: _buildFooterRow(),
+                        ),
+                      ),
+                    ),
+                    // Blender gold on TOP of everything — this is the only border for Legendary
+                    if (rarity == CardRarity.legendary)
+                      Positioned.fill(
+                        child: Image.asset(
+                          'assets/frames/legendary_frame.png',
+                          fit: BoxFit.fill,
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -148,143 +184,151 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
   }
 
   Widget _buildBioText() => Text(
-        widget.bio.isEmpty ? 'Tap to add a bio...' : widget.bio,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 15,
-          color: widget.bio.isEmpty 
-              ? cSmoke 
-              : (appSettings.textColourFor('profile_bio') ?? cMist), // <-- Wired up!
-          fontStyle: FontStyle.italic,
-          height: 1.9,
-        ),
-      );
+    widget.bio.isEmpty ? 'Tap to add a bio...' : widget.bio,
+    textAlign: TextAlign.center,
+    style: TextStyle(
+      fontSize: 15,
+      color: widget.bio.isEmpty
+          ? cSmoke
+          : (appSettings.textColourFor('profile_bio') ??
+                cMist), // <-- Wired up!
+      fontStyle: FontStyle.italic,
+      height: 1.9,
+    ),
+  );
 
   Widget _buildStatsRow() => Row(
-        children: [
-          for (var i = 0; i < widget.stats.length; i++) ...[
-            if (i > 0)
-              Container(
-                width: 1,
-                height: 34,
-                color:
-                    appSettings.profileBorderColor.withValues(alpha: 0.25),
-              ),
-            Expanded(child: _statCell(widget.stats[i])),
-          ],
-        ],
-      );
+    children: [
+      for (var i = 0; i < widget.stats.length; i++) ...[
+        if (i > 0)
+          Container(
+            width: 1,
+            height: 34,
+            color: appSettings.profileBorderColor.withValues(alpha: 0.25),
+          ),
+        Expanded(child: _statCell(widget.stats[i])),
+      ],
+    ],
+  );
 
   Widget _statCell(ProfileStat s) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            s.value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w300,
-              color: appSettings.textColourFor('profile_name') ?? cParchment, // <-- Wired up!
-              height: 1.1,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            s.label.toUpperCase(),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 7.5,
-              letterSpacing: 1.5,
-              color: appSettings.textColourFor('profile_bio') ?? 
-                     appSettings.profileBorderColor.withValues(alpha: 0.7), // <-- Wired up!
-            ),
-          ),
-        ],
-      );
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(
+        s.value,
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w300,
+          color:
+              appSettings.textColourFor('profile_name') ??
+              cParchment, // <-- Wired up!
+          height: 1.1,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        s.label.toUpperCase(),
+        textAlign: TextAlign.center,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 7.5,
+          letterSpacing: 1.5,
+          color:
+              appSettings.textColourFor('profile_bio') ??
+              appSettings.profileBorderColor.withValues(
+                alpha: 0.7,
+              ), // <-- Wired up!
+        ),
+      ),
+    ],
+  );
 
   Widget _buildFooterRow() => Row(
-        children: [
-          Expanded(
-            child:
-                _codeRevealed ? _revealedCodeRow() : _hiddenCodeRow(),
-          ),
-          const SizedBox(width: 8),
-          Text('✦ LORE ✦',
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 8,
-                color: appSettings.profileBorderColor
-                    .withValues(alpha: 0.35),
-                letterSpacing: 3,
-              )),
-        ],
-      );
+    children: [
+      Expanded(child: _codeRevealed ? _revealedCodeRow() : _hiddenCodeRow()),
+      const SizedBox(width: 8),
+      Text(
+        '✦ LORE ✦',
+        style: TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 8,
+          color: appSettings.profileBorderColor.withValues(alpha: 0.35),
+          letterSpacing: 3,
+        ),
+      ),
+    ],
+  );
 
   Widget _hiddenCodeRow() {
     return GestureDetector(
       onTap: _revealCode,
       behavior: HitTestBehavior.opaque,
-      child: const Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.lock_outline, size: 10, color: cSmoke),
-        SizedBox(width: 5),
-        Flexible(
-          child: Text(
-            'UNIQUE CODE — tap to reveal',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 9,
-              color: cSmoke,
-              letterSpacing: 1,
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.lock_outline, size: 10, color: cSmoke),
+          SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              'UNIQUE CODE — tap to reveal',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 9,
+                color: cSmoke,
+                letterSpacing: 1,
+              ),
             ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 
   Widget _revealedCodeRow() {
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      Flexible(
-        child: Text(
-          widget.code,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 11,
-            color: cGold,
-            letterSpacing: 2,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: Text(
+            widget.code,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 11,
+              color: cGold,
+              letterSpacing: 2,
+            ),
           ),
         ),
-      ),
-      const SizedBox(width: 6),
-      GestureDetector(
-        onTap: _copyCode,
-        behavior: HitTestBehavior.opaque,
-        child: const Padding(
-          padding: EdgeInsets.all(3),
-          child: Icon(Icons.copy, size: 11, color: cSmoke),
+        const SizedBox(width: 6),
+        GestureDetector(
+          onTap: _copyCode,
+          behavior: HitTestBehavior.opaque,
+          child: const Padding(
+            padding: EdgeInsets.all(3),
+            child: Icon(Icons.copy, size: 11, color: cSmoke),
+          ),
         ),
-      ),
-      const SizedBox(width: 2),
-      GestureDetector(
-        onTap: () => setState(() => _codeRevealed = false),
-        behavior: HitTestBehavior.opaque,
-        child: const Padding(
-          padding: EdgeInsets.all(3),
-          child: Icon(Icons.visibility_off, size: 11, color: cSmoke),
+        const SizedBox(width: 2),
+        GestureDetector(
+          onTap: () => setState(() => _codeRevealed = false),
+          behavior: HitTestBehavior.opaque,
+          child: const Padding(
+            padding: EdgeInsets.all(3),
+            child: Icon(Icons.visibility_off, size: 11, color: cSmoke),
+          ),
         ),
-      ),
-    ]);
+      ],
+    );
   }
 
-  BoxDecoration _cardDecoration() {
+  BoxDecoration _cardDecoration(Color borderColor) {
     final gradient = appSettings.profileGradient;
-    final borderColor = appSettings.profileBorderColor;
     final style = appSettings.profileBorderStyle;
 
     Border border;
@@ -295,13 +339,16 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
         border = Border.all(color: borderColor, width: 3);
         break;
       case 'glow':
-        border =
-            Border.all(color: borderColor.withValues(alpha: 0.7), width: 1);
+        border = Border.all(
+          color: borderColor.withValues(alpha: 0.7),
+          width: 1,
+        );
         shadows = [
           BoxShadow(
-              color: borderColor.withValues(alpha: 0.35),
-              blurRadius: 16,
-              spreadRadius: 2)
+            color: borderColor.withValues(alpha: 0.35),
+            blurRadius: 16,
+            spreadRadius: 2,
+          ),
         ];
         break;
       case 'none':
@@ -344,58 +391,78 @@ class _CodeDialog extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 9,
-                      color: actionColor,
-                      letterSpacing: 4)),
-              const SizedBox(height: 12),
-              Text(body,
-                  style: const TextStyle(
-                      fontSize: 13,
-                      color: cMist,
-                      height: 1.7,
-                      fontStyle: FontStyle.italic)),
-              const SizedBox(height: 24),
-              Row(children: [
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 9,
+                color: actionColor,
+                letterSpacing: 4,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              body,
+              style: const TextStyle(
+                fontSize: 13,
+                color: cMist,
+                height: 1.7,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
                 Expanded(
-                    child: GestureDetector(
-                  onTap: () => Navigator.of(context).pop(false),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration:
-                        BoxDecoration(border: Border.all(color: cAsh)),
-                    child: const Center(
-                        child: Text('Cancel',
-                            style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 9,
-                                color: cSmoke,
-                                letterSpacing: 2))),
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(false),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: cAsh),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 9,
+                            color: cSmoke,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                )),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
-                    child: GestureDetector(
-                  onTap: () => Navigator.of(context).pop(true),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    color: actionColor.withValues(alpha: 0.8),
-                    child: Center(
-                        child: Text(actionLabel,
-                            style: const TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 9,
-                                color: cParchment,
-                                letterSpacing: 2))),
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(true),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      color: actionColor.withValues(alpha: 0.8),
+                      child: Center(
+                        child: Text(
+                          actionLabel,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 9,
+                            color: cParchment,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                )),
-              ]),
-            ]),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

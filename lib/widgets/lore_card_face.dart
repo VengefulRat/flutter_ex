@@ -5,6 +5,9 @@ import '../theme.dart';
 import '../settings.dart';
 import 'card_frame.dart';
 import 'holo_parallax.dart';
+import 'card_rarity.dart';
+import 'card_shape.dart';
+
 
 /// The shared "Lore card" chrome. Renders the set bar, name banner,
 /// art zone, optional stats strip, and optional footer — all wrapped
@@ -20,6 +23,7 @@ class LoreCardFace extends StatelessWidget {
   final bool fillHeight;
   final Color accent;
   final String? backgroundImageUrl;
+  final CardRarity rarity;
 
   const LoreCardFace({
     super.key,
@@ -33,6 +37,7 @@ class LoreCardFace extends StatelessWidget {
     this.footer,
     this.fillHeight = false,
     this.backgroundImageUrl,
+    this.rarity = CardRarity.common,
   });
 
   String get _serial {
@@ -56,15 +61,16 @@ class LoreCardFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final spec = CardFrameSpec(
-      seed: seed,
-      accent: accent,
-      glow: false,
-      ornate: true,
-      dense: false,
-    );
+  final isBlenderFrame = rarity == CardRarity.legendary;
 
-    Widget content = Padding(
+final spec = CardFrameSpec(
+  glow: isBlenderFrame ? false : rarity.glow,
+  ornate: isBlenderFrame ? false : rarity.ornate,
+  dense: isBlenderFrame ? false : rarity.dense,
+  seed: seed,
+  accent: accent,
+);
+  Widget content = Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       child: Column(
         mainAxisSize: fillHeight ? MainAxisSize.max : MainAxisSize.min,
@@ -75,6 +81,12 @@ class LoreCardFace extends StatelessWidget {
           _rule(),
           const SizedBox(height: 2),
           HoloParallaxLayer(depth: 0.7, child: _buildNameBanner()),
+          const SizedBox(height: 2),
+          _rule(),
+          if (subtitle != null && subtitle!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _buildSubtitleLine(),
+          ],
           const SizedBox(height: 12),
           if (fillHeight)
             Expanded(
@@ -141,7 +153,30 @@ class LoreCardFace extends StatelessWidget {
       );
     }
 
-    return CardFrame(spec: spec, child: content);
+            final baseCard = CardFrame(spec: spec, child: content);
+
+    final frameChild = rarity == CardRarity.legendary
+        ? Stack(
+            children: [
+              baseCard,
+              Positioned.fill(
+                child: Image.asset(
+                  'assets/frames/legendary_frame.png',
+                  fit: BoxFit.fill,
+                ),
+              ),
+            ],
+          )
+        : baseCard;
+
+    final clipper = rarity.shape.clipper;
+if (clipper == null) {
+  return CardFrame(spec: spec, child: content);
+}
+return ClipPath(
+  clipper: clipper,
+  child: CardFrame(spec: spec, child: content),
+);
   }
 
   Widget _rule() => Container(

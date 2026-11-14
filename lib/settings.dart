@@ -9,7 +9,6 @@ import 'services/auth_service.dart';
 // Single global instance
 final appSettings = AppSettings();
 
-
 // ════════════════════════════════════════
 // BLOCK STYLE
 // ════════════════════════════════════════
@@ -44,30 +43,29 @@ class BlockStyle {
     bool clearBackground = false,
     bool clearBorderColor = false,
     bool clearAccent = false,
-  }) =>
-      BlockStyle(
-        background: clearBackground ? null : (background ?? this.background),
-        borderColor: clearBorderColor ? null : (borderColor ?? this.borderColor),
-        borderStyle: borderStyle ?? this.borderStyle,
-        accent: clearAccent ? null : (accent ?? this.accent),
-        shape: shape ?? this.shape,
-      );
+  }) => BlockStyle(
+    background: clearBackground ? null : (background ?? this.background),
+    borderColor: clearBorderColor ? null : (borderColor ?? this.borderColor),
+    borderStyle: borderStyle ?? this.borderStyle,
+    accent: clearAccent ? null : (accent ?? this.accent),
+    shape: shape ?? this.shape,
+  );
 
   Map<String, dynamic> toJson() => {
-        if (background != null) 'bg': background!.toARGB32(),
-        if (borderColor != null) 'bc': borderColor!.toARGB32(),
-        'bs': borderStyle,
-        if (accent != null) 'ac': accent!.toARGB32(),
-        'sh': shape,
-      };
+    if (background != null) 'bg': background!.toARGB32(),
+    if (borderColor != null) 'bc': borderColor!.toARGB32(),
+    'bs': borderStyle,
+    if (accent != null) 'ac': accent!.toARGB32(),
+    'sh': shape,
+  };
 
   factory BlockStyle.fromJson(Map<String, dynamic> j) => BlockStyle(
-        background: j['bg'] != null ? Color(j['bg'] as int) : null,
-        borderColor: j['bc'] != null ? Color(j['bc'] as int) : null,
-        borderStyle: j['bs'] as String? ?? 'solid',
-        accent: j['ac'] != null ? Color(j['ac'] as int) : null,
-        shape: j['sh'] as String? ?? 'square',
-      );
+    background: j['bg'] != null ? Color(j['bg'] as int) : null,
+    borderColor: j['bc'] != null ? Color(j['bc'] as int) : null,
+    borderStyle: j['bs'] as String? ?? 'solid',
+    accent: j['ac'] != null ? Color(j['ac'] as int) : null,
+    shape: j['sh'] as String? ?? 'square',
+  );
 }
 
 // ════════════════════════════════════════
@@ -101,7 +99,11 @@ class AppSettings extends ChangeNotifier {
   static const _kContinueLastShown = 'as_continue_last_shown';
   static const _kBlockStyles = 'as_block_styles_v1';
   static const _kDevModeUnlocked = 'as_dev_mode_unlocked';
-  
+  static const _kAnimatedBorderThickness = 'as_animated_border_thickness';
+  static const _kAnimatedBorderWaviness = 'as_animated_border_waviness';
+  static const _kAnimatedBorderSpeed = 'as_animated_border_speed';
+  static const _kAnimatedBorderOpacity = 'as_animated_border_opacity';
+  static const _kAnimatedBorderPattern = 'as_animated_border_pattern';
 
   // ── Stat keys ──
   static const statActiveRPs = 'active_rps';
@@ -124,11 +126,14 @@ class AppSettings extends ChangeNotifier {
     statCharactersCreated,
   ];
 
-    List<String> _homeOrder = [];
-  
+  List<String> _homeOrder = [];
+
   Future<void> setHomeOrder(List<String> order) async {
     _homeOrder = order;
-    (await SharedPreferences.getInstance()).setStringList('as_home_order', order);
+    (await SharedPreferences.getInstance()).setStringList(
+      'as_home_order',
+      order,
+    );
     _touch();
     notifyListeners();
   }
@@ -236,6 +241,11 @@ class AppSettings extends ChangeNotifier {
   ];
   Color _bgGlowColor = const Color(0xFFC9A96E);
   Color _profileBorderColor = const Color(0xFF2a2a2a);
+  double _animatedBorderThickness = 3.0;
+  double _animatedBorderWaviness = 4.0;
+  double _animatedBorderSpeed = 1.0;
+  double _animatedBorderOpacity = 0.7;
+  String _animatedBorderPattern = 'waves';
   String _profileBorderStyle = 'solid';
   bool _aiMood = true;
   bool _notifNewPost = true;
@@ -293,6 +303,11 @@ class AppSettings extends ChangeNotifier {
     _enterToSend = p.getBool(_kEnterToSend) ?? false;
     _discoverable = p.getBool(_kDiscoverable) ?? true;
     _profileBorderStyle = p.getString(_kBorderStyle) ?? 'solid';
+    _animatedBorderThickness = p.getDouble(_kAnimatedBorderThickness) ?? 3.0;
+    _animatedBorderWaviness = p.getDouble(_kAnimatedBorderWaviness) ?? 4.0;
+    _animatedBorderSpeed = p.getDouble(_kAnimatedBorderSpeed) ?? 1.0;
+    _animatedBorderOpacity = p.getDouble(_kAnimatedBorderOpacity) ?? 0.7;
+    _animatedBorderPattern = p.getString(_kAnimatedBorderPattern) ?? 'waves';
     _profileStatsMaster = p.getBool(_kProfileStatsMaster) ?? true;
     _continueMode = p.getString(_kContinueMode) ?? continueModeCycle;
     _continueIds = p.getStringList(_kContinueIds) ?? [];
@@ -440,7 +455,7 @@ class AppSettings extends ChangeNotifier {
     try {
       await FirebaseFirestore.instance.collection('users').doc(code).update({
         'preferences': jsonEncode(_serializeAll()),
-         'homeOrder': _homeOrder,
+        'homeOrder': _homeOrder,
         'enterToSend': _enterToSend,
         'preferencesUpdatedAt': FieldValue.serverTimestamp(),
       });
@@ -460,6 +475,11 @@ class AppSettings extends ChangeNotifier {
     'bgGlowColor': _bgGlowColor.toARGB32(),
     'profileBorderColor': _profileBorderColor.toARGB32(),
     'profileBorderStyle': _profileBorderStyle,
+    'animatedBorderThickness': _animatedBorderThickness,
+    'animatedBorderWaviness': _animatedBorderWaviness,
+    'animatedBorderSpeed': _animatedBorderSpeed,
+    'animatedBorderOpacity': _animatedBorderOpacity,
+    'animatedBorderPattern': _animatedBorderPattern,
     'aiMood': _aiMood,
     'notifNewPost': _notifNewPost,
     'notifInterest': _notifInterest,
@@ -480,6 +500,19 @@ class AppSettings extends ChangeNotifier {
     _soundEnabled = j['soundEnabled'] as bool? ?? _soundEnabled;
     _profileBorderStyle =
         j['profileBorderStyle'] as String? ?? _profileBorderStyle;
+    _animatedBorderThickness =
+        (j['animatedBorderThickness'] as num?)?.toDouble() ??
+        _animatedBorderThickness;
+    _animatedBorderWaviness =
+        (j['animatedBorderWaviness'] as num?)?.toDouble() ??
+        _animatedBorderWaviness;
+    _animatedBorderSpeed =
+        (j['animatedBorderSpeed'] as num?)?.toDouble() ?? _animatedBorderSpeed;
+    _animatedBorderOpacity =
+        (j['animatedBorderOpacity'] as num?)?.toDouble() ??
+        _animatedBorderOpacity;
+    _animatedBorderPattern =
+        j['animatedBorderPattern'] as String? ?? _animatedBorderPattern;
     _aiMood = j['aiMood'] as bool? ?? _aiMood;
     _notifNewPost = j['notifNewPost'] as bool? ?? _notifNewPost;
     _notifInterest = j['notifInterest'] as bool? ?? _notifInterest;
@@ -533,6 +566,11 @@ class AppSettings extends ChangeNotifier {
     await p.setString(_kOrientation, _orientation);
     await p.setBool(_kSound, _soundEnabled);
     await p.setString(_kBorderStyle, _profileBorderStyle);
+    await p.setDouble(_kAnimatedBorderThickness, _animatedBorderThickness);
+    await p.setDouble(_kAnimatedBorderWaviness, _animatedBorderWaviness);
+    await p.setDouble(_kAnimatedBorderSpeed, _animatedBorderSpeed);
+    await p.setDouble(_kAnimatedBorderOpacity, _animatedBorderOpacity);
+    await p.setString(_kAnimatedBorderPattern, _animatedBorderPattern);
     await p.setBool(_kAiMood, _aiMood);
     await p.setBool(_kNotifPost, _notifNewPost);
     await p.setBool('as_notif_rp_post', _notifRpPost);
@@ -561,7 +599,7 @@ class AppSettings extends ChangeNotifier {
       jsonEncode(_blockStyles.map((k, v) => MapEntry(k, v.toJson()))),
     );
     await p.setBool(_kEnterToSend, _enterToSend);
-        await p.setStringList('as_home_order', _homeOrder);
+    await p.setStringList('as_home_order', _homeOrder);
   }
 
   // ════════════════════════════════════════
@@ -576,6 +614,11 @@ class AppSettings extends ChangeNotifier {
   List<Color> get profileGradient => List.unmodifiable(_profileGradient);
   Color get profileBorderColor => _profileBorderColor;
   String get profileBorderStyle => _profileBorderStyle;
+  double get animatedBorderThickness => _animatedBorderThickness;
+  double get animatedBorderWaviness => _animatedBorderWaviness;
+  double get animatedBorderSpeed => _animatedBorderSpeed;
+  double get animatedBorderOpacity => _animatedBorderOpacity;
+  String get animatedBorderPattern => _animatedBorderPattern;
   bool get aiMood => _aiMood;
   bool get notifNewPost => _notifNewPost;
   bool get notifInterest => _notifInterest;
@@ -604,7 +647,7 @@ class AppSettings extends ChangeNotifier {
       )
       .toList();
 
-        List<String> get homeOrder => List.unmodifiable(_homeOrder);
+  List<String> get homeOrder => List.unmodifiable(_homeOrder);
 
   Color? textColourFor(String key) => _textColours[key];
 
@@ -734,6 +777,54 @@ class AppSettings extends ChangeNotifier {
   Future<void> setProfileBorderStyle(String v) async {
     _profileBorderStyle = v;
     (await SharedPreferences.getInstance()).setString(_kBorderStyle, v);
+    _touch();
+    notifyListeners();
+  }
+
+  Future<void> setAnimatedBorderThickness(double v) async {
+    _animatedBorderThickness = v;
+    (await SharedPreferences.getInstance()).setDouble(
+      _kAnimatedBorderThickness,
+      v,
+    );
+    _touch();
+    notifyListeners();
+  }
+
+  Future<void> setAnimatedBorderWaviness(double v) async {
+    _animatedBorderWaviness = v;
+    (await SharedPreferences.getInstance()).setDouble(
+      _kAnimatedBorderWaviness,
+      v,
+    );
+    _touch();
+    notifyListeners();
+  }
+
+  Future<void> setAnimatedBorderSpeed(double v) async {
+    _animatedBorderSpeed = v;
+    (await SharedPreferences.getInstance()).setDouble(_kAnimatedBorderSpeed, v);
+    _touch();
+    notifyListeners();
+  }
+
+  Future<void> setAnimatedBorderOpacity(double v) async {
+    _animatedBorderOpacity = v;
+    (await SharedPreferences.getInstance()).setDouble(
+      _kAnimatedBorderOpacity,
+      v,
+    );
+    _touch();
+    notifyListeners();
+  }
+
+  Future<void> setAnimatedBorderPattern(String v) async {
+        if (v != 'waves' && v != 'spikes' && v != 'gears' && v != 'dice') return;
+    _animatedBorderPattern = v;
+    (await SharedPreferences.getInstance()).setString(
+      _kAnimatedBorderPattern,
+      v,
+    );
     _touch();
     notifyListeners();
   }
@@ -909,6 +1000,11 @@ class AppSettings extends ChangeNotifier {
     _oocSide = 'Right';
     _discoverable = true;
     _profileBorderStyle = 'solid';
+    _animatedBorderThickness = 3.0;
+    _animatedBorderWaviness = 4.0;
+    _animatedBorderSpeed = 1.0;
+    _animatedBorderOpacity = 0.7;
+    _animatedBorderPattern = 'waves';
     _profileStatsMaster = true;
     _continueMode = continueModeCycle;
     _continueIds = [];
@@ -958,6 +1054,11 @@ class AppSettings extends ChangeNotifier {
     await p.remove(_kContinueLastShown);
     await p.remove(_kBlockStyles);
     await p.remove(_kEnterToSend);
+    await p.remove(_kAnimatedBorderThickness);
+    await p.remove(_kAnimatedBorderWaviness);
+    await p.remove(_kAnimatedBorderSpeed);
+    await p.remove(_kAnimatedBorderOpacity);
+    await p.remove(_kAnimatedBorderPattern);
 
     // Cancel any in-flight debounce so a stale push doesn't fire after
     // the next user is signed in.
