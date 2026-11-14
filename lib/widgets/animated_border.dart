@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../settings.dart';
 
-enum AnimatedBorderPattern { waves, spikes, gears, dice }
+enum AnimatedBorderPattern { waves, spikes, gears, dice, swords, leaves, shields, flames, stars, runes, thorns, feathers, claws }
 
 class AnimatedBorder extends StatefulWidget {
   final Widget child;
@@ -82,65 +82,80 @@ class _AnimatedBorderState extends State<AnimatedBorder>
     super.dispose();
   }
 
+  AnimatedBorderPattern _parse(String s) {
+    switch (s) {
+      case 'spikes': return AnimatedBorderPattern.spikes;
+      case 'gears': return AnimatedBorderPattern.gears;
+      case 'dice': return AnimatedBorderPattern.dice;
+      case 'swords': return AnimatedBorderPattern.swords;
+      case 'leaves': return AnimatedBorderPattern.leaves;
+      case 'shields': return AnimatedBorderPattern.shields;
+      case 'flames': return AnimatedBorderPattern.flames;
+      case 'stars': return AnimatedBorderPattern.stars;
+      case 'runes': return AnimatedBorderPattern.runes;
+      case 'thorns': return AnimatedBorderPattern.thorns;
+      case 'feathers': return AnimatedBorderPattern.feathers;
+      case 'claws': return AnimatedBorderPattern.claws;
+      default: return AnimatedBorderPattern.waves;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: Listenable.merge([_controller, _diceController, appSettings]),
       builder: (_, _) {
-        final thickness =
-            widget.borderWidth ?? appSettings.animatedBorderThickness;
+        final thickness = widget.borderWidth ?? appSettings.animatedBorderThickness;
         final waviness = widget.waviness ?? appSettings.animatedBorderWaviness;
         final opacity = widget.opacity ?? appSettings.animatedBorderOpacity;
-        final patternString = appSettings.animatedBorderPattern;
-        final pattern =
-            widget.pattern ??
-            (patternString == 'spikes'
-                ? AnimatedBorderPattern.spikes
-                : patternString == 'gears'
-                ? AnimatedBorderPattern.gears
-                : patternString == 'dice'
-                ? AnimatedBorderPattern.dice
-                : AnimatedBorderPattern.waves);
+        final pattern = widget.pattern ?? _parse(appSettings.animatedBorderPattern);
+        final col = widget.color.withValues(alpha: opacity);
 
         CustomPainter painter;
-        if (pattern == AnimatedBorderPattern.spikes) {
-          painter = _SpikesPainter(
-            progress: _controller.value,
-            color: widget.color.withValues(alpha: opacity),
-            borderWidth: thickness,
-            waviness: waviness,
-          );
-        } else if (pattern == AnimatedBorderPattern.gears) {
-          painter = _GearsPainter(
-            progress: _controller.value,
-            color: widget.color.withValues(alpha: opacity),
-            borderWidth: thickness,
-            waviness: waviness,
-          );
-        } else if (pattern == AnimatedBorderPattern.dice) {
-          painter = _DicePainter(
-            progress: _isRolling ? _diceController.value : 0,
-            isRolling: _isRolling,
-            diceValues: _diceValues,
-            color: widget.color.withValues(alpha: opacity),
-            borderWidth: thickness,
-            waviness: waviness,
-          );
-        } else {
-          painter = _WavesPainter(
-            progress: _controller.value,
-            color: widget.color.withValues(alpha: opacity),
-            borderWidth: thickness,
-            waviness: waviness,
-          );
+        switch (pattern) {
+          case AnimatedBorderPattern.spikes:
+            painter = _SpikesPainter(progress: _controller.value, color: col, borderWidth: thickness, waviness: waviness);
+            break;
+          case AnimatedBorderPattern.gears:
+            painter = _GearsPainter(progress: _controller.value, color: col, borderWidth: thickness, waviness: waviness);
+            break;
+          case AnimatedBorderPattern.dice:
+            painter = _DicePainter(progress: _isRolling ? _diceController.value : 0, isRolling: _isRolling, diceValues: _diceValues, color: col, borderWidth: thickness, waviness: waviness);
+            break;
+          case AnimatedBorderPattern.swords:
+            painter = _SwordsPainter(progress: _controller.value, color: col, borderWidth: thickness, waviness: waviness);
+            break;
+          case AnimatedBorderPattern.leaves:
+            painter = _LeavesPainter(progress: _controller.value, color: col, borderWidth: thickness, waviness: waviness);
+            break;
+          case AnimatedBorderPattern.shields:
+            painter = _ShieldsPainter(progress: _controller.value, color: col, borderWidth: thickness, waviness: waviness);
+            break;
+          case AnimatedBorderPattern.flames:
+            painter = _FlamesPainter(progress: _controller.value, color: col, borderWidth: thickness, waviness: waviness);
+            break;
+          case AnimatedBorderPattern.stars:
+            painter = _StarsPainter(progress: _controller.value, color: col, borderWidth: thickness, waviness: waviness);
+            break;
+          case AnimatedBorderPattern.runes:
+            painter = _RunesPainter(progress: _controller.value, color: col, borderWidth: thickness, waviness: waviness);
+            break;
+          case AnimatedBorderPattern.thorns:
+            painter = _ThornsPainter(progress: _controller.value, color: col, borderWidth: thickness, waviness: waviness);
+            break;
+          case AnimatedBorderPattern.feathers:
+            painter = _FeathersPainter(progress: _controller.value, color: col, borderWidth: thickness, waviness: waviness);
+            break;
+          case AnimatedBorderPattern.claws:
+            painter = _ClawsPainter(progress: _controller.value, color: col, borderWidth: thickness, waviness: waviness);
+            break;
+          default:
+            painter = _WavesPainter(progress: _controller.value, color: col, borderWidth: thickness, waviness: waviness);
         }
 
         final content = CustomPaint(
           foregroundPainter: painter,
-          child: Padding(
-            padding: EdgeInsets.all(thickness + 10),
-            child: widget.child,
-          ),
+          child: Padding(padding: EdgeInsets.all(thickness + 10), child: widget.child),
         );
 
         if (pattern == AnimatedBorderPattern.dice) {
@@ -157,29 +172,14 @@ class _AnimatedBorderState extends State<AnimatedBorder>
   }
 }
 
+// ---------- WAVES ----------
 class _WavesPainter extends CustomPainter {
-  final double progress;
-  final Color color;
-  final double borderWidth;
-  final double waviness;
-
-  _WavesPainter({
-    required this.progress,
-    required this.color,
-    required this.borderWidth,
-    required this.waviness,
-  });
-
+  final double progress; final Color color; final double borderWidth; final double waviness;
+  _WavesPainter({required this.progress, required this.color, required this.borderWidth, required this.waviness});
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = borderWidth
-      ..strokeCap = StrokeCap.round;
-
+    final paint = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = borderWidth..strokeCap = StrokeCap.round;
     const waveLength = 28.0;
-
     Path buildEdge(Offset start, Offset end) {
       final path = Path()..moveTo(start.dx, start.dy);
       final total = (end - start).distance;
@@ -189,339 +189,518 @@ class _WavesPainter extends CustomPainter {
         final base = Offset.lerp(start, end, t)!;
         final dir = (end - start) / total;
         final perp = Offset(-dir.dy, dir.dx);
-        final phase =
-            (t * total / waveLength * math.pi * 2) + (progress * math.pi * 2);
+        final phase = (t * total / waveLength * math.pi * 2) + (progress * math.pi * 2);
         final offset = math.sin(phase) * waviness;
         path.lineTo(base.dx + perp.dx * offset, base.dy + perp.dy * offset);
       }
       return path;
     }
-
     final inset = borderWidth / 2;
-    final tl = Offset(inset, inset);
-    final tr = Offset(size.width - inset, inset);
-    final br = Offset(size.width - inset, size.height - inset);
-    final bl = Offset(inset, size.height - inset);
-
+    final tl = Offset(inset, inset); final tr = Offset(size.width - inset, inset);
+    final br = Offset(size.width - inset, size.height - inset); final bl = Offset(inset, size.height - inset);
     canvas.drawPath(buildEdge(tl, tr), paint);
     canvas.drawPath(buildEdge(tr, br), paint);
     canvas.drawPath(buildEdge(br, bl), paint);
     canvas.drawPath(buildEdge(bl, tl), paint);
   }
-
-  @override
-  bool shouldRepaint(_WavesPainter old) =>
-      old.progress != progress ||
-      old.color != color ||
-      old.borderWidth != borderWidth ||
-      old.waviness != waviness;
+  @override bool shouldRepaint(_WavesPainter old) => old.progress != progress || old.color != color || old.borderWidth != borderWidth || old.waviness != waviness;
 }
 
+// ---------- SPIKES ----------
 class _SpikesPainter extends CustomPainter {
-  final double progress;
-  final Color color;
-  final double borderWidth;
-  final double waviness;
-
-  _SpikesPainter({
-    required this.progress,
-    required this.color,
-    required this.borderWidth,
-    required this.waviness,
-  });
-
+  final double progress; final Color color; final double borderWidth; final double waviness;
+  _SpikesPainter({required this.progress, required this.color, required this.borderWidth, required this.waviness});
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
+    final paint = Paint()..color = color..style = PaintingStyle.fill;
     final toothWidth = (14 + waviness * 1.2).clamp(10.0, 32.0);
     final toothHeight = (borderWidth * 1.6).clamp(3.0, 14.0);
     final slide = math.sin(progress * math.pi * 2) * toothWidth * 0.35;
-
     Path buildEdge(Offset start, Offset end) {
       final path = Path();
       final total = (end - start).distance;
       final dir = (end - start) / total;
       final perp = Offset(-dir.dy, dir.dx);
       final count = (total / toothWidth).ceil();
-
       for (int i = 0; i < count; i++) {
         final baseT = (i * toothWidth + slide) / total;
         if (baseT < 0 || baseT > 1) continue;
         final base = Offset.lerp(start, end, baseT.clamp(0.0, 1.0))!;
         final nextT = ((i + 1) * toothWidth + slide) / total;
         final next = Offset.lerp(start, end, nextT.clamp(0.0, 1.0))!;
-
         final mid = Offset.lerp(base, next, 0.5)! + perp * toothHeight;
-        path.moveTo(base.dx, base.dy);
-        path.lineTo(mid.dx, mid.dy);
-        path.lineTo(next.dx, next.dy);
-        path.close();
+        path.moveTo(base.dx, base.dy); path.lineTo(mid.dx, mid.dy); path.lineTo(next.dx, next.dy); path.close();
       }
       return path;
     }
-
-    final inset = 2.0;
-    final tl = Offset(inset, inset);
-    final tr = Offset(size.width - inset, inset);
-    final br = Offset(size.width - inset, size.height - inset);
-    final bl = Offset(inset, size.height - inset);
-
+    const inset = 2.0;
+    final tl = Offset(inset, inset); final tr = Offset(size.width - inset, inset);
+    final br = Offset(size.width - inset, size.height - inset); final bl = Offset(inset, size.height - inset);
     canvas.drawPath(buildEdge(tl, tr), paint);
     canvas.drawPath(buildEdge(tr, br), paint);
     canvas.drawPath(buildEdge(br, bl), paint);
     canvas.drawPath(buildEdge(bl, tl), paint);
-
-    final linePaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawRect(
-      Rect.fromLTWH(
-        inset,
-        inset,
-        size.width - inset * 2,
-        size.height - inset * 2,
-      ),
-      linePaint,
-    );
+    final linePaint = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.5;
+    canvas.drawRect(Rect.fromLTWH(inset, inset, size.width - inset * 2, size.height - inset * 2), linePaint);
   }
-
-  @override
-  bool shouldRepaint(_SpikesPainter old) =>
-      old.progress != progress ||
-      old.color != color ||
-      old.borderWidth != borderWidth ||
-      old.waviness != waviness;
+  @override bool shouldRepaint(_SpikesPainter old) => old.progress != progress || old.color != color || old.borderWidth != borderWidth || old.waviness != waviness;
 }
 
+// ---------- GEARS ----------
 class _GearsPainter extends CustomPainter {
-  final double progress;
-  final Color color;
-  final double borderWidth;
-  final double waviness;
-
-  _GearsPainter({
-    required this.progress,
-    required this.color,
-    required this.borderWidth,
-    required this.waviness,
-  });
-
+  final double progress; final Color color; final double borderWidth; final double waviness;
+  _GearsPainter({required this.progress, required this.color, required this.borderWidth, required this.waviness});
   @override
   void paint(Canvas canvas, Size size) {
     final gearRadius = (6 + borderWidth * 1.8).clamp(8.0, 22.0);
     final spacing = (gearRadius * 2 + 4 + waviness).clamp(20.0, 60.0);
     const toothCount = 8;
-
-    final strokePaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    final fillPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
+    final strokePaint = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.5;
+    final fillPaint = Paint()..color = color..style = PaintingStyle.fill;
     void drawGear(Offset center, int index) {
       final direction = index.isEven ? 1.0 : -1.0;
       final angle = progress * math.pi * 2 * direction;
-
       for (int i = 0; i < toothCount; i++) {
         final a = angle + (i / toothCount) * math.pi * 2;
-        final toothBase =
-            center + Offset(math.cos(a), math.sin(a)) * gearRadius;
-        final toothTip =
-            center + Offset(math.cos(a), math.sin(a)) * (gearRadius + 3.5);
+        final toothBase = center + Offset(math.cos(a), math.sin(a)) * gearRadius;
+        final toothTip = center + Offset(math.cos(a), math.sin(a)) * (gearRadius + 3.5);
         final perp = Offset(-math.sin(a), math.cos(a));
         const halfWidth = 2.0;
         final path = Path()
-          ..moveTo(
-            toothBase.dx + perp.dx * halfWidth,
-            toothBase.dy + perp.dy * halfWidth,
-          )
-          ..lineTo(
-            toothTip.dx + perp.dx * halfWidth * 0.6,
-            toothTip.dy + perp.dy * halfWidth * 0.6,
-          )
-          ..lineTo(
-            toothTip.dx - perp.dx * halfWidth * 0.6,
-            toothTip.dy - perp.dy * halfWidth * 0.6,
-          )
-          ..lineTo(
-            toothBase.dx - perp.dx * halfWidth,
-            toothBase.dy - perp.dy * halfWidth,
-          )
+          ..moveTo(toothBase.dx + perp.dx * halfWidth, toothBase.dy + perp.dy * halfWidth)
+          ..lineTo(toothTip.dx + perp.dx * halfWidth * 0.6, toothTip.dy + perp.dy * halfWidth * 0.6)
+          ..lineTo(toothTip.dx - perp.dx * halfWidth * 0.6, toothTip.dy - perp.dy * halfWidth * 0.6)
+          ..lineTo(toothBase.dx - perp.dx * halfWidth, toothBase.dy - perp.dy * halfWidth)
           ..close();
         canvas.drawPath(path, fillPaint);
       }
-
       canvas.drawCircle(center, gearRadius, strokePaint);
       canvas.drawCircle(center, gearRadius * 0.45, strokePaint);
       canvas.drawCircle(center, 1.5, fillPaint);
       for (int i = 0; i < 4; i++) {
         final a = angle + (i / 4) * math.pi * 2;
-        canvas.drawLine(
-          center,
-          center + Offset(math.cos(a), math.sin(a)) * gearRadius * 0.45,
-          strokePaint,
-        );
+        canvas.drawLine(center, center + Offset(math.cos(a), math.sin(a)) * gearRadius * 0.45, strokePaint);
       }
     }
-
     int gearIndex = 0;
     void drawEdge(Offset start, Offset end) {
       final total = (end - start).distance;
       final count = (total / spacing).floor();
       for (int i = 0; i <= count; i++) {
         final t = count == 0 ? 0.0 : i / count;
-        final pos = Offset.lerp(start, end, t)!;
-        drawGear(pos, gearIndex);
-        gearIndex++;
+        drawGear(Offset.lerp(start, end, t)!, gearIndex); gearIndex++;
       }
     }
-
     final inset = gearRadius + 4;
-    final tl = Offset(inset, inset);
-    final tr = Offset(size.width - inset, inset);
-    final br = Offset(size.width - inset, size.height - inset);
-    final bl = Offset(inset, size.height - inset);
-
-    drawEdge(tl, tr);
-    drawEdge(tr, br);
-    drawEdge(br, bl);
-    drawEdge(bl, tl);
+    final tl = Offset(inset, inset); final tr = Offset(size.width - inset, inset);
+    final br = Offset(size.width - inset, size.height - inset); final bl = Offset(inset, size.height - inset);
+    drawEdge(tl, tr); drawEdge(tr, br); drawEdge(br, bl); drawEdge(bl, tl);
   }
-
-  @override
-  bool shouldRepaint(_GearsPainter old) =>
-      old.progress != progress ||
-      old.color != color ||
-      old.borderWidth != borderWidth ||
-      old.waviness != waviness;
+  @override bool shouldRepaint(_GearsPainter old) => old.progress != progress || old.color != color || old.borderWidth != borderWidth || old.waviness != waviness;
 }
 
+// ---------- DICE ----------
 class _DicePainter extends CustomPainter {
-  final double progress;
-  final bool isRolling;
-  final List<int> diceValues;
-  final Color color;
-  final double borderWidth;
-  final double waviness;
-
-  _DicePainter({
-    required this.progress,
-    required this.isRolling,
-    required this.diceValues,
-    required this.color,
-    required this.borderWidth,
-    required this.waviness,
-  });
-
+  final double progress; final bool isRolling; final List<int> diceValues; final Color color; final double borderWidth; final double waviness;
+  _DicePainter({required this.progress, required this.isRolling, required this.diceValues, required this.color, required this.borderWidth, required this.waviness});
   @override
   void paint(Canvas canvas, Size size) {
     final dieSize = (18 + borderWidth * 3).clamp(22.0, 48.0);
     final half = dieSize / 2;
-    // Bounce while rolling — waviness controls bounce height
-    final bounce = isRolling
-        ? math.sin(progress * math.pi * 3) * (2 + waviness * 0.5)
-        : 0.0;
+    final bounce = isRolling ? math.sin(progress * math.pi * 3) * (2 + waviness * 0.5) : 0.0;
     final rotation = isRolling ? progress * math.pi * 4 : 0.0;
-
-    final fillPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    final strokePaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    final pipPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    // Pip layouts for 1-6
+    final fillPaint = Paint()..color = color.withValues(alpha: 0.18)..style = PaintingStyle.fill;
+    final strokePaint = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.5;
+    final pipPaint = Paint()..color = color..style = PaintingStyle.fill;
     List<Offset> pipsFor(int value, double r) {
-      final c = Offset(0, 0);
-      final o = r * 0.55;
+      final c = Offset(0, 0); final o = r * 0.55;
       switch (value) {
-        case 1:
-          return [c];
-        case 2:
-          return [Offset(-o, -o), Offset(o, o)];
-        case 3:
-          return [Offset(-o, -o), c, Offset(o, o)];
-        case 4:
-          return [Offset(-o, -o), Offset(o, -o), Offset(-o, o), Offset(o, o)];
-        case 5:
-          return [
-            Offset(-o, -o),
-            Offset(o, -o),
-            c,
-            Offset(-o, o),
-            Offset(o, o),
-          ];
-        case 6:
-        default:
-          return [
-            Offset(-o, -o),
-            Offset(o, -o),
-            Offset(-o, 0),
-            Offset(o, 0),
-            Offset(-o, o),
-            Offset(o, o),
-          ];
+        case 1: return [c];
+        case 2: return [Offset(-o, -o), Offset(o, o)];
+        case 3: return [Offset(-o, -o), c, Offset(o, o)];
+        case 4: return [Offset(-o, -o), Offset(o, -o), Offset(-o, o), Offset(o, o)];
+        case 5: return [Offset(-o, -o), Offset(o, -o), c, Offset(-o, o), Offset(o, o)];
+        default: return [Offset(-o, -o), Offset(o, -o), Offset(-o, 0), Offset(o, 0), Offset(-o, o), Offset(o, o)];
       }
     }
-
     void drawDie(Offset center, int value, int index) {
       canvas.save();
-      // Each die rotates slightly offset so they don't all spin in sync
       final rot = rotation + index * 0.4;
       final bounceOffset = bounce * (index.isEven ? 1 : -1);
       canvas.translate(center.dx, center.dy + bounceOffset);
       canvas.rotate(rot);
-      // Die body — rounded square, translucent fill + outline
-      final rect = Rect.fromCenter(
-        center: Offset.zero,
-        width: dieSize,
-        height: dieSize,
-      );
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, const Radius.circular(6)),
-        fillPaint..color = color.withValues(alpha: 0.18),
-      );
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(rect, const Radius.circular(6)),
-        strokePaint,
-      );
-      // Pips
+      final rect = Rect.fromCenter(center: Offset.zero, width: dieSize, height: dieSize);
+      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(6)), fillPaint);
+      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(6)), strokePaint);
       final pipRadius = (dieSize * 0.09).clamp(1.5, 3.5);
-      for (final p in pipsFor(value, half * 0.7)) {
-        canvas.drawCircle(p, pipRadius, pipPaint);
-      }
+      for (final p in pipsFor(value, half * 0.7)) { canvas.drawCircle(p, pipRadius, pipPaint); }
       canvas.restore();
     }
-
     final inset = half + 2;
     drawDie(Offset(inset, inset), diceValues[0], 0);
     drawDie(Offset(size.width - inset, inset), diceValues[1], 1);
     drawDie(Offset(size.width - inset, size.height - inset), diceValues[2], 2);
     drawDie(Offset(inset, size.height - inset), diceValues[3], 3);
-
-    // Thin baseline frame so card still feels framed
-    canvas.drawRect(
-      Rect.fromLTWH(2, 2, size.width - 4, size.height - 4),
-      strokePaint..strokeWidth = 1,
-    );
+    canvas.drawRect(Rect.fromLTWH(2, 2, size.width - 4, size.height - 4), strokePaint..strokeWidth = 1);
   }
+  @override bool shouldRepaint(_DicePainter old) => old.progress != progress || old.isRolling != isRolling || old.diceValues != diceValues || old.color != color || old.borderWidth != borderWidth || old.waviness != waviness;
+}
 
+// ---------- HELPER: walk around perimeter ----------
+typedef _ShapeDrawer = void Function(Canvas canvas, Offset pos, double edgeAngle, int index, double progress);
+
+void _walkPerimeter(Canvas canvas, Size size, double spacing, double inset, _ShapeDrawer draw, double progress) {
+  final tl = Offset(inset, inset); final tr = Offset(size.width - inset, inset);
+  final br = Offset(size.width - inset, size.height - inset); final bl = Offset(inset, size.height - inset);
+  final edges = [[tl, tr, 0.0], [tr, br, math.pi / 2], [br, bl, math.pi], [bl, tl, -math.pi / 2]];
+  int idx = 0;
+  for (final e in edges) {
+    final start = e[0] as Offset; final end = e[1] as Offset; final ang = e[2] as double;
+    final total = (end - start).distance;
+    final count = (total / spacing).floor();
+    for (int i = 0; i <= count; i++) {
+      final t = count == 0 ? 0.0 : i / count;
+      draw(canvas, Offset.lerp(start, end, t)!, ang, idx, progress);
+      idx++;
+    }
+  }
+}
+
+// ---------- SWORDS - DETAILED ----------
+class _SwordsPainter extends CustomPainter {
+  final double progress; final Color color; final double borderWidth; final double waviness;
+  _SwordsPainter({required this.progress, required this.color, required this.borderWidth, required this.waviness});
   @override
-  bool shouldRepaint(_DicePainter old) =>
-      old.progress != progress ||
-      old.isRolling != isRolling ||
-      old.diceValues != diceValues ||
-      old.color != color ||
-      old.borderWidth != borderWidth ||
-      old.waviness != waviness;
+  void paint(Canvas canvas, Size size) {
+    final bladeFill = Paint()..color = color.withValues(alpha: 0.85)..style = PaintingStyle.fill;
+    final bladeEdge = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.4;
+    final gripPaint = Paint()..color = color..style = PaintingStyle.fill;
+    final len = (20 + borderWidth * 2).clamp(24.0, 44.0);
+    final spacing = len + 14 + waviness;
+    _walkPerimeter(canvas, size, spacing, 14, (canvas, pos, edgeAngle, idx, prog) {
+      final sway = math.sin(prog * math.pi * 2 + idx * 0.8) * 0.18;
+      canvas.save(); canvas.translate(pos.dx, pos.dy); canvas.rotate(edgeAngle - math.pi / 2 + sway);
+      // BLADE - long, pointed, with fuller
+      final blade = Path()
+        ..moveTo(0, -len / 2)
+        ..lineTo(3.2, -len / 2 + 7)
+        ..lineTo(3.2, 2)
+        ..lineTo(0, 4)
+        ..lineTo(-3.2, 2)
+        ..lineTo(-3.2, -len / 2 + 7)
+        ..close();
+      canvas.drawPath(blade, bladeFill);
+      canvas.drawPath(blade, bladeEdge);
+      // Fuller - centre line down blade
+      canvas.drawLine(Offset(0, -len / 2 + 8), Offset(0, 1), bladeEdge..strokeWidth = 0.8);
+      // CROSSGUARD - curved up at ends
+      final guard = Path()
+        ..moveTo(-9, 4)
+        ..quadraticBezierTo(-6, 1, -9, -1)
+        ..lineTo(-2, 3)
+        ..lineTo(2, 3)
+        ..lineTo(9, -1)
+        ..quadraticBezierTo(6, 1, 9, 4)
+        ..lineTo(2, 6)
+        ..lineTo(-2, 6)
+        ..close();
+      canvas.drawPath(guard, gripPaint);
+      // GRIP - wrapped, 3 lines
+      canvas.drawRect(Rect.fromLTWH(-1.8, 6, 3.6, 7), gripPaint);
+      for (int i = 0; i < 3; i++) {
+        canvas.drawLine(Offset(-1.8, 7.5 + i * 2), Offset(1.8, 7.5 + i * 2), Paint()..color = Colors.black.withValues(alpha: 0.35)..strokeWidth = 0.7);
+      }
+      // POMMEL - round + gem dot
+      canvas.drawCircle(Offset(0, 15), 3.2, gripPaint);
+      canvas.drawCircle(Offset(0, 15), 1.2, Paint()..color = Colors.white.withValues(alpha: 0.7)..style = PaintingStyle.fill);
+      canvas.restore();
+    }, progress);
+  }
+  @override bool shouldRepaint(_SwordsPainter old) => old.progress != progress || old.color != color || old.borderWidth != borderWidth || old.waviness != waviness;
+}
+
+// ---------- LEAVES - DETAILED ----------
+class _LeavesPainter extends CustomPainter {
+  final double progress; final Color color; final double borderWidth; final double waviness;
+  _LeavesPainter({required this.progress, required this.color, required this.borderWidth, required this.waviness});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final fill = Paint()..color = color.withValues(alpha: 0.35)..style = PaintingStyle.fill;
+    final outline = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.3;
+    final veinPaint = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 0.9;
+    final len = (16 + borderWidth * 1.6).clamp(20.0, 38.0);
+    final wid = len * 0.42;
+    final spacing = len + 8 + waviness;
+    _walkPerimeter(canvas, size, spacing, 14, (canvas, pos, edgeAngle, idx, prog) {
+      final flutter = math.sin(prog * math.pi * 2 + idx * 1.2) * 0.45;
+      canvas.save(); canvas.translate(pos.dx, pos.dy); canvas.rotate(edgeAngle + flutter);
+      // Leaf body - pointed both ends, slightly bent
+      final leaf = Path()
+        ..moveTo(0, -len / 2)
+        ..quadraticBezierTo(wid, -len * 0.15, wid * 0.7, len * 0.15)
+        ..quadraticBezierTo(wid * 0.4, len * 0.35, 0, len / 2)
+        ..quadraticBezierTo(-wid * 0.4, len * 0.35, -wid * 0.7, len * 0.15)
+        ..quadraticBezierTo(-wid, -len * 0.15, 0, -len / 2)
+        ..close();
+      canvas.drawPath(leaf, fill); canvas.drawPath(leaf, outline);
+      // Main vein
+      canvas.drawLine(Offset(0, -len / 2 + 2), Offset(0, len / 2 - 2), veinPaint);
+      // Side veins - 4 pairs
+      for (int i = 0; i < 4; i++) {
+        final y = -len * 0.3 + i * len * 0.18;
+        canvas.drawLine(Offset(0, y), Offset(wid * 0.6, y + 3), veinPaint);
+        canvas.drawLine(Offset(0, y), Offset(-wid * 0.6, y + 3), veinPaint);
+      }
+      // Stem
+      canvas.drawLine(Offset(0, len / 2), Offset(0, len / 2 + 4), outline);
+      canvas.restore();
+    }, progress);
+  }
+  @override bool shouldRepaint(_LeavesPainter old) => old.progress != progress || old.color != color || old.borderWidth != borderWidth || old.waviness != waviness;
+}
+
+// ---------- SHIELDS ----------
+class _ShieldsPainter extends CustomPainter {
+  final double progress; final Color color; final double borderWidth; final double waviness;
+  _ShieldsPainter({required this.progress, required this.color, required this.borderWidth, required this.waviness});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final fill = Paint()..color = color.withValues(alpha: 0.22)..style = PaintingStyle.fill;
+    final stroke = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.5;
+    final w = (12 + borderWidth * 1.5).clamp(14.0, 28.0);
+    final h = w * 1.25;
+    final spacing = w + 8 + waviness;
+    _walkPerimeter(canvas, size, spacing, 12, (canvas, pos, edgeAngle, idx, prog) {
+      final bob = math.sin(prog * math.pi * 2 + idx * 0.9) * 2;
+      canvas.save(); canvas.translate(pos.dx, pos.dy + bob * 0.3); canvas.rotate(edgeAngle);
+      final path = Path()..moveTo(-w / 2, -h / 2)..lineTo(w / 2, -h / 2)..lineTo(w / 2, 0)..quadraticBezierTo(w / 2, h / 2, 0, h / 2)..quadraticBezierTo(-w / 2, h / 2, -w / 2, 0)..close();
+      canvas.drawPath(path, fill); canvas.drawPath(path, stroke);
+      // inner cross / gem
+      canvas.drawCircle(Offset(0, -2), 2, stroke);
+      canvas.restore();
+    }, progress);
+  }
+  @override bool shouldRepaint(_ShieldsPainter old) => old.progress != progress || old.color != color || old.borderWidth != borderWidth || old.waviness != waviness;
+}
+
+// ---------- FLAMES - DETAILED ----------
+class _FlamesPainter extends CustomPainter {
+  final double progress; final Color color; final double borderWidth; final double waviness;
+  _FlamesPainter({required this.progress, required this.color, required this.borderWidth, required this.waviness});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final h = (18 + borderWidth * 2).clamp(22.0, 42.0);
+    final spacing = 20 + waviness;
+    _walkPerimeter(canvas, size, spacing, 14, (canvas, pos, edgeAngle, idx, prog) {
+      final flick1 = 0.85 + 0.3 * math.sin(prog * math.pi * 2 * 2 + idx * 1.7);
+      final flick2 = 0.8 + 0.35 * math.sin(prog * math.pi * 2 * 3 + idx * 2.3 + 1);
+      final lean = math.sin(prog * math.pi * 2 + idx * 0.9) * 0.22;
+      canvas.save(); canvas.translate(pos.dx, pos.dy); canvas.rotate(edgeAngle - math.pi / 2 + lean);
+      // OUTER flame - big, wavy
+      final outer = Path()
+        ..moveTo(0, -h * flick1)
+        ..quadraticBezierTo(9, -h * 0.5, 7, -h * 0.1)
+        ..quadraticBezierTo(9, h * 0.25, 4, h / 2)
+        ..quadraticBezierTo(0, h * 0.65, -4, h / 2)
+        ..quadraticBezierTo(-9, h * 0.25, -7, -h * 0.1)
+        ..quadraticBezierTo(-9, -h * 0.5, 0, -h * flick1)
+        ..close();
+      canvas.drawPath(outer, Paint()..color = color.withValues(alpha: 0.9)..style = PaintingStyle.fill);
+      // MID flame - smaller, offset
+      final mid = Path()
+        ..moveTo(0, -h * 0.65 * flick2)
+        ..quadraticBezierTo(5, -h * 0.3, 4, 0)
+        ..quadraticBezierTo(4, h * 0.3, 0, h * 0.45)
+        ..quadraticBezierTo(-4, h * 0.3, -4, 0)
+        ..quadraticBezierTo(-5, -h * 0.3, 0, -h * 0.65 * flick2)
+        ..close();
+      canvas.drawPath(mid, Paint()..color = color.withValues(alpha: 0.6)..style = PaintingStyle.fill);
+      // INNER core - hot white-ish centre
+      final inner = Path()
+        ..moveTo(0, -h * 0.35 * flick1)
+        ..quadraticBezierTo(2.5, -h * 0.1, 2, h * 0.2)
+        ..quadraticBezierTo(0, h * 0.35, -2, h * 0.2)
+        ..quadraticBezierTo(-2.5, -h * 0.1, 0, -h * 0.35 * flick1)
+        ..close();
+      canvas.drawPath(inner, Paint()..color = Colors.white.withValues(alpha: 0.85)..style = PaintingStyle.fill);
+      // Ember dots
+      canvas.drawCircle(Offset(3 * math.sin(prog * 5 + idx), -h * 0.7), 1.1, Paint()..color = color..style = PaintingStyle.fill);
+      canvas.restore();
+    }, progress);
+  }
+  @override bool shouldRepaint(_FlamesPainter old) => old.progress != progress || old.color != color || old.borderWidth != borderWidth || old.waviness != waviness;
+}
+
+// ---------- STARS ----------
+class _StarsPainter extends CustomPainter {
+  final double progress; final Color color; final double borderWidth; final double waviness;
+  _StarsPainter({required this.progress, required this.color, required this.borderWidth, required this.waviness});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final fill = Paint()..color = color..style = PaintingStyle.fill;
+    final r = (6 + borderWidth).clamp(7.0, 16.0);
+    final spacing = r * 2 + 14 + waviness;
+    _walkPerimeter(canvas, size, spacing, 12, (canvas, pos, edgeAngle, idx, prog) {
+      final twinkle = 0.6 + 0.4 * math.sin(prog * math.pi * 2 + idx * 1.3);
+      final rot = prog * math.pi * 2 * (idx.isEven ? 1 : -1) * 0.3;
+      canvas.save(); canvas.translate(pos.dx, pos.dy); canvas.rotate(rot); canvas.scale(twinkle);
+      final path = Path();
+      for (int i = 0; i < 5; i++) {
+        final a1 = -math.pi / 2 + i * math.pi * 2 / 5;
+        final a2 = a1 + math.pi / 5;
+        final outer = Offset(math.cos(a1) * r, math.sin(a1) * r);
+        final inner = Offset(math.cos(a2) * r * 0.45, math.sin(a2) * r * 0.45);
+        if (i == 0) path.moveTo(outer.dx, outer.dy); else path.lineTo(outer.dx, outer.dy);
+        path.lineTo(inner.dx, inner.dy);
+      }
+      path.close(); canvas.drawPath(path, fill); canvas.restore();
+    }, progress);
+  }
+  @override bool shouldRepaint(_StarsPainter old) => old.progress != progress || old.color != color || old.borderWidth != borderWidth || old.waviness != waviness;
+}
+
+// ---------- RUNES ----------
+class _RunesPainter extends CustomPainter {
+  final double progress; final Color color; final double borderWidth; final double waviness;
+  _RunesPainter({required this.progress, required this.color, required this.borderWidth, required this.waviness});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final stroke = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = (1.2 + borderWidth * 0.3).clamp(1.2, 3.0)..strokeCap = StrokeCap.round;
+    final glow = Paint()..color = color.withValues(alpha: 0.25)..style = PaintingStyle.stroke..strokeWidth = 5..strokeCap = StrokeCap.round;
+    final h = (12 + borderWidth * 1.2).clamp(14.0, 26.0);
+    final spacing = 22 + waviness;
+    // Rune shapes: simple angular glyphs
+    List<List<Offset>> runes = [
+      [Offset(0, -0.5), Offset(0, 0.5), Offset(0.4, 0.1)], // like ᚱ
+      [Offset(-0.4, -0.5), Offset(-0.4, 0.5), Offset(0.4, -0.1), Offset(-0.4, 0.1)], // like ᚼ
+      [Offset(0, -0.5), Offset(0, 0.5), Offset(0.4, -0.3), Offset(0, 0)], // like ᚠ
+      [Offset(-0.4, -0.5), Offset(0.4, -0.5), Offset(0, 0.5)], // like ᚨ
+      [Offset(0, -0.5), Offset(-0.4, 0.5), Offset(0.4, 0.5), Offset(0, -0.5)], // diamond
+    ];
+    _walkPerimeter(canvas, size, spacing, 12, (canvas, pos, edgeAngle, idx, prog) {
+      final pulse = 0.7 + 0.3 * math.sin(prog * math.pi * 2 + idx * 0.9);
+      final glyph = runes[idx % runes.length];
+      canvas.save(); canvas.translate(pos.dx, pos.dy); canvas.rotate(edgeAngle); canvas.scale(pulse);
+      for (int i = 0; i < glyph.length - 1; i++) {
+        final a = Offset(glyph[i].dx * h, glyph[i].dy * h);
+        final b = Offset(glyph[i + 1].dx * h, glyph[i + 1].dy * h);
+        canvas.drawLine(a, b, glow); canvas.drawLine(a, b, stroke);
+      }
+      // vertical spine
+      canvas.drawLine(Offset(0, -h / 2), Offset(0, h / 2), glow);
+      canvas.drawLine(Offset(0, -h / 2), Offset(0, h / 2), stroke);
+      canvas.restore();
+    }, progress);
+  }
+  @override bool shouldRepaint(_RunesPainter old) => old.progress != progress || old.color != color || old.borderWidth != borderWidth || old.waviness != waviness;
+}
+
+// ---------- THORNS - DETAILED ----------
+class _ThornsPainter extends CustomPainter {
+  final double progress; final Color color; final double borderWidth; final double waviness;
+  _ThornsPainter({required this.progress, required this.color, required this.borderWidth, required this.waviness});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final vinePaint = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.6;
+    final thornPaint = Paint()..color = color..style = PaintingStyle.fill;
+    final leafPaint = Paint()..color = color.withValues(alpha: 0.3)..style = PaintingStyle.fill;
+    final len = (12 + borderWidth * 1.5).clamp(16.0, 32.0);
+    final spacing = 18 + waviness;
+    _walkPerimeter(canvas, size, spacing, 10, (canvas, pos, edgeAngle, idx, prog) {
+      final sway = math.sin(prog * math.pi * 2 + idx * 0.7) * 0.25;
+      canvas.save(); canvas.translate(pos.dx, pos.dy); canvas.rotate(edgeAngle - math.pi / 2 + sway);
+      // Vine - wavy horizontal
+      final vine = Path()..moveTo(-spacing / 2, 0)..quadraticBezierTo(-spacing / 4, -3, 0, 0)..quadraticBezierTo(spacing / 4, 3, spacing / 2, 0);
+      canvas.drawPath(vine, vinePaint);
+      // Main thorn - big, curved, sharp
+      final thorn = Path()
+        ..moveTo(-2, 0)
+        ..quadraticBezierTo(1, -len * 0.4, 5, -len)
+        ..quadraticBezierTo(2, -len * 0.5, 0, -len * 0.3)
+        ..quadraticBezierTo(-1, -len * 0.1, -2, 0)
+        ..close();
+      canvas.drawPath(thorn, thornPaint);
+      // Second smaller thorn opposite
+      final thorn2 = Path()
+        ..moveTo(2, 0)
+        ..quadraticBezierTo(0, len * 0.3, -4, len * 0.7)
+        ..quadraticBezierTo(-1, len * 0.4, 0, len * 0.2)
+        ..close();
+      canvas.drawPath(thorn2, thornPaint);
+      // Tiny leaf on vine
+      final leaf = Path()..moveTo(-6, 0)..quadraticBezierTo(-10, -4, -13, 0)..quadraticBezierTo(-10, 2, -6, 0)..close();
+      canvas.drawPath(leaf, leafPaint);
+      canvas.restore();
+    }, progress);
+  }
+  @override bool shouldRepaint(_ThornsPainter old) => old.progress != progress || old.color != color || old.borderWidth != borderWidth || old.waviness != waviness;
+}
+
+// ---------- FEATHERS - DETAILED ----------
+class _FeathersPainter extends CustomPainter {
+  final double progress; final Color color; final double borderWidth; final double waviness;
+  _FeathersPainter({required this.progress, required this.color, required this.borderWidth, required this.waviness});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final vaneFill = Paint()..color = color.withValues(alpha: 0.28)..style = PaintingStyle.fill;
+    final outline = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.1;
+    final barbPaint = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 0.7;
+    final len = (18 + borderWidth * 1.5).clamp(22.0, 40.0);
+    final wid = len * 0.35;
+    final spacing = len + 8 + waviness;
+    _walkPerimeter(canvas, size, spacing, 14, (canvas, pos, edgeAngle, idx, prog) {
+      final drift = math.sin(prog * math.pi * 2 + idx) * 3;
+      final tilt = math.sin(prog * math.pi * 2 + idx * 0.8) * 0.35;
+      canvas.save(); canvas.translate(pos.dx + drift * 0.3, pos.dy + drift); canvas.rotate(edgeAngle + tilt);
+      // Vane - soft, rounded, with split at top
+      final vane = Path()
+        ..moveTo(0, -len / 2)
+        ..quadraticBezierTo(wid, -len * 0.2, wid * 0.8, len * 0.2)
+        ..quadraticBezierTo(wid * 0.5, len * 0.45, 0, len / 2)
+        ..quadraticBezierTo(-wid * 0.5, len * 0.45, -wid * 0.8, len * 0.2)
+        ..quadraticBezierTo(-wid, -len * 0.2, 0, -len / 2)
+        ..close();
+      canvas.drawPath(vane, vaneFill); canvas.drawPath(vane, outline);
+      // Rachis - centre shaft, extends past vane
+      canvas.drawLine(Offset(0, -len / 2 - 2), Offset(0, len / 2 + 5), outline..strokeWidth = 1.4);
+      // Barbs - diagonal lines off rachis
+      for (int i = 0; i < 7; i++) {
+        final y = -len * 0.35 + i * len * 0.11;
+        final spread = wid * (0.9 - (i / 7) * 0.3);
+        canvas.drawLine(Offset(0, y), Offset(spread, y + 3), barbPaint);
+        canvas.drawLine(Offset(0, y), Offset(-spread, y + 3), barbPaint);
+      }
+      // Fluffy tip - little notch
+      canvas.drawLine(Offset(0, -len / 2), Offset(2, -len / 2 - 3), outline);
+      canvas.restore();
+    }, progress);
+  }
+  @override bool shouldRepaint(_FeathersPainter old) => old.progress != progress || old.color != color || old.borderWidth != borderWidth || old.waviness != waviness;
+}
+
+// ---------- CLAWS ----------
+class _ClawsPainter extends CustomPainter {
+  final double progress; final Color color; final double borderWidth; final double waviness;
+  _ClawsPainter({required this.progress, required this.color, required this.borderWidth, required this.waviness});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final clawPaint = Paint()..color = color..style = PaintingStyle.fill;
+    final len = (12 + borderWidth * 2).clamp(14.0, 32.0);
+    final spacing = 22 + waviness;
+    _walkPerimeter(canvas, size, spacing, 12, (canvas, pos, edgeAngle, idx, prog) {
+      // 3 claw slashes per spot, staggered
+      for (int c = 0; c < 3; c++) {
+        final slashProg = ((prog + c * 0.15 + idx * 0.05) % 1.0);
+        final alpha = slashProg < 0.5 ? slashProg * 2 : (1 - slashProg) * 2;
+        final slashLen = len * (0.5 + c * 0.25) * (0.8 + 0.2 * math.sin(prog * math.pi * 2 + idx + c));
+        canvas.save();
+        canvas.translate(pos.dx + (c - 1) * 4, pos.dy);
+        canvas.rotate(edgeAngle - math.pi / 2 + (c - 1) * 0.2);
+        final path = Path()..moveTo(0, 0)..quadraticBezierTo(3, -slashLen * 0.5, 0, -slashLen)..quadraticBezierTo(-2, -slashLen * 0.5, 0, 0)..close();
+        canvas.drawPath(path, clawPaint..color = color.withValues(alpha: (alpha * 0.9).clamp(0.0, 1.0)));
+        canvas.restore();
+      }
+    }, progress);
+  }
+  @override bool shouldRepaint(_ClawsPainter old) => old.progress != progress || old.color != color || old.borderWidth != borderWidth || old.waviness != waviness;
 }
