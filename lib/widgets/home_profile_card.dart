@@ -5,8 +5,7 @@ import '../settings.dart';
 import 'shared.dart';
 import 'holo_card_v2.dart';
 import 'lore_card_face.dart';
-import 'card_rarity.dart';
-import 'card_shape.dart';
+import 'animated_border.dart';
 
 class ProfileStat {
   final String key;
@@ -29,7 +28,6 @@ class HomeProfileCard extends StatefulWidget {
   final VoidCallback? onLongPress;
   final bool fillHeight;
   final String? avatarUrl;
-  final CardRarity rarity;
 
   const HomeProfileCard({
     super.key,
@@ -42,8 +40,6 @@ class HomeProfileCard extends StatefulWidget {
     this.onLongPress,
     this.fillHeight = false,
     this.avatarUrl,
-    // TEMP TEST: Legendary so you can see it. We'll set this back to Common after.
-    this.rarity = CardRarity.legendary,
   });
 
   @override
@@ -118,11 +114,7 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
   @override
   Widget build(BuildContext context) {
     final seed = _stableSeed(widget.code);
-    final rarity = widget.rarity;
-    // Legendary forces Lore gold. Common / Mythic use your chosen profile colour.
-    final effectiveAccent = rarity == CardRarity.legendary
-        ? Colors.transparent
-        : appSettings.profileBorderColor;
+    final effectiveAccent = appSettings.profileBorderColor;
 
     return AnimatedBuilder(
       animation: appSettings,
@@ -131,49 +123,34 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           child: HoloCardV2(
             accent: effectiveAccent,
-            intensity: rarity.holoIntensity,
-            maxTiltDegrees: rarity.maxTiltDegrees,
-            parallaxStrength: rarity.parallaxStrength,
+            intensity: 1.0,
+            maxTiltDegrees: 8.0,
+            parallaxStrength: 0.5,
             seed: seed,
             child: LoreTap(
               onTap: widget.onTap,
               onLongPress: widget.onLongPress,
-              child: ClipPath(
-                clipper: rarity.shape.clipper,
-                child: Stack(
-                  children: [
-                    Container(
-                      decoration: _cardDecoration(effectiveAccent),
-                      child: Padding(
-                        padding: EdgeInsets.all(
-                          rarity == CardRarity.legendary ? 0 : 6,
-                        ),
-                        child: LoreCardFace(
-                          title: widget.name,
-                          code: widget.code,
-                          subtitle: widget.subtitle,
-                          seed: seed,
-                          accent: effectiveAccent,
-                          fillHeight: widget.fillHeight,
-                          backgroundImageUrl: widget.avatarUrl,
-                          rarity: widget.rarity,
-                          art: _buildBioText(),
-                          statsStrip: widget.stats.isEmpty
-                              ? null
-                              : _buildStatsRow(),
-                          footer: _buildFooterRow(),
-                        ),
-                      ),
+              child: AnimatedBorder(
+                color: effectiveAccent,
+                child: Container(
+                  decoration: _cardDecoration(effectiveAccent),
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: LoreCardFace(
+                      title: widget.name,
+                      code: widget.code,
+                      subtitle: widget.subtitle,
+                      seed: seed,
+                      accent: effectiveAccent,
+                      fillHeight: widget.fillHeight,
+                      backgroundImageUrl: widget.avatarUrl,
+                      art: _buildBioText(),
+                      statsStrip: widget.stats.isEmpty
+                          ? null
+                          : _buildStatsRow(),
+                      footer: _buildFooterRow(),
                     ),
-                    // Blender gold on TOP of everything — this is the only border for Legendary
-                    if (rarity == CardRarity.legendary)
-                      Positioned.fill(
-                        child: Image.asset(
-                          'assets/frames/legendary_frame.png',
-                          fit: BoxFit.fill,
-                        ),
-                      ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -190,8 +167,7 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
       fontSize: 15,
       color: widget.bio.isEmpty
           ? cSmoke
-          : (appSettings.textColourFor('profile_bio') ??
-                cMist), // <-- Wired up!
+          : (appSettings.textColourFor('profile_bio') ?? cMist),
       fontStyle: FontStyle.italic,
       height: 1.9,
     ),
@@ -219,9 +195,7 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
         style: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w300,
-          color:
-              appSettings.textColourFor('profile_name') ??
-              cParchment, // <-- Wired up!
+          color: appSettings.textColourFor('profile_name') ?? cParchment,
           height: 1.1,
         ),
       ),
@@ -237,9 +211,7 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
           letterSpacing: 1.5,
           color:
               appSettings.textColourFor('profile_bio') ??
-              appSettings.profileBorderColor.withValues(
-                alpha: 0.7,
-              ), // <-- Wired up!
+              appSettings.profileBorderColor.withValues(alpha: 0.7),
         ),
       ),
     ],

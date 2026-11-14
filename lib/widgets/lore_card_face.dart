@@ -5,8 +5,6 @@ import '../theme.dart';
 import '../settings.dart';
 import 'card_frame.dart';
 import 'holo_parallax.dart';
-import 'card_rarity.dart';
-import 'card_shape.dart';
 
 
 /// The shared "Lore card" chrome. Renders the set bar, name banner,
@@ -23,7 +21,6 @@ class LoreCardFace extends StatelessWidget {
   final bool fillHeight;
   final Color accent;
   final String? backgroundImageUrl;
-  final CardRarity rarity;
 
   const LoreCardFace({
     super.key,
@@ -37,7 +34,6 @@ class LoreCardFace extends StatelessWidget {
     this.footer,
     this.fillHeight = false,
     this.backgroundImageUrl,
-    this.rarity = CardRarity.common,
   });
 
   String get _serial {
@@ -60,16 +56,14 @@ class LoreCardFace extends StatelessWidget {
   );
 
   @override
-  Widget build(BuildContext context) {
-  final isBlenderFrame = rarity == CardRarity.legendary;
-
-final spec = CardFrameSpec(
-  glow: isBlenderFrame ? false : rarity.glow,
-  ornate: isBlenderFrame ? false : rarity.ornate,
-  dense: isBlenderFrame ? false : rarity.dense,
-  seed: seed,
-  accent: accent,
-);
+Widget build(BuildContext context) {
+  final spec = CardFrameSpec(
+    glow: true,
+    ornate: false,
+    dense: false,
+    seed: seed,
+    accent: accent,
+  );
   Widget content = Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       child: Column(
@@ -92,11 +86,19 @@ final spec = CardFrameSpec(
             Expanded(
               child: HoloParallaxLayer(depth: 0.4, child: _buildArtZone()),
             )
-          else
+                    else
             SizedBox(
               height: 130,
               child: HoloParallaxLayer(depth: 0.4, child: _buildArtZone()),
             ),
+          if (statsStrip != null) ...[
+            const SizedBox(height: 12),
+            statsStrip!,
+          ],
+          if (footer != null) ...[
+            const SizedBox(height: 10),
+            footer!,
+          ],
         ],
       ),
     );
@@ -153,45 +155,14 @@ final spec = CardFrameSpec(
       );
     }
 
-            final baseCard = CardFrame(spec: spec, child: content);
-
-    final frameChild = rarity == CardRarity.legendary
-        ? Stack(
-            children: [
-              baseCard,
-              Positioned.fill(
-                child: Image.asset(
-                  'assets/frames/legendary_frame.png',
-                  fit: BoxFit.fill,
-                ),
-              ),
-            ],
-          )
-        : baseCard;
-
-    final clipper = rarity.shape.clipper;
-if (clipper == null) {
-  return CardFrame(spec: spec, child: content);
+            return CardFrame(spec: spec, child: content);
 }
-return ClipPath(
-  clipper: clipper,
-  child: CardFrame(spec: spec, child: content),
-);
-  }
 
   Widget _rule() => Container(
-    height: 1,
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [
-          Colors.transparent,
-          accent.withValues(alpha: 0.55),
-          Colors.transparent,
-        ],
-        stops: const [0.0, 0.5, 1.0],
-      ),
-    ),
-  );
+        height: 1,
+        color: accent.withValues(alpha: 0.25),
+      );
+
 
   Widget _buildSetBar() => Row(
     children: [

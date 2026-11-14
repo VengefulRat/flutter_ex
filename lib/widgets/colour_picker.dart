@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
+import '../settings.dart';
 
 class LoreColourPicker extends StatefulWidget {
   final Color current;
@@ -151,6 +152,57 @@ class _LoreColourPickerState extends State<LoreColourPicker> {
     );
   }
 
+    Widget _buildValueSlider({
+    required String label,
+    required String valueLabel,
+    required double value,
+    required double min,
+    required double max,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(label,
+                style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 9,
+                    color: cSmoke,
+                    letterSpacing: 2)),
+            const Spacer(),
+            Text(valueLabel,
+                style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 9,
+                    color: cGold,
+                    letterSpacing: 1)),
+          ],
+        ),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: cGold,
+            inactiveTrackColor: cAsh,
+            thumbColor: cParchment,
+            overlayColor: cGold.withValues(alpha: 0.2),
+            trackHeight: 2,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+          ),
+          child: Slider(
+            value: value.clamp(min, max),
+            min: min,
+            max: max,
+            onChanged: (v) {
+              onChanged(v);
+              setState(() {});
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -263,9 +315,52 @@ class _LoreColourPickerState extends State<LoreColourPicker> {
                 onChanged: (v) => _updateHSV(v: v),
               ),
               
+                            const SizedBox(height: 24),
+              Container(height: 1, color: cAsh.withValues(alpha: 0.4)),
+              const SizedBox(height: 16),
+              const Text('ANIMATED BORDER',
+                  style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 9,
+                      color: cGold,
+                      letterSpacing: 4)),
+              const SizedBox(height: 16),
+              _buildValueSlider(
+                label: 'THICKNESS',
+                valueLabel: appSettings.animatedBorderThickness.toStringAsFixed(1),
+                value: appSettings.animatedBorderThickness,
+                min: 1,
+                max: 8,
+                onChanged: (v) => appSettings.setAnimatedBorderThickness(v),
+              ),
+              _buildValueSlider(
+                label: 'WAVINESS',
+                valueLabel: appSettings.animatedBorderWaviness.toStringAsFixed(1),
+                value: appSettings.animatedBorderWaviness,
+                min: 0,
+                max: 12,
+                onChanged: (v) => appSettings.setAnimatedBorderWaviness(v),
+              ),
+              _buildValueSlider(
+                label: 'SPEED',
+                valueLabel: '${appSettings.animatedBorderSpeed.toStringAsFixed(1)}x',
+                value: appSettings.animatedBorderSpeed,
+                min: 0.3,
+                max: 2.5,
+                onChanged: (v) => appSettings.setAnimatedBorderSpeed(v),
+              ),
+              _buildValueSlider(
+                label: 'OPACITY',
+                valueLabel:
+                    '${(appSettings.animatedBorderOpacity * 100).round()}%',
+                value: appSettings.animatedBorderOpacity,
+                min: 0.3,
+                max: 1.0,
+                onChanged: (v) => appSettings.setAnimatedBorderOpacity(v),
+              ),
               const SizedBox(height: 24),
-              
-              GestureDetector(
+
+                            GestureDetector(
                 onTap: () {
                   widget.onPicked(_picked);
                   Navigator.pop(context);
@@ -274,9 +369,13 @@ class _LoreColourPickerState extends State<LoreColourPicker> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   color: cParchment,
-                  child: const Center(child: Text('Use this colour',
-                      style: TextStyle(fontFamily: 'monospace',
-                          fontSize: 10, color: cVoid, letterSpacing: 2))),
+                  child: const Center(
+                    child: Text('Use this colour',
+                        style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 10,
+                            color: cVoid,
+                            letterSpacing: 2))),
                 ),
               ),
             ]),
