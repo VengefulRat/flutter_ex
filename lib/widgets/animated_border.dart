@@ -282,12 +282,12 @@ class _GearsPainter extends CustomPainter {
         canvas.drawLine(center, center + Offset(math.cos(a), math.sin(a)) * gearRadius * 0.45, strokePaint);
       }
     }
-    int gearIndex = 0;
+        int gearIndex = 0;
     void drawEdge(Offset start, Offset end) {
       final total = (end - start).distance;
       final count = (total / spacing).floor();
-      for (int i = 0; i <= count; i++) {
-        final t = count == 0 ? 0.0 : i / count;
+      for (int i = 0; i < count; i++) {
+        final t = (i + 0.5) / count; // half-step offset, never lands exactly on corner
         drawGear(Offset.lerp(start, end, t)!, gearIndex); gearIndex++;
       }
     }
@@ -346,23 +346,38 @@ class _DicePainter extends CustomPainter {
   @override bool shouldRepaint(_DicePainter old) => old.progress != progress || old.isRolling != isRolling || old.diceValues != diceValues || old.color != color || old.borderWidth != borderWidth || old.waviness != waviness;
 }
 
-// ---------- HELPER: walk around perimeter ----------
+// ---------- HELPER: walk around perimeter - ONE loop, no corner overlap ----------
 typedef _ShapeDrawer = void Function(Canvas canvas, Offset pos, double edgeAngle, int index, double progress);
 
 void _walkPerimeter(Canvas canvas, Size size, double spacing, double inset, _ShapeDrawer draw, double progress) {
-  final tl = Offset(inset, inset); final tr = Offset(size.width - inset, inset);
-  final br = Offset(size.width - inset, size.height - inset); final bl = Offset(inset, size.height - inset);
-  final edges = [[tl, tr, 0.0], [tr, br, math.pi / 2], [br, bl, math.pi], [bl, tl, -math.pi / 2]];
-  int idx = 0;
-  for (final e in edges) {
-    final start = e[0] as Offset; final end = e[1] as Offset; final ang = e[2] as double;
-    final total = (end - start).distance;
-    final count = (total / spacing).floor();
-    for (int i = 0; i <= count; i++) {
-      final t = count == 0 ? 0.0 : i / count;
-      draw(canvas, Offset.lerp(start, end, t)!, ang, idx, progress);
-      idx++;
+  final w = size.width - inset * 2;
+  final h = size.height - inset * 2;
+  final perimeter = 2 * (w + h);
+  final count = (perimeter / spacing).floor().clamp(4, 200);
+  final step = perimeter / count;
+
+  for (int i = 0; i < count; i++) {
+    final d = i * step + step / 2; // offset by half-step so we never land exactly on a corner
+    Offset pos;
+    double angle;
+    if (d < w) {
+      // Top edge, left -> right
+      pos = Offset(inset + d, inset);
+      angle = 0.0;
+    } else if (d < w + h) {
+      // Right edge, top -> bottom
+      pos = Offset(size.width - inset, inset + (d - w));
+      angle = math.pi / 2;
+    } else if (d < 2 * w + h) {
+      // Bottom edge, right -> left
+      pos = Offset(size.width - inset - (d - w - h), size.height - inset);
+      angle = math.pi;
+    } else {
+      // Left edge, bottom -> top
+      pos = Offset(inset, size.height - inset - (d - 2 * w - h));
+      angle = -math.pi / 2;
     }
+    draw(canvas, pos, angle, i, progress);
   }
 }
 
@@ -459,24 +474,68 @@ class _LeavesPainter extends CustomPainter {
   @override bool shouldRepaint(_LeavesPainter old) => old.progress != progress || old.color != color || old.borderWidth != borderWidth || old.waviness != waviness;
 }
 
-// ---------- SHIELDS ----------
+// ---------- SHIELDS - DETAILED ----------
 class _ShieldsPainter extends CustomPainter {
   final double progress; final Color color; final double borderWidth; final double waviness;
   _ShieldsPainter({required this.progress, required this.color, required this.borderWidth, required this.waviness});
   @override
   void paint(Canvas canvas, Size size) {
     final fill = Paint()..color = color.withValues(alpha: 0.22)..style = PaintingStyle.fill;
-    final stroke = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.5;
-    final w = (12 + borderWidth * 1.5).clamp(14.0, 28.0);
-    final h = w * 1.25;
-    final spacing = w + 8 + waviness;
-    _walkPerimeter(canvas, size, spacing, 12, (canvas, pos, edgeAngle, idx, prog) {
-      final bob = math.sin(prog * math.pi * 2 + idx * 0.9) * 2;
+    final outline = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.6;
+    final innerLine = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 0.9;
+    final bossPaint = Paint()..color = color..style = PaintingStyle.fill;
+    final rivetPaint = Paint()..color = color..style = PaintingStyle.fill;
+    final w = (14 + borderWidth * 1.5).clamp(18.0, 32.0);
+    final h = w * 1.35;
+    final spacing = w + 10 + waviness;
+    _walkPerimeter(canvas, size, spacing, 14, (canvas, pos, edgeAngle, idx, prog) {
+      final bob = math.sin(prog * math.pi * 2 + idx * 0.9) * 1.5;
+      final shine = 0.7 + 0.3 * math.sin(prog * math.pi * 2 + idx * 1.1);
       canvas.save(); canvas.translate(pos.dx, pos.dy + bob * 0.3); canvas.rotate(edgeAngle);
-      final path = Path()..moveTo(-w / 2, -h / 2)..lineTo(w / 2, -h / 2)..lineTo(w / 2, 0)..quadraticBezierTo(w / 2, h / 2, 0, h / 2)..quadraticBezierTo(-w / 2, h / 2, -w / 2, 0)..close();
-      canvas.drawPath(path, fill); canvas.drawPath(path, stroke);
-      // inner cross / gem
-      canvas.drawCircle(Offset(0, -2), 2, stroke);
+      // OUTER shield shape - heater shield
+      final outer = Path()
+        ..moveTo(-w / 2, -h / 2)
+        ..lineTo(w / 2, -h / 2)
+        ..lineTo(w / 2, -h * 0.1)
+        ..quadraticBezierTo(w / 2, h * 0.35, 0, h / 2)
+        ..quadraticBezierTo(-w / 2, h * 0.35, -w / 2, -h * 0.1)
+        ..close();
+      canvas.drawPath(outer, fill);
+      canvas.drawPath(outer, outline);
+      // INNER border - inset shield
+      final inset = 3.5;
+      final inner = Path()
+        ..moveTo(-w / 2 + inset, -h / 2 + inset)
+        ..lineTo(w / 2 - inset, -h / 2 + inset)
+        ..lineTo(w / 2 - inset, -h * 0.1)
+        ..quadraticBezierTo(w / 2 - inset, h * 0.32, 0, h / 2 - inset)
+        ..quadraticBezierTo(-w / 2 + inset, h * 0.32, -w / 2 + inset, -h * 0.1)
+        ..close();
+      canvas.drawPath(inner, innerLine);
+      // VERTICAL ridge down centre - gives it depth
+      canvas.drawLine(Offset(0, -h / 2 + inset), Offset(0, h / 2 - inset - 2), innerLine..strokeWidth = 0.7);
+      // BOSS - centre dome
+      canvas.drawCircle(Offset(0, -h * 0.05), w * 0.18 * shine, bossPaint);
+      canvas.drawCircle(Offset(0, -h * 0.05), w * 0.18 * shine, outline..strokeWidth = 1.0);
+      // Gem dot in boss
+      canvas.drawCircle(Offset(0, -h * 0.05), 1.3, Paint()..color = Colors.white.withValues(alpha: 0.85)..style = PaintingStyle.fill);
+      // RIVETS - 4 corners + top
+      final rivets = [
+        Offset(-w / 2 + 3, -h / 2 + 3),
+        Offset(w / 2 - 3, -h / 2 + 3),
+        Offset(-w / 2 + 3, -h * 0.05),
+        Offset(w / 2 - 3, -h * 0.05),
+        Offset(0, -h / 2 + 3),
+      ];
+      for (final r in rivets) {
+        canvas.drawCircle(r, 1.2, rivetPaint);
+      }
+      // BOTTOM chevron - little V near point
+      final chevron = Path()
+        ..moveTo(-w * 0.22, h * 0.18)
+        ..lineTo(0, h * 0.28)
+        ..lineTo(w * 0.22, h * 0.18);
+      canvas.drawPath(chevron, innerLine..strokeWidth = 1.1);
       canvas.restore();
     }, progress);
   }
