@@ -819,7 +819,7 @@ class AppSettings extends ChangeNotifier {
   }
 
   Future<void> setAnimatedBorderPattern(String v) async {
-        if (v != 'waves' && v != 'spikes' && v != 'gears' && v != 'dice') return;
+        if (v != 'waves' && v != 'spikes' && v != 'gears' && v != 'dice' && v != 'swords' && v != 'leaves' && v != 'shields' && v != 'flames' && v != 'stars' && v != 'runes' && v != 'thorns' && v != 'feathers' && v != 'claws') return;
     _animatedBorderPattern = v;
     (await SharedPreferences.getInstance()).setString(
       _kAnimatedBorderPattern,

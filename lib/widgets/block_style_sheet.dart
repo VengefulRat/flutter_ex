@@ -942,7 +942,7 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
   }
 
   Widget _patternRow() {
-    const options = ['waves', 'spikes', 'gears', 'dice'];
+        const options = ['waves', 'spikes', 'gears', 'dice', 'swords', 'leaves', 'shields', 'flames', 'stars', 'runes', 'thorns', 'feathers', 'claws'];
     return Wrap(
       spacing: 6,
       runSpacing: 6,
