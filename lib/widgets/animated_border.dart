@@ -34,7 +34,7 @@ class AnimatedBorder extends StatefulWidget {
   /// This never changes the card's size — only where the frame is painted.
   final double? frameOutset;
 
-    const AnimatedBorder({
+  const AnimatedBorder({
     super.key,
     required this.child,
     required this.color,
@@ -49,6 +49,29 @@ class AnimatedBorder extends StatefulWidget {
   @override
   State<AnimatedBorder> createState() => _AnimatedBorderState();
 }
+
+/// Per-pattern breathing room, added on top of the user's Frame outset
+/// slider. The slider is still the master control — this just means
+/// Stars/Runes always float a touch prouder than Waves, without the
+/// user having to re-drag the slider on every pattern switch.
+///
+/// An explicit widget.frameOutset still wins outright (see build):
+/// this bonus only applies to the settings-driven outset.
+const Map<AnimatedBorderPattern, double> _patternOutsetBonus = {
+  AnimatedBorderPattern.waves: 0,
+  AnimatedBorderPattern.spikes: 0,
+  AnimatedBorderPattern.gears: 0,
+  AnimatedBorderPattern.dice: 2,
+  AnimatedBorderPattern.swords: 1,
+  AnimatedBorderPattern.leaves: 1,
+  AnimatedBorderPattern.shields: 1,
+  AnimatedBorderPattern.flames: 2,
+  AnimatedBorderPattern.stars: 4,
+  AnimatedBorderPattern.runes: 4,
+  AnimatedBorderPattern.thorns: 2,
+  AnimatedBorderPattern.feathers: 3,
+  AnimatedBorderPattern.claws: 1,
+};
 
 class _AnimatedBorderState extends State<AnimatedBorder>
     with TickerProviderStateMixin {
@@ -257,7 +280,7 @@ class _AnimatedBorderState extends State<AnimatedBorder>
             );
         }
 
-                // DECOUPLED LAYOUT:
+        // DECOUPLED LAYOUT:
         // - widget.child is laid out at its NATURAL size, with no padding.
         //   Thickness / waviness / pattern can no longer resize the card.
         // - The frame is a separate overlay layer, positioned with a
@@ -266,7 +289,15 @@ class _AnimatedBorderState extends State<AnimatedBorder>
         //   bleed past the card edge instead of being clipped to it.
         // - foregroundPainter is kept: the frame still paints ON TOP,
         //   just on its own layer now, not as part of the card.
-        final outset = widget.frameOutset ?? appSettings.animatedBorderFrameOutset;
+        // Effective outset = user slider + per-pattern bonus.
+        // Effective outset = user slider + per-pattern bonus.
+        // pattern was already resolved above, before the painter switch,
+        // so we just re-use it here. An explicit widget.frameOutset
+        // bypasses the bonus — explicit wins.
+        final outset =
+            widget.frameOutset ??
+            (appSettings.animatedBorderFrameOutset +
+                (_patternOutsetBonus[pattern] ?? 0));
         final content = Stack(
           clipBehavior: Clip.none,
           children: [
