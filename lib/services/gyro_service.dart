@@ -20,6 +20,7 @@ class GyroService {
   StreamSubscription<AccelerometerEvent>? _sub;
   _LifecycleListener? _lifecycle;
   int _refCount = 0;
+  bool _active = false;
 
   Offset _raw = Offset.zero;
   Offset _baseline = Offset.zero;
@@ -48,8 +49,13 @@ class GyroService {
   }
 
   void _start() {
+    if (_active) return;
+    _active = true;
     try {
-      _lifecycle = _LifecycleListener(onResume: calibrate);
+      _lifecycle = _LifecycleListener(
+        onResume: calibrate,
+        isActive: () => _active,
+      );
       WidgetsBinding.instance.addObserver(_lifecycle!);
 
       _sub = accelerometerEventStream(
@@ -63,6 +69,7 @@ class GyroService {
   }
 
   void _stop() {
+    _active = false;
     _sub?.cancel();
     _sub = null;
     if (_lifecycle != null) {
@@ -76,6 +83,7 @@ class GyroService {
   }
 
   void _onEvent(AccelerometerEvent e) {
+    if (!_active) return;
     final roll = atan2(e.x, e.y);
     final pitch = atan2(e.z, e.y);
     final nx = (roll / 0.45).clamp(-1.0, 1.0);
@@ -109,14 +117,17 @@ class GyroService {
 
 class _LifecycleListener with WidgetsBindingObserver {
   final VoidCallback onResume;
-  _LifecycleListener({required this.onResume});
+  final bool Function() isActive;
+  _LifecycleListener({required this.onResume, required this.isActive});
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       // Small delay so the accelerometer delivers fresh data after
       // resume. 300ms is enough for 60Hz to have settled.
-      Future.delayed(const Duration(milliseconds: 300), onResume);
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (isActive()) onResume();
+      });
     }
   }
 }

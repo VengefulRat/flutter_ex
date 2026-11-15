@@ -2,10 +2,32 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-
 class MapSelectionScreen extends StatelessWidget {
   final String worldName;
   const MapSelectionScreen({super.key, required this.worldName});
+
+  Future<void> _openMap(BuildContext context, String urlString) async {
+    final url = Uri.parse(urlString);
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Could not open browser';
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: cInk,
+            content: Text(
+              'Could not open the map generator. Check your browser and try again.',
+              style: TextStyle(color: cParchment, fontStyle: FontStyle.italic),
+            ),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,8 +37,12 @@ class MapSelectionScreen extends StatelessWidget {
         backgroundColor: cInk,
         iconTheme: const IconThemeData(color: cSmoke),
         title: Text(
-          'Map Generator',
-          style: const TextStyle(fontFamily: 'monospace', fontSize: 14, color: cParchment),
+          'Map for $worldName',
+          style: const TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 14,
+            color: cParchment,
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -66,42 +92,63 @@ class MapSelectionScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 32),
+            Text(
+              'Give $worldName its shape.',
+              style: const TextStyle(
+                fontSize: 20,
+                color: cParchment,
+                fontWeight: FontWeight.w300,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Every world deserves a map its stories can walk across. '
+              'Pick a generator below, build it, then bring it home.',
+              style: TextStyle(
+                fontSize: 13,
+                color: cSmoke,
+                fontStyle: FontStyle.italic,
+                height: 1.6,
+              ),
+            ),
+            const SizedBox(height: 24),
             const Text(
               'Choose a generator:',
-              style: TextStyle(fontSize: 16, color: cMist, fontStyle: FontStyle.italic),
+              style: TextStyle(
+                fontSize: 16,
+                color: cMist,
+                fontStyle: FontStyle.italic,
+              ),
             ),
             const SizedBox(height: 16),
-            
+
             // ── WORLD MAP CARD (Azgaar) ──
             _MapOptionCard(
               title: 'World Map',
-              subtitle: 'Full continents, factions, and religions. Best for large-scale world building.',
+              subtitle:
+                  'Full continents, factions, and religions. Best for large-scale world building.',
               icon: Icons.public,
               accent: cGold,
-              onTap: () async {
-                final url = Uri.parse('https://azgaar.github.io/Fantasy-Map-Generator/');
-                if (await canLaunchUrl(url)) {
-                  await launchUrl(url, mode: LaunchMode.externalApplication);
-                }
-              },
+              onTap: () => _openMap(
+                context,
+                'https://azgaar.github.io/Fantasy-Map-Generator/',
+              ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // ── TOWN MAP CARD (Fantasy Town Generator) ──
             _MapOptionCard(
               title: 'Town Map',
-              subtitle: 'Detailed settlements and streets. No account needed to generate or export.',
+              subtitle:
+                  'Detailed settlements and streets. No account needed to generate or export.',
               icon: Icons.location_city,
               accent: cIce,
-              onTap: () async {
-                final url = Uri.parse('https://www.fantasytowngenerator.com/');
-                if (await canLaunchUrl(url)) {
-                  await launchUrl(url, mode: LaunchMode.externalApplication);
-                }
-              },
+              onTap: () =>
+                  _openMap(context, 'https://www.fantasytowngenerator.com/'),
             ),
           ],
         ),
@@ -140,13 +187,14 @@ class _MapOptionCard extends StatelessWidget {
               color: accent.withValues(alpha: 0.1),
               blurRadius: 20,
               spreadRadius: 2,
-            )
+            ),
           ],
         ),
         child: Row(
           children: [
             Container(
-              width: 50, height: 50,
+              width: 50,
+              height: 50,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: accent.withValues(alpha: 0.1),
@@ -158,14 +206,24 @@ class _MapOptionCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w300,
-                    fontStyle: FontStyle.italic, color: accent,
-                  )),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w300,
+                      fontStyle: FontStyle.italic,
+                      color: accent,
+                    ),
+                  ),
                   const SizedBox(height: 6),
-                  Text(subtitle, style: const TextStyle(
-                    fontSize: 12, color: cSmoke, height: 1.4,
-                  )),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: cSmoke,
+                      height: 1.4,
+                    ),
+                  ),
                 ],
               ),
             ),

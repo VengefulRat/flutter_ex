@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'holo_parallax.dart';
 import '../services/gyro_service.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; 
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class HoloCardV2 extends StatefulWidget {
   final Widget child;
@@ -43,13 +43,10 @@ class _RotState {
   bool get isRest => rotateX == 0 && rotateY == 0;
 }
 
-class _HoloCardV2State extends State<HoloCardV2>
-    with TickerProviderStateMixin {
+class _HoloCardV2State extends State<HoloCardV2> with TickerProviderStateMixin {
   ui.FragmentShader? _shader;
-  final ValueNotifier<_RotState> _rot =
-      ValueNotifier(const _RotState.rest());
-  final ValueNotifier<Offset> _light =
-      ValueNotifier(const Offset(0.5, 0.35));
+  final ValueNotifier<_RotState> _rot = ValueNotifier(const _RotState.rest());
+  final ValueNotifier<Offset> _light = ValueNotifier(const Offset(0.5, 0.35));
   late final AnimationController _activeCtrl;
   late final AnimationController _timeCtrl;
 
@@ -62,6 +59,7 @@ class _HoloCardV2State extends State<HoloCardV2>
   // Gyro-driven tilt
   double _gyroX = 0;
   double _gyroY = 0;
+  bool _gyroAcquired = false;
 
   @override
   void initState() {
@@ -77,14 +75,34 @@ class _HoloCardV2State extends State<HoloCardV2>
     _loadShader();
     if (widget.gyroEnabled && !kIsWeb) {
       GyroService.instance.acquire();
+      _gyroAcquired = true;
       GyroService.instance.tilt.addListener(_onGyroUpdate);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant HoloCardV2 oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.gyroEnabled == widget.gyroEnabled) return;
+    if (widget.gyroEnabled && !kIsWeb && !_gyroAcquired) {
+      GyroService.instance.acquire();
+      _gyroAcquired = true;
+      GyroService.instance.tilt.addListener(_onGyroUpdate);
+    } else if (!widget.gyroEnabled && _gyroAcquired) {
+      GyroService.instance.tilt.removeListener(_onGyroUpdate);
+      GyroService.instance.release();
+      _gyroAcquired = false;
+      _gyroX = 0;
+      _gyroY = 0;
+      _updateRotation();
     }
   }
 
   Future<void> _loadShader() async {
     try {
-      final program =
-          await ui.FragmentProgram.fromAsset('shaders/foil_overlay.frag');
+      final program = await ui.FragmentProgram.fromAsset(
+        'shaders/foil_overlay.frag',
+      );
       if (!mounted) return;
       setState(() => _shader = program.fragmentShader());
     } catch (e) {
@@ -106,7 +124,7 @@ class _HoloCardV2State extends State<HoloCardV2>
     _updateRotation();
   }
 
-    void _handlePointer(PointerEvent e) {
+  void _handlePointer(PointerEvent e) {
     final box = context.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize) return;
     if (kIsWeb && e is PointerMoveEvent && e.buttons == 0) return;
@@ -127,15 +145,15 @@ class _HoloCardV2State extends State<HoloCardV2>
   } // <--- THIS BRACKET CLOSES _handlePointer
 
   // THIS IS THE NEW METHOD, IT MUST BE OUTSIDE ^
-    void _handleHover(PointerHoverEvent e) {
+  void _handleHover(PointerHoverEvent e) {
     if (_fingerActive) return;
-    
+
     final box = context.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize) return;
     final local = e.localPosition;
     final nx = (local.dx / box.size.width).clamp(0.0, 1.0);
     final ny = (local.dy / box.size.height).clamp(0.0, 1.0);
-    
+
     // Only update the light position for the shader and parallax
     _light.value = Offset(nx, ny);
 
@@ -171,9 +189,10 @@ class _HoloCardV2State extends State<HoloCardV2>
 
   @override
   void dispose() {
-    if (widget.gyroEnabled && !kIsWeb) {
+    if (_gyroAcquired) {
       GyroService.instance.tilt.removeListener(_onGyroUpdate);
       GyroService.instance.release();
+      _gyroAcquired = false;
     }
     _activeCtrl.dispose();
     _timeCtrl.dispose();
@@ -184,7 +203,8 @@ class _HoloCardV2State extends State<HoloCardV2>
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.enabled || _shader == null) return widget.child;
+    if (!widget.enabled) return widget.child;
+    final shader = _shader;
 
     return RepaintBoundary(
       child: MouseRegion(
@@ -216,13 +236,16 @@ class _HoloCardV2State extends State<HoloCardV2>
                       maxParallaxOffset: widget.parallaxStrength,
                       child: widget.child,
                     ),
-                    Positioned.fill(
-                      child: IgnorePointer(
+                    if (shader != null)
+                      Positioned.fill(
+                        child: IgnorePointer(
                         child: RepaintBoundary(
                           child: AnimatedBuilder(
-                            animation: Listenable.merge(
-                              [_activeCtrl, _timeCtrl, _light],
-                            ),
+                            animation: Listenable.merge([
+                              _activeCtrl,
+                              _timeCtrl,
+                              _light,
+                            ]),
                             builder: (_, _) {
                               final bgLum = widget.bgColor.computeLuminance();
                               final isBright = bgLum > 0.35;
@@ -230,10 +253,11 @@ class _HoloCardV2State extends State<HoloCardV2>
                                   widget.intensity * (1.0 - bgLum * 0.85);
                               return CustomPaint(
                                 painter: _FoilPainter(
-                                  shader: _shader!,
+                                  shader: shader,
                                   light: _light.value,
                                   active: _activeCtrl.value,
-                                  time: DateTime.now().millisecondsSinceEpoch /
+                                  time:
+                                      DateTime.now().millisecondsSinceEpoch /
                                       1000.0,
                                   intensity: effectiveIntensity,
                                   accent: widget.accent,
@@ -257,7 +281,7 @@ class _HoloCardV2State extends State<HoloCardV2>
       ),
     );
   }
-    }
+}
 
 class _FoilPainter extends CustomPainter {
   final ui.FragmentShader shader;

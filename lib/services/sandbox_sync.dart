@@ -41,14 +41,19 @@ class SandboxSync {
   static Future<void> _flushWorlds() async {
     final worlds = _pendingWorlds;
     if (worlds == null) return;
-    _pendingWorlds = null;
     final code = _auth.currentCode;
+    // No code yet — keep pending, it will flush on next push/flush.
     if (code == null) return;
     try {
-      await _db.collection('users').doc(code).update({
+      // set(merge) not update(): update() throws if the user doc
+      // doesn't exist yet, which drops a new user's first save.
+      await _db.collection('users').doc(code).set({
         'sandboxWorlds': jsonEncode(worlds.map((w) => w.toJson()).toList()),
         'sandboxUpdatedAt': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
+      // Only clear pending on success — a failed write keeps its data
+      // for the next push/flush instead of vanishing.
+      if (identical(_pendingWorlds, worlds)) _pendingWorlds = null;
     } catch (e) {
       print('[SandboxSync] worlds push failed: $e');
     }
@@ -57,14 +62,14 @@ class SandboxSync {
   static Future<void> _flushChars() async {
     final chars = _pendingChars;
     if (chars == null) return;
-    _pendingChars = null;
     final code = _auth.currentCode;
     if (code == null) return;
     try {
-      await _db.collection('users').doc(code).update({
+      await _db.collection('users').doc(code).set({
         'sandboxCharacters': jsonEncode(chars.map((c) => c.toJson()).toList()),
         'sandboxUpdatedAt': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
+      if (identical(_pendingChars, chars)) _pendingChars = null;
     } catch (e) {
       print('[SandboxSync] characters push failed: $e');
     }
@@ -72,13 +77,12 @@ class SandboxSync {
 
   static Future<void> syncOnLogin() async {
     final pull = await SandboxSync.pull();
-    if (pull == null) {
-      await SandboxStorage.saveWorlds(<WorldEntry>[]);
-      await SandboxStorage.saveCharacters(<CharacterEntry>[]);
-      return;
-    }
+    // pull == null means "no usable cloud data OR the pull failed"
+    // (no doc, no network, parse error). In ALL of those cases the
+    // safe move is keep local data — never wipe it.
+    if (pull == null) return;
     await SandboxStorage.saveWorlds(pull.worlds);
-    await SandboxStorage.saveCharacters(pull.characters); // <-- uses pull.characters, which is correct
+    await SandboxStorage.saveCharacters(pull.characters);
   }
 
   static Future<SandboxPull?> pull() async {
@@ -107,6 +111,10 @@ class SandboxSync {
           }
         } catch (e) {
           print('[SandboxSync] worlds parse failed: $e');
+          // Corrupt on one side => treat the whole pull as unusable,
+          // so syncOnLogin keeps local data instead of overwriting
+          // one side with empty.
+          return null;
         }
       }
       if (charsRaw != null) {
@@ -119,6 +127,7 @@ class SandboxSync {
           }
         } catch (e) {
           print('[SandboxSync] characters parse failed: $e');
+          return null;
         }
       }
 

@@ -51,14 +51,15 @@ class RequestCardView extends StatelessWidget {
 
   int get _seed => frame?.seed ?? (foilSeed == 0 ? code.hashCode : foilSeed);
 
-  @override
+    @override
   Widget build(BuildContext context) {
     return AspectRatio(
       aspectRatio: 5 / 7,
-      child: GestureDetector(
-        // Absorb drags so scrolling parents don't fight the tilt gesture.
-        onVerticalDragUpdate: (_) {},
-        onHorizontalDragUpdate: (_) {},
+      child: HoloCardV2(
+        accent: accent,
+        enabled: foilEnabled,
+        intensity: foilIntensity,
+        seed: _seed,
         child: Container(
           decoration: _outerDecoration(),
           child: Padding(

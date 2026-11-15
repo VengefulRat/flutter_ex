@@ -540,6 +540,14 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   Future<String?> _promptForMediaUrl() async {
     final ctrl = TextEditingController();
+    try {
+      return await _promptForMediaUrlDialog(ctrl);
+    } finally {
+      ctrl.dispose();
+    }
+  }
+
+  Future<String?> _promptForMediaUrlDialog(TextEditingController ctrl) async {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => Dialog(
@@ -646,18 +654,36 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   Future<void> _sendEncryptedMediaUrl(String url) async {
-    setState(() {
-      _oocMessages.add(
-        OOCMessage(
-          author: _auth.currentName ?? 'You',
-          content: '',
-          isUser: true,
-          timestamp: DateTime.now(),
-          mediaUrl: url,
-          isEncryptedMedia: false,
+    if (widget.sessionId.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _oocMessages.add(
+          OOCMessage(
+            author: _auth.currentName ?? 'You',
+            content: url,
+            isUser: true,
+            timestamp: DateTime.now(),
+          ),
+        );
+      });
+      _scrollOocToBottom();
+      return;
+    }
+
+    try {
+      await _fs.addOocMessage(sessionId: widget.sessionId, content: url);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: cInk,
+          content: Text(
+            'Send failed: $e',
+            style: const TextStyle(color: cParchment),
+          ),
         ),
       );
-    });
+    }
     _scrollOocToBottom();
   }
 
@@ -1004,6 +1030,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   void _saveMyStats(StatBlock? block) {
+    if (!mounted) return;
     setState(() => _myStats = block);
     if (widget.sessionId.isEmpty) {
       return;
@@ -1014,19 +1041,22 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     });
   }
 
-    Future<void> _loadSandboxData() async {
+  Future<void> _loadSandboxData() async {
     final worlds = await SandboxStorage.loadWorlds();
     final chars = await SandboxStorage.loadCharacters();
-    
+
     // Load saved import IDs from Firestore
     if (widget.sessionId.isNotEmpty) {
       try {
-        final doc = await FirebaseFirestore.instance.collection('sessions').doc(widget.sessionId).get();
+        final doc = await FirebaseFirestore.instance
+            .collection('sessions')
+            .doc(widget.sessionId)
+            .get();
         final data = doc.data();
         if (data != null) {
           final charIds = List<String>.from(data['importedCharacterIds'] ?? []);
           final worldIds = List<String>.from(data['importedWorldIds'] ?? []);
-          
+
           for (final id in charIds) {
             final match = chars.where((c) => c.id == id).firstOrNull;
             if (match != null && !_importedCharacters.any((c) => c.id == id)) {
@@ -1144,9 +1174,10 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     final text = _editorCtrl.text;
     _lastTyped = DateTime.now();
     final captured = _lastTyped;
-    Future.delayed(_draftDebounce, () {
+        Future.delayed(_draftDebounce, () {
       if (_lastTyped == captured && mounted) _saveDraft(text);
     });
+    if (!mounted) return;
     setState(() {});
   }
 
@@ -1181,6 +1212,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   void _setMood(StoryMood mood, {String? reason}) {
+    if (!mounted) return;
     if (mood == _currentMood) return;
     setState(() {
       _fromColor = _bgAnim.value ?? _fromColor;
@@ -1206,12 +1238,14 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   void _setMoodManual(StoryMood mood) {
+    if (!mounted) return;
     setState(() => _moodLockedByUser = true);
     sounds.play(SoundKey.moodSwitch);
     _setMood(mood);
   }
 
   void _unlockMood() {
+    if (!mounted) return;
     _moodHistory.clear();
     setState(() => _moodLockedByUser = false);
   }
@@ -1286,6 +1320,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         _editingPostId = null;
         _editorExpanded = false;
       });
+      await _clearDraft();
       return;
     }
 
@@ -1339,7 +1374,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           _editorExpanded = false;
         });
       }
-    } else {
+        } else {
+      if (!mounted) return;
       final displayName =
           _activeCharacter?.name ?? (_auth.currentName ?? 'You');
       final postColor = _activeCharacter != null
@@ -1374,7 +1410,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     }
   }
 
-  Future<void> _deletePost(String id) async {
+    Future<void> _deletePost(String id) async {
+    if (!mounted) return;
     final i = _posts.indexWhere((p) => p.id == id);
     if (i == -1) return;
     final original = _posts[i];
@@ -1401,7 +1438,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   void _quotePost(String id) {
-    setState(() {
+  if (!mounted) return;
+  setState(() {
       _quotingPostId = id;
       _editorExpanded = true;
     });
@@ -1409,8 +1447,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   void _editPost(RPPost post) {
-    _editorCtrl.text = post.content;
-    setState(() {
+  if (!mounted) return;
+  _editorCtrl.text = post.content;
+  setState(() {
       _editingPostId = post.id;
       _quotingPostId = null;
       _editorExpanded = true;
@@ -1544,6 +1583,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     );
     ctrl.dispose();
     if (result == null) return;
+    if (!mounted) return;
     final newTitle = result.trim();
     setState(() => _sessionTitle = newTitle);
     if (widget.sessionId.isNotEmpty) {
@@ -1556,7 +1596,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   void _openLog() {
-    if (widget.sessionId.isEmpty) {
+  if (!mounted) return;
+  if (widget.sessionId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: cInk,
@@ -1571,7 +1612,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     SessionLogSheet.show(context, widget.sessionId);
   }
 
-  void _addToLogFromText(String selectedText) {
+    void _addToLogFromText(String selectedText) {
+    if (!mounted) return;
     if (widget.sessionId.isEmpty) return;
     SessionLogSheet.promptFromSelection(
       context: context,
@@ -1596,9 +1638,10 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     }
   }
 
-  Future<void> _addSelectionToLog() async {
+    Future<void> _addSelectionToLog() async {
     final text = _selectedText;
     if (text.isEmpty) return;
+    if (!mounted) return;
     setState(() => _selectedText = '');
     _selectionDebounce?.cancel();
     _addToLogFromText(text);
@@ -1690,7 +1733,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     return _buildMobileLayout();
   }
 
-    Widget _buildDesktopLayout() {
+  Widget _buildDesktopLayout() {
     return AnimatedBuilder(
       animation: _moodCtrl,
       builder: (_, child) {
@@ -1702,12 +1745,18 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               Positioned.fill(
                 child: LayoutBuilder(
                   builder: (_, constraints) {
-                    _canvasSize = Size(constraints.maxWidth, constraints.maxHeight);
+                    _canvasSize = Size(
+                      constraints.maxWidth,
+                      constraints.maxHeight,
+                    );
                     return RepaintBoundary(
                       child: ValueListenableBuilder<int>(
                         valueListenable: _particleTick,
                         builder: (_, _, _) => CustomPaint(
-                          painter: MoodParticlePainter(_particles, _currentMood),
+                          painter: MoodParticlePainter(
+                            _particles,
+                            _currentMood,
+                          ),
                         ),
                       ),
                     );
@@ -1738,7 +1787,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                           Expanded(
                             child: Center(
                               child: ConstrainedBox(
-                                constraints: const BoxConstraints(maxWidth: 800),
+                                constraints: const BoxConstraints(
+                                  maxWidth: 800,
+                                ),
                                 child: Column(
                                   children: [
                                     Expanded(child: _buildPostList()),
@@ -1772,43 +1823,96 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                       availableCharacters: _sandboxCharacters,
                                       onDiceRolled: (msg) {
                                         if (widget.sessionId.isNotEmpty) {
-                                          _fs.addOocMessage(sessionId: widget.sessionId, content: msg, isSystem: true);
-                                          _log.addEvent(title: 'Dice roll', body: msg, source: 'dice');
+                                          _fs.addOocMessage(
+                                            sessionId: widget.sessionId,
+                                            content: msg,
+                                            isSystem: true,
+                                          );
+                                          _log.addEvent(
+                                            title: 'Dice roll',
+                                            body: msg,
+                                            source: 'dice',
+                                          );
                                         }
                                       },
-                                      onMyStatsChanged: (block) => _saveMyStats(block),
+                                      onMyStatsChanged: (block) =>
+                                          _saveMyStats(block),
                                       onImportWorld: (w) {
                                         setState(() {
-                                          if (!_importedWorlds.any((x) => x.id == w.id)) {
+                                          if (!_importedWorlds.any(
+                                            (x) => x.id == w.id,
+                                          )) {
                                             _importedWorlds.add(w);
                                           }
                                         });
                                         if (widget.sessionId.isNotEmpty) {
                                           _log.addWorldEntry(w);
-                                          _fs.saveImportedItems(widget.sessionId, _importedCharacters.map((c) => c.id).toList(), _importedWorlds.map((w) => w.id).toList());
+                                          _fs.saveImportedItems(
+                                            widget.sessionId,
+                                            _importedCharacters
+                                                .map((c) => c.id)
+                                                .toList(),
+                                            _importedWorlds
+                                                .map((w) => w.id)
+                                                .toList(),
+                                          );
                                         }
                                       },
                                       onImportCharacter: (c) {
                                         setState(() {
-                                          if (!_importedCharacters.any((x) => x.id == c.id)) {
+                                          if (!_importedCharacters.any(
+                                            (x) => x.id == c.id,
+                                          )) {
                                             _importedCharacters.add(c);
                                           }
                                         });
                                         if (widget.sessionId.isNotEmpty) {
                                           _log.addCharacterEntry(c);
-                                          _fs.saveImportedItems(widget.sessionId, _importedCharacters.map((c) => c.id).toList(), _importedWorlds.map((w) => w.id).toList());
+                                          _fs.saveImportedItems(
+                                            widget.sessionId,
+                                            _importedCharacters
+                                                .map((c) => c.id)
+                                                .toList(),
+                                            _importedWorlds
+                                                .map((w) => w.id)
+                                                .toList(),
+                                          );
                                         }
                                       },
                                       onRemoveWorld: (w) {
-                                        setState(() => _importedWorlds.removeWhere((x) => x.id == w.id));
+                                        setState(
+                                          () => _importedWorlds.removeWhere(
+                                            (x) => x.id == w.id,
+                                          ),
+                                        );
                                         if (widget.sessionId.isNotEmpty) {
-                                          _fs.saveImportedItems(widget.sessionId, _importedCharacters.map((c) => c.id).toList(), _importedWorlds.map((w) => w.id).toList());
+                                          _fs.saveImportedItems(
+                                            widget.sessionId,
+                                            _importedCharacters
+                                                .map((c) => c.id)
+                                                .toList(),
+                                            _importedWorlds
+                                                .map((w) => w.id)
+                                                .toList(),
+                                          );
                                         }
                                       },
                                       onRemoveCharacter: (c) {
-                                        setState(() => _importedCharacters.removeWhere((x) => x.id == c.id));
+                                        setState(
+                                          () => _importedCharacters.removeWhere(
+                                            (x) => x.id == c.id,
+                                          ),
+                                        );
                                         if (widget.sessionId.isNotEmpty) {
-                                          _fs.saveImportedItems(widget.sessionId, _importedCharacters.map((c) => c.id).toList(), _importedWorlds.map((w) => w.id).toList());
+                                          _fs.saveImportedItems(
+                                            widget.sessionId,
+                                            _importedCharacters
+                                                .map((c) => c.id)
+                                                .toList(),
+                                            _importedWorlds
+                                                .map((w) => w.id)
+                                                .toList(),
+                                          );
                                         }
                                       },
                                     ),
@@ -1824,24 +1928,46 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                           color: cInk,
                                           child: InkWell(
                                             onTap: () {
-                                              setState(() => _desktopOOCExpanded = !_desktopOOCExpanded);
-                                              if (_desktopOOCExpanded) _scrollOocToBottom();
+                                              setState(
+                                                () => _desktopOOCExpanded =
+                                                    !_desktopOOCExpanded,
+                                              );
+                                              if (_desktopOOCExpanded)
+                                                _scrollOocToBottom();
                                             },
                                             child: Container(
                                               height: 50,
-                                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 16,
+                                                  ),
                                               decoration: const BoxDecoration(
-                                                border: Border(bottom: BorderSide(color: cAsh)),
+                                                border: Border(
+                                                  bottom: BorderSide(
+                                                    color: cAsh,
+                                                  ),
+                                                ),
                                               ),
                                               child: Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
                                                 children: [
                                                   const Text(
                                                     'OOC CHAT',
-                                                    style: TextStyle(fontFamily: 'monospace', fontSize: 11, color: cIce, letterSpacing: 4),
+                                                    style: TextStyle(
+                                                      fontFamily: 'monospace',
+                                                      fontSize: 11,
+                                                      color: cIce,
+                                                      letterSpacing: 4,
+                                                    ),
                                                   ),
                                                   Icon(
-                                                    _desktopOOCExpanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up,
+                                                    _desktopOOCExpanded
+                                                        ? Icons
+                                                              .keyboard_arrow_down
+                                                        : Icons
+                                                              .keyboard_arrow_up,
                                                     size: 16,
                                                     color: cSmoke,
                                                   ),
@@ -1851,7 +1977,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                           ),
                                         ),
                                         if (_desktopOOCExpanded)
-                                          Expanded(child: _buildOOCDesktopWidget()),
+                                          Expanded(
+                                            child: _buildOOCDesktopWidget(),
+                                          ),
                                       ],
                                     ),
                                   ),
@@ -1865,16 +1993,19 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   ],
                 ),
               ),
-              
+
               // Bottom selection pill
-              if (!kIsWeb && _selectedText.isNotEmpty && !_desktopOOCExpanded && !_settingsOpen)
+              if (!kIsWeb &&
+                  _selectedText.isNotEmpty &&
+                  !_desktopOOCExpanded &&
+                  !_settingsOpen)
                 Positioned(
                   left: 300,
                   right: 320,
                   bottom: 100,
                   child: _buildSelectionPill(),
                 ),
-              
+
               // Settings Overlay
               if (_settingsOpen)
                 Positioned(
@@ -2013,7 +2144,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             color: cInk.withValues(alpha: 0.65), // More transparent
-            border: const Border(bottom: BorderSide(color: Color.fromARGB(255, 209, 212, 30))),
+            border: const Border(
+              bottom: BorderSide(color: Color.fromARGB(255, 209, 212, 30)),
+            ),
           ),
           child: Row(
             children: [
@@ -2655,7 +2788,11 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               });
               if (widget.sessionId.isNotEmpty) {
                 _log.addWorldEntry(w);
-                _fs.saveImportedItems(widget.sessionId, _importedCharacters.map((c) => c.id).toList(), _importedWorlds.map((w) => w.id).toList());
+                _fs.saveImportedItems(
+                  widget.sessionId,
+                  _importedCharacters.map((c) => c.id).toList(),
+                  _importedWorlds.map((w) => w.id).toList(),
+                );
               }
               setModalState(() {});
             },
@@ -2663,7 +2800,11 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               setState(() {
                 if (!_importedCharacters.any((x) => x.id == c.id)) {
                   _importedCharacters.add(c);
-                  _fs.saveImportedItems(widget.sessionId, _importedCharacters.map((c) => c.id).toList(), _importedWorlds.map((w) => w.id).toList());
+                  _fs.saveImportedItems(
+                    widget.sessionId,
+                    _importedCharacters.map((c) => c.id).toList(),
+                    _importedWorlds.map((w) => w.id).toList(),
+                  );
                 }
               });
               if (widget.sessionId.isNotEmpty) {
@@ -2674,14 +2815,24 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             onRemoveWorld: (w) {
               setState(() => _importedWorlds.removeWhere((x) => x.id == w.id));
               if (widget.sessionId.isNotEmpty) {
-                _fs.saveImportedItems(widget.sessionId, _importedCharacters.map((c) => c.id).toList(), _importedWorlds.map((w) => w.id).toList());
+                _fs.saveImportedItems(
+                  widget.sessionId,
+                  _importedCharacters.map((c) => c.id).toList(),
+                  _importedWorlds.map((w) => w.id).toList(),
+                );
               }
               setModalState(() {});
             },
             onRemoveCharacter: (c) {
-              setState(() => _importedCharacters.removeWhere((x) => x.id == c.id));
+              setState(
+                () => _importedCharacters.removeWhere((x) => x.id == c.id),
+              );
               if (widget.sessionId.isNotEmpty) {
-                _fs.saveImportedItems(widget.sessionId, _importedCharacters.map((c) => c.id).toList(), _importedWorlds.map((w) => w.id).toList());
+                _fs.saveImportedItems(
+                  widget.sessionId,
+                  _importedCharacters.map((c) => c.id).toList(),
+                  _importedWorlds.map((w) => w.id).toList(),
+                );
               }
               setModalState(() {});
             },
@@ -2691,7 +2842,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     );
   }
 
-  void _showPostActions(RPPost post) {
+    void _showPostActions(RPPost post) {
+    if (!mounted) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: cInk,
@@ -2722,11 +2874,196 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                 Navigator.pop(context);
                 _editPost(post);
               }),
-              _actionTile(Icons.delete_outline, 'Delete post', () {
+              _actionTile(Icons.delete_outline, 'Delete post', () async {
                 Navigator.pop(context);
-                _deletePost(post.id);
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => Dialog(
+                    backgroundColor: cInk,
+                    shape: const RoundedRectangleBorder(),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'DELETE POST?',
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 9,
+                              color: cEmber,
+                              letterSpacing: 4,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'This cannot be undone.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: cMist,
+                              fontStyle: FontStyle.italic,
+                              height: 1.7,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => Navigator.pop(ctx, false),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: cAsh),
+                                    ),
+                                    child: const Center(
+                                      child: Text(
+                                        'Cancel',
+                                        style: TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 9,
+                                          color: cSmoke,
+                                          letterSpacing: 2,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => Navigator.pop(ctx, true),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    color: cEmber,
+                                    child: const Center(
+                                      child: Text(
+                                        'Delete',
+                                        style: TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 9,
+                                          color: cVoid,
+                                          letterSpacing: 2,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+                if (confirmed == true) _deletePost(post.id);
               }, color: cEmber),
             ],
+            if (post.isUser) ...[
+              _actionTile(Icons.edit_outlined, 'Edit post', () {
+                Navigator.pop(context);
+                _editPost(post);
+              }),
+              _actionTile(Icons.delete_outline, 'Delete post', () async {
+                Navigator.pop(context);
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => Dialog(
+                    backgroundColor: cInk,
+                    shape: const RoundedRectangleBorder(),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'DELETE POST?',
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 9,
+                              color: cEmber,
+                              letterSpacing: 4,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'This cannot be undone.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: cMist,
+                              fontStyle: FontStyle.italic,
+                              height: 1.7,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => Navigator.pop(ctx, false),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: cAsh),
+                                    ),
+                                    child: const Center(
+                                      child: Text(
+                                        'Cancel',
+                                        style: TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 9,
+                                          color: cSmoke,
+                                          letterSpacing: 2,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => Navigator.pop(ctx, true),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    color: cEmber,
+                                    child: const Center(
+                                      child: Text(
+                                        'Delete',
+                                        style: TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 9,
+                                          color: cVoid,
+                                          letterSpacing: 2,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+                if (confirmed == true) _deletePost(post.id);
+              }, color: cEmber),
+            ],
+
             _actionTile(Icons.copy, 'Copy text', () {
               Clipboard.setData(ClipboardData(text: post.content));
               Navigator.pop(context);
@@ -2774,7 +3111,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     );
   }
 
-    void _showCharacterSwitcher() {
+  void _showCharacterSwitcher() {
     showModalBottomSheet(
       context: context,
       backgroundColor: cInk,
@@ -2794,10 +3131,11 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   const Text(
                     'WRITING AS',
                     style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 9,
-                        color: cSmoke,
-                        letterSpacing: 3),
+                      fontFamily: 'monospace',
+                      fontSize: 9,
+                      color: cSmoke,
+                      letterSpacing: 3,
+                    ),
                   ),
                   const Spacer(),
                   GestureDetector(
@@ -2808,7 +3146,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // ── THE CARD DECK ──
             Expanded(
               child: ListView.builder(
@@ -2835,7 +3173,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   // The rest are imported characters
                   final c = _importedCharacters[index - 1];
                   final isSelected = _activeCharacter?.id == c.id;
-                  
+
                   return _CharacterSwitcherCard(
                     isSelected: isSelected,
                     name: c.name,
@@ -2858,13 +3196,17 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                 },
               ),
             ),
-            
+
             if (_importedCharacters.isEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(20, 10, 20, 0),
                 child: Text(
                   'Import characters from the Tools panel first to use character switching.',
-                  style: TextStyle(fontSize: 12, color: cSmoke, fontStyle: FontStyle.italic),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: cSmoke,
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
               ),
           ],
@@ -4272,6 +4614,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                       }
                     }
                   } else {
+                    if (!mounted) return;
                     _oocCtrl.clear();
                     setState(
                       () => _oocMessages.add(
@@ -4309,7 +4652,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       ],
     );
   }
-    }
+}
 
 class _CharacterSwitcherCard extends StatelessWidget {
   final bool isSelected;
@@ -4331,7 +4674,7 @@ class _CharacterSwitcherCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final seed = name.hashCode;
-    
+
     return GestureDetector(
       onTap: onTap,
       child: Padding(
@@ -4367,7 +4710,11 @@ class _CharacterSwitcherCard extends StatelessWidget {
                     children: [
                       // Image (supports GIFs automatically)
                       if (avatarUrl != null)
-                        Image.network(avatarUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox())
+                        Image.network(
+                          avatarUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => const SizedBox(),
+                        )
                       else
                         Container(
                           color: cInk,
@@ -4375,14 +4722,17 @@ class _CharacterSwitcherCard extends StatelessWidget {
                             child: Icon(Icons.person, size: 40, color: cSmoke),
                           ),
                         ),
-                      
+
                       // Scrim
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.9)],
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.9),
+                            ],
                             stops: const [0.4, 1.0],
                           ),
                         ),
@@ -4434,7 +4784,11 @@ class _CharacterSwitcherCard extends StatelessWidget {
                               color: cGold,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.check, size: 12, color: cVoid),
+                            child: const Icon(
+                              Icons.check,
+                              size: 12,
+                              color: cVoid,
+                            ),
                           ),
                         ),
                     ],
@@ -4445,7 +4799,7 @@ class _CharacterSwitcherCard extends StatelessWidget {
           ),
         ),
       ),
-  ); // <--- Closes GestureDetector
+    ); // <--- Closes GestureDetector
   } // <--- Closes build method
 } // <--- Closes _CharacterSwitcherCard (Changed comment)
 
@@ -4472,9 +4826,15 @@ class _OocMediaPreviewState extends State<_OocMediaPreview> {
     }
   }
 
-  Future<void> _downloadAndDecrypt() async {
+    Future<void> _downloadAndDecrypt() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
+      final sessionId = widget.sessionId;
+      if (sessionId == null || sessionId.isEmpty) {
+        throw 'No session';
+      }
+
       final storageRef = FirebaseStorage.instance.ref().child(widget.url);
       final downloadBytes = await storageRef.getData();
 
@@ -4484,7 +4844,7 @@ class _OocMediaPreviewState extends State<_OocMediaPreview> {
       final cipher = downloadBytes.sublist(12);
 
       final sessionKey = await FirestoreService().getSessionKeyForMedia(
-        widget.sessionId!,
+        sessionId,
       );
       if (sessionKey == null) throw 'No key';
 

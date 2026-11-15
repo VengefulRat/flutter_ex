@@ -260,7 +260,7 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
     if (widget.sessionId.isNotEmpty) _subscribeToMessages();
   }
 
-  void _subscribeToMessages() {
+    void _subscribeToMessages() {
     final myCode = _auth.currentCode ?? '';
     _msgSub = _fs.brainstormMessages(widget.sessionId).listen((data) {
       final msgs = data.map((d) {
@@ -270,22 +270,34 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
           author: d['authorName'] as String? ?? '?',
           content: d['content'] as String? ?? '',
           isUser: d['authorCode'] == myCode,
-          timestamp: (d['createdAt'] != null)
-              ? (d['createdAt'] as dynamic).toDate()
-              : DateTime.now(),
+          timestamp: _parseTimestamp(d['createdAt']),
           type: _bsTypeFromString(typeStr),
-        );
+        ); // _BSMessage
       }).toList();
       if (mounted) {
         setState(() { _messages..clear()..addAll(msgs); _loading = false; });
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
           if (_scrollCtrl.hasClients) {
             _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent,
                 duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
           }
         });
       }
+    }, onError: (e) {
+      print('[prelude] messages stream error: $e');
+      if (mounted) setState(() => _loading = false);
     });
+  }
+
+  DateTime _parseTimestamp(dynamic value) {
+    try {
+      if (value == null) return DateTime.now();
+      if (value is DateTime) return value;
+      return (value as dynamic).toDate() as DateTime;
+    } catch (_) {
+      return DateTime.now();
+    }
   }
 
   _BSType _bsTypeFromString(String s) {
@@ -322,13 +334,23 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
     _msgCtrl.clear();
     sounds.play(SoundKey.brainstormMsg);
 
-    if (widget.sessionId.isNotEmpty) {
+        if (widget.sessionId.isNotEmpty) {
       _fs.addBrainstormMessage(
         sessionId: widget.sessionId,
         content: text,
         type: 'chat',
-      );
-    } else {
+      ).catchError((e) {
+        print('[prelude] send failed: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            backgroundColor: cInk,
+            content: Text('Could not send message.',
+                style: TextStyle(color: cParchment)),
+          ));
+        }
+      });
+        } else {
+      if (!mounted) return;
       setState(() => _messages.add(_BSMessage(
         id: DateTime.now().microsecondsSinceEpoch.toString(),
         author: _auth.currentName ?? 'You',
@@ -339,6 +361,7 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
   }
 
   void _showPinMenu(_BSMessage msg) {
+    if (!mounted) return;
     final isPinned = msg.type != _BSType.chat;
     showModalBottomSheet(
       context: context,
@@ -477,9 +500,26 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
     );
   }
 
-  Future<void> _setPin(_BSMessage msg, _BSType type) async {
+    Future<void> _setPin(_BSMessage msg, _BSType type) async {
     if (msg.id.isEmpty) return;
-    if (widget.sessionId.isEmpty) return;
+    if (widget.sessionId.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        final i = _messages.indexWhere((m) => m.id == msg.id);
+        if (i != -1) {
+          _messages[i] = _BSMessage(
+            id: _messages[i].id,
+            author: _messages[i].author,
+            content: _messages[i].content,
+            isUser: _messages[i].isUser,
+            timestamp: _messages[i].timestamp,
+            type: type,
+          );
+        }
+      });
+      sounds.play(SoundKey.brainstormMsg);
+      return;
+    }
     try {
       await _fs.setBrainstormMessageType(
         sessionId: widget.sessionId,
@@ -749,6 +789,7 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
   }
 
   void _showPreludeMenu() {
+        if (!mounted) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: cInk,
@@ -926,7 +967,8 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
         ),
       ),
     );
-    if (confirm != true) return;
+        if (confirm != true) return;
+    if (!mounted) return;
     await _archivePrelude();
   }
 
@@ -936,9 +978,10 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
         await _fs.updateSessionStatus(widget.sessionId, 'archived');
       } catch (_) {}
     }
-    if (!mounted) return;
+        if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    messenger.showSnackBar(SnackBar(
       backgroundColor: cInk,
       behavior: SnackBarBehavior.floating,
       shape: const RoundedRectangleBorder(),
@@ -1027,6 +1070,7 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
 
 
   void _confirmLaunchRP() {
+        if (!mounted) return;
     showDialog(
       context: context,
       builder: (_) => Dialog(

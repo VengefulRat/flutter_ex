@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 enum CardShape { square, bevelled, octagon, jagged, crystal }
@@ -9,22 +10,24 @@ extension CardShapeClipper on CardShape {
       case CardShape.square:
         return null;
       case CardShape.bevelled:
-        return BevelledClipper();
+        return const BevelledClipper();
       case CardShape.octagon:
-        return OctagonClipper();
+        return const OctagonClipper();
       case CardShape.jagged:
-        return JaggedClipper();
+        return const JaggedClipper();
       case CardShape.crystal:
-        return CrystalClipper();
+        return const CrystalClipper();
     }
   }
 }
 
 // ── Rare: corners cut off at 45° ──
 class BevelledClipper extends CustomClipper<Path> {
+  const BevelledClipper();
+
   @override
   Path getClip(Size size) {
-    final cut = 18.0;
+    final cut = math.min(18.0, size.shortestSide * 0.25);
     final w = size.width;
     final h = size.height;
     final path = Path();
@@ -41,11 +44,14 @@ class BevelledClipper extends CustomClipper<Path> {
   }
 
   @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) =>
+      oldClipper.runtimeType != runtimeType;
 }
 
 // ── Epic: 8 sides ──
 class OctagonClipper extends CustomClipper<Path> {
+  const OctagonClipper();
+
   @override
   Path getClip(Size size) {
     final cut = size.shortestSide * 0.18;
@@ -65,11 +71,14 @@ class OctagonClipper extends CustomClipper<Path> {
   }
 
   @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) =>
+      oldClipper.runtimeType != runtimeType;
 }
 
 // ── Legendary: jagged / crown edge ──
 class JaggedClipper extends CustomClipper<Path> {
+  const JaggedClipper();
+
   @override
   Path getClip(Size size) {
     final w = size.width;
@@ -104,11 +113,14 @@ class JaggedClipper extends CustomClipper<Path> {
   }
 
   @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) =>
+      oldClipper.runtimeType != runtimeType;
 }
 
 // ── Mythic: irregular crystal / torn edge ──
 class CrystalClipper extends CustomClipper<Path> {
+  const CrystalClipper();
+
   @override
   Path getClip(Size size) {
     final w = size.width;
@@ -129,5 +141,6 @@ class CrystalClipper extends CustomClipper<Path> {
   }
 
   @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) =>
+      oldClipper.runtimeType != runtimeType;
 }

@@ -6,7 +6,6 @@ import '../settings.dart';
 import 'card_frame.dart';
 import 'holo_parallax.dart';
 
-
 /// The shared "Lore card" chrome. Renders the set bar, name banner,
 /// art zone, optional stats strip, and optional footer — all wrapped
 /// in the procedural [CardFrame] ornaments.
@@ -56,21 +55,21 @@ class LoreCardFace extends StatelessWidget {
   );
 
   @override
-Widget build(BuildContext context) {
-  final spec = CardFrameSpec(
-    glow: true,
-    ornate: false,
-    dense: false,
-    seed: seed,
-    accent: accent,
-  );
-  Widget content = Padding(
+  Widget build(BuildContext context) {
+    final spec = CardFrameSpec(
+      glow: true,
+      ornate: false,
+      dense: false,
+      seed: seed,
+      accent: accent,
+    );
+    Widget content = Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       child: Column(
         mainAxisSize: fillHeight ? MainAxisSize.max : MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildSetBar(),
+          HoloParallaxLayer(depth: 1.0, child: _buildSetBar()),
           const SizedBox(height: 10),
           _rule(),
           const SizedBox(height: 2),
@@ -79,25 +78,25 @@ Widget build(BuildContext context) {
           _rule(),
           if (subtitle != null && subtitle!.isNotEmpty) ...[
             const SizedBox(height: 10),
-            _buildSubtitleLine(),
+            HoloParallaxLayer(depth: 0.7, child: _buildSubtitleLine()),
           ],
           const SizedBox(height: 12),
           if (fillHeight)
             Expanded(
               child: HoloParallaxLayer(depth: 0.4, child: _buildArtZone()),
             )
-                    else
+          else
             SizedBox(
               height: 130,
               child: HoloParallaxLayer(depth: 0.4, child: _buildArtZone()),
             ),
           if (statsStrip != null) ...[
             const SizedBox(height: 12),
-            statsStrip!,
+            HoloParallaxLayer(depth: 1.0, child: statsStrip!),
           ],
           if (footer != null) ...[
             const SizedBox(height: 10),
-            footer!,
+            HoloParallaxLayer(depth: 0.4, child: footer!),
           ],
         ],
       ),
@@ -155,14 +154,10 @@ Widget build(BuildContext context) {
       );
     }
 
-            return CardFrame(spec: spec, child: content);
-}
+    return CardFrame(spec: spec, child: content);
+  }
 
-  Widget _rule() => Container(
-        height: 1,
-        color: accent.withValues(alpha: 0.25),
-      );
-
+  Widget _rule() => Container(height: 1, color: accent.withValues(alpha: 0.25));
 
   Widget _buildSetBar() => Row(
     children: [

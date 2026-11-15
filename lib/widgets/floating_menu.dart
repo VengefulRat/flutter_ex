@@ -52,8 +52,8 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
   late final AnimationController _menuCtrl;
 
   static const double _cardSize = 82;
-  static const double _radius = 210;    // was 170
-  static const double _spread = 1.42;   // was 1.15
+  static const double _radius = 210; // was 170
+  static const double _spread = 1.42; // was 1.15
   static const double _pad = 10;
   static const double _tuck = 0.55;
 
@@ -64,6 +64,13 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
       vsync: this,
       duration: const Duration(milliseconds: 450),
     );
+    // When the close animation finishes, rebuild once so the
+    // (now invisible) items are actually removed from the tree.
+    _menuCtrl.addStatusListener((status) {
+      if (status == AnimationStatus.dismissed && mounted) {
+        setState(() {});
+      }
+    });
     _loadPosition();
   }
 
@@ -75,19 +82,22 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
 
   // ── Default position: higher up so the fan has room to swing ──
   Offset _defaultPosition(Size screen) => Offset(
-        screen.width - widget.buttonSize - 24,
-        screen.height - widget.buttonSize - 200,   // was -130
-      );
+    screen.width - widget.buttonSize - 24,
+    screen.height - widget.buttonSize - 200, // was -130
+  );
 
   Offset _currentPos(Size screen) {
     final pos = _position ?? _defaultPosition(screen);
     // Clamp to screen bounds in case window resized
-    final safeX = pos.dx.clamp(-widget.buttonSize * 0.5, screen.width - widget.buttonSize * 0.5);
+    final safeX = pos.dx.clamp(
+      -widget.buttonSize * 0.5,
+      screen.width - widget.buttonSize * 0.5,
+    );
     final safeY = pos.dy.clamp(0.0, screen.height - widget.buttonSize);
     return Offset(safeX, safeY);
   }
 
-    Future<void> _loadPosition() async {
+  Future<void> _loadPosition() async {
     _prefs = await SharedPreferences.getInstance();
     final dx = _prefs?.getDouble('float_menu_dx');
     final dy = _prefs?.getDouble('float_menu_dy');
@@ -99,7 +109,12 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
   // ── Safe radius for a given spread: shrink the arc if cards would
   // clip off-screen. Spread is a parameter now, because when the
   // radius shrinks we widen the spread to keep tile spacing.
-  double _getRadius(Offset origin, Size screen, double baseAngle, double spread) {
+  double _getRadius(
+    Offset origin,
+    Size screen,
+    double baseAngle,
+    double spread,
+  ) {
     final n = widget.items.length;
     if (n < 2) return _radius;
     final half = _cardSize / 2;
@@ -133,8 +148,10 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
     final newPos = _dragStartPos + delta;
     setState(() {
       _position = Offset(
-        newPos.dx.clamp(-widget.buttonSize * 0.5,
-            screen.width - widget.buttonSize * 0.5),
+        newPos.dx.clamp(
+          -widget.buttonSize * 0.5,
+          screen.width - widget.buttonSize * 0.5,
+        ),
         newPos.dy.clamp(0, screen.height - widget.buttonSize),
       );
     });
@@ -208,75 +225,79 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
     Future.delayed(const Duration(milliseconds: 220), item.onLongPress);
   }
 
-    @override
+  @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      final screen = Size(constraints.maxWidth, constraints.maxHeight);
-      final pos = _currentPos(screen);
-      final buttonCenter = pos + Offset(widget.buttonSize / 2, widget.buttonSize / 2);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screen = Size(constraints.maxWidth, constraints.maxHeight);
+        final pos = _currentPos(screen);
+        final buttonCenter =
+            pos + Offset(widget.buttonSize / 2, widget.buttonSize / 2);
 
-      return Stack(
-        children: [
-          if (_menuOpen)
-            Positioned.fill(
+        return Stack(
+          children: [
+            if (_menuOpen || _menuCtrl.status != AnimationStatus.dismissed)
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: _closeMenu,
+                  child: Container(color: Colors.black.withValues(alpha: 0.6)),
+                ),
+              ),
+
+            if (_menuOpen || _menuCtrl.status != AnimationStatus.dismissed)
+              ..._buildRadialItems(buttonCenter, screen),
+
+            Positioned(
+              left: pos.dx,
+              top: pos.dy,
               child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: _closeMenu,
-                child: Container(color: Colors.black.withValues(alpha: 0.6)),
-              ),
-            ),
-
-          if (_menuOpen) ..._buildRadialItems(buttonCenter, screen),
-
-          Positioned(
-            left: pos.dx,
-            top: pos.dy,
-            child: GestureDetector(
-              onTap: _toggleMenu,
-              onPanStart: (d) => _onPanStart(d, screen),
-              onPanUpdate: (d) => _onPanUpdate(d, screen),
-              onPanEnd: (_) => _onPanEnd(screen),
-              child: Container(
-                width: widget.buttonSize,
-                height: widget.buttonSize,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: cInk,
-                  border: Border.all(
-                    color: cGold.withValues(alpha: 0.7),
-                    width: 1.5,
+                onTap: _toggleMenu,
+                onPanStart: (d) => _onPanStart(d, screen),
+                onPanUpdate: (d) => _onPanUpdate(d, screen),
+                onPanEnd: (_) => _onPanEnd(screen),
+                child: Container(
+                  width: widget.buttonSize,
+                  height: widget.buttonSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: cInk,
+                    border: Border.all(
+                      color: cGold.withValues(alpha: 0.7),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: cGold.withValues(alpha: 0.3),
+                        blurRadius: 22,
+                        spreadRadius: 2,
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: cGold.withValues(alpha: 0.3),
-                      blurRadius: 22,
-                      spreadRadius: 2,
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.6),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: AnimatedRotation(
-                    turns: _menuOpen ? 0.125 : 0,
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeOutCubic,
-                    child: Icon(
-                      _menuOpen ? Icons.close : widget.menuIcon,
-                      color: cGold,
-                      size: 24,
+                  child: Center(
+                    child: AnimatedRotation(
+                      turns: _menuOpen ? 0.125 : 0,
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOutCubic,
+                      child: Icon(
+                        _menuOpen ? Icons.close : widget.menuIcon,
+                        color: cGold,
+                        size: 24,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
-      );
-    });
+          ],
+        );
+      },
+    );
   }
 
   List<Widget> _buildRadialItems(Offset origin, Size screen) {
@@ -457,8 +478,9 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
 
     return GestureDetector(
       onTap: () => _onItemTap(item),
-      onLongPress:
-          item.onLongPress != null ? () => _onItemLongPress(item) : null,
+      onLongPress: item.onLongPress != null
+          ? () => _onItemLongPress(item)
+          : null,
       child: tile,
     );
   }

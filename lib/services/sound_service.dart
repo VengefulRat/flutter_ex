@@ -1,4 +1,5 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ════════════════════════════════════════
@@ -39,7 +40,6 @@ class SoundService {
   SoundService._();
   static final SoundService instance = SoundService._();
 
-  final _pool = <String, AudioPlayer>{};
   SharedPreferences? _prefs;
   bool _loaded = false;
 
@@ -67,10 +67,12 @@ class SoundService {
   }
 
   Future<void> setMasterMute(bool value) async {
+    await init();
     await _prefs?.setBool(SoundKey.masterMute, value);
   }
 
   Future<void> setEnabled(String key, bool value) async {
+    await init();
     await _prefs?.setBool(key, value);
   }
 
@@ -80,35 +82,39 @@ class SoundService {
     final file = _files[key];
     if (file == null) return;
     try {
-      // Get or create the player for this key
-      _pool[key] ??= AudioPlayer();
-      final player = _pool[key]!;
+      // Fresh player per play: concurrent chimes overlap instead of
+      // cutting each other off via a shared player's stop().
+      final player = AudioPlayer();
 
-      // ── THE FIX ──
-      // Tell Android this is a notification sound, not media, 
+      // Tell Android this is a notification sound, not media,
       // and do NOT request audio focus from other apps.
-            await player.setAudioContext(AudioContext(
+      await player.setAudioContext(AudioContext(
         android: AudioContextAndroid(
           contentType: AndroidContentType.sonification,
-          usageType: AndroidUsageType.game, // <-- Changed from notification
-          audioFocus: AndroidAudioFocus.none, // <-- Keeps it from ducking other apps
+          usageType: AndroidUsageType.game,
+          audioFocus: AndroidAudioFocus.none, // Keeps it from ducking other apps
         ),
         iOS: AudioContextIOS(
           category: AVAudioSessionCategory.ambient,
         ),
       ));
-      // ──────────────
 
-      await player.stop();
       await player.play(AssetSource(file));
-    } catch (_) {}
+
+      // Dispose once it finishes (or after 5s max, in case completion
+      // never fires for a short asset).
+      Future.any([
+        player.onPlayerComplete.first,
+        Future.delayed(const Duration(seconds: 5)),
+      ]).then((_) => player.dispose());
+    } catch (e) {
+      debugPrint('[SoundService] play failed ($key): $e');
+    }
   }
 
   void dispose() {
-    for (final p in _pool.values) {
-      p.dispose();
-    }
-    _pool.clear();
+    // No long-lived players anymore — each play() creates and
+    // disposes its own. Nothing to clean up.
   }
 }
 

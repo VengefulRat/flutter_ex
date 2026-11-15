@@ -2,6 +2,31 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// ── Small parsing helpers ──
+// Old / corrupt data must never take down a whole load. Each helper
+// returns a safe default instead of throwing.
+String _parseId(dynamic v) => v is String ? v : '';
+
+DateTime _parseCreatedAt(dynamic v) {
+  if (v is int) return DateTime.fromMillisecondsSinceEpoch(v);
+  if (v is double) return DateTime.fromMillisecondsSinceEpoch(v.toInt());
+  if (v is String) {
+    final asInt = int.tryParse(v);
+    if (asInt != null) return DateTime.fromMillisecondsSinceEpoch(asInt);
+    return DateTime.tryParse(v) ?? DateTime.now();
+  }
+  return DateTime.now();
+}
+
+Color _parseColor(dynamic v, Color fallback) {
+  if (v is int) return Color(v);
+  if (v is String) {
+    final asInt = int.tryParse(v);
+    if (asInt != null) return Color(asInt);
+  }
+  return fallback;
+}
+
 // ─────────────────────────────────────────
 // SANDBOX STORAGE  (shared_preferences)
 // ─────────────────────────────────────────
@@ -15,7 +40,16 @@ class SandboxStorage {
     if (raw == null) return [];
     try {
       final list = jsonDecode(raw) as List;
-      return list.map((e) => WorldEntry.fromJson(e as Map<String, dynamic>)).toList();
+      // Skip corrupt entries instead of dropping the whole list.
+      final out = <WorldEntry>[];
+      for (final e in list) {
+        try {
+          out.add(WorldEntry.fromJson(e as Map<String, dynamic>));
+        } catch (_) {
+          // One bad world must not wipe the rest.
+        }
+      }
+      return out;
     } catch (_) { return []; }
   }
 
@@ -30,11 +64,19 @@ class SandboxStorage {
     if (raw == null) return [];
     try {
       final list = jsonDecode(raw) as List;
-      return list.map((e) => CharacterEntry.fromJson(e as Map<String, dynamic>)).toList();
+      final out = <CharacterEntry>[];
+      for (final e in list) {
+        try {
+          out.add(CharacterEntry.fromJson(e as Map<String, dynamic>));
+        } catch (_) {
+          // One bad character must not wipe the rest.
+        }
+      }
+      return out;
     } catch (_) { return []; }
   }
 
-    static Future<void> saveCharacters(List<CharacterEntry> chars) async {
+  static Future<void> saveCharacters(List<CharacterEntry> chars) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_charsKey, jsonEncode(chars.map((c) => c.toJson()).toList()));
   }
@@ -93,7 +135,7 @@ class WorldEntry {
   };
 
   factory WorldEntry.fromJson(Map<String, dynamic> j) => WorldEntry(
-    id: j['id'] as String,
+    id: _parseId(j['id']),
     name: j['name'] as String? ?? '',
     genre: j['genre'] as String? ?? '',
     overview: j['overview'] as String? ?? '',
@@ -103,9 +145,21 @@ class WorldEntry {
     notes: j['notes'] as String? ?? '',
     mapUrl: j['mapUrl'] as String?,
     isDraft: j['isDraft'] as bool? ?? true,
-    createdAt: j['createdAt'] != null ? DateTime.fromMillisecondsSinceEpoch(j['createdAt'] as int) : null,
-    locations: (j['locations'] as List? ?? []).map((l) => WorldLocation(name: l['name'] as String? ?? '', description: l['description'] as String? ?? '')).toList(),
-    factions: (j['factions'] as List? ?? []).map((f) => WorldFaction(name: f['name'] as String? ?? '', description: f['description'] as String? ?? '')).toList(),
+    createdAt: _parseCreatedAt(j['createdAt']),
+    locations: (j['locations'] as List? ?? []).map((l) {
+      final m = l is Map<String, dynamic> ? l : <String, dynamic>{};
+      return WorldLocation(
+        name: m['name'] as String? ?? '',
+        description: m['description'] as String? ?? '',
+      );
+    }).toList(),
+    factions: (j['factions'] as List? ?? []).map((f) {
+      final m = f is Map<String, dynamic> ? f : <String, dynamic>{};
+      return WorldFaction(
+        name: m['name'] as String? ?? '',
+        description: m['description'] as String? ?? '',
+      );
+    }).toList(),
   );
 }
 
@@ -169,26 +223,26 @@ class CharacterEntry {
     'avatarUrl': avatarUrl, // <--- Added
   };
 
-  factory CharacterEntry.fromJson(Map<String, dynamic> j) => CharacterEntry(
-    id: j['id'] as String,
-    name: j['name'] as String? ?? '',
-    pronouns: j['pronouns'] as String? ?? '',
-    age: j['age'] as String? ?? '',
-    appearance: j['appearance'] as String? ?? '',
-    personality: j['personality'] as String? ?? '',
-    backstory: j['backstory'] as String? ?? '',
-    relationships: j['relationships'] as String? ?? '',
-    notes: j['notes'] as String? ?? '',
-    type: CharacterType.values[j['type'] as int? ?? 0],
-    linkedWorldId: j['linkedWorldId'] as String?,
-    createdAt: j['createdAt'] != null 
-        ? DateTime.fromMillisecondsSinceEpoch(j['createdAt'] as int) 
-        : null,
-    accentColor: j['accentColor'] != null 
-        ? Color(j['accentColor'] as int) 
-        : null,
-    avatarUrl: j['avatarUrl'] as String?, // <--- Added
-  );
+  factory CharacterEntry.fromJson(Map<String, dynamic> j) {
+    final typeIndex = j['type'] is int ? j['type'] as int : 0;
+    final safeTypeIndex = typeIndex.clamp(0, CharacterType.values.length - 1);
+    return CharacterEntry(
+      id: _parseId(j['id']),
+      name: j['name'] as String? ?? '',
+      pronouns: j['pronouns'] as String? ?? '',
+      age: j['age'] as String? ?? '',
+      appearance: j['appearance'] as String? ?? '',
+      backstory: j['backstory'] as String? ?? '',
+      relationships: j['relationships'] as String? ?? '',
+      notes: j['notes'] as String? ?? '',
+      personality: j['personality'] as String? ?? '',
+      type: CharacterType.values[safeTypeIndex],
+      linkedWorldId: j['linkedWorldId'] as String?,
+      createdAt: _parseCreatedAt(j['createdAt']),
+      accentColor: _parseColor(j['accentColor'], const Color(0xFFC9A96E)),
+      avatarUrl: j['avatarUrl'] as String?, // <--- Added
+    );
+  }
 }
 
 // ── STAT BLOCK ──
@@ -324,4 +378,3 @@ class RPNote {
 // ── SAMPLE DATA (empty — user creates their own) ──
 final sampleWorlds = <WorldEntry>[];
 final sampleCharacters = <CharacterEntry>[];
-

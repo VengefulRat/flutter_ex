@@ -213,7 +213,7 @@ class _RPToolsPanelState extends State<RPToolsPanel>
               children: [
                 _buildTagRow(),
                 TextField(
-                  controller: _noteCtrl..text = note.content,
+                  controller: _noteCtrl,
                   maxLines: null,
                   autofocus: true,
                   style: TextStyle(

@@ -23,12 +23,14 @@ Future<bool> showLockScreen(BuildContext context) async {
 
 class LockScreen extends StatefulWidget {
   const LockScreen({super.key});
-  @override State<LockScreen> createState() => _LockScreenState();
+  @override
+  State<LockScreen> createState() => _LockScreenState();
 }
 
 class _LockScreenState extends State<LockScreen> {
   final _localAuth = LocalAuthentication();
   bool _biometricsAvailable = false;
+  bool _bioAutoPrompted = false;
   final _auth = AuthService();
   String _mode = 'pin'; // 'pin' | 'code'
   String _pinInput = '';
@@ -47,7 +49,7 @@ class _LockScreenState extends State<LockScreen> {
 
   Future<void> _init() async {
     final pinLen = await _auth.pinLength();
-    
+
     // Check if biometrics are enabled and available
     final bioEnabled = await _auth.isBiometricsEnabled();
     if (bioEnabled) {
@@ -56,7 +58,11 @@ class _LockScreenState extends State<LockScreen> {
         final isSupported = await _localAuth.isDeviceSupported();
         if (canCheck && isSupported && !kIsWeb) {
           if (mounted) setState(() => _biometricsAvailable = true);
-          _promptBiometrics(); // Auto-trigger
+          if (!_bioAutoPrompted) {
+            _bioAutoPrompted = true;
+            await _promptBiometrics();
+            if (!mounted) return; // Biometrics popped us — don't finish loading
+          }
         }
       } catch (e) {
         debugPrint('Biometrics init error: $e');
@@ -64,12 +70,16 @@ class _LockScreenState extends State<LockScreen> {
     }
 
     if (mounted) {
-      setState(() { _pinLength = pinLen; _loading = false; });
+      setState(() {
+        _pinLength = pinLen;
+        _loading = false;
+      });
     }
   }
 
   Future<void> _promptBiometrics() async {
     if (_verifying) return;
+    if (!mounted) return;
     setState(() => _verifying = true);
     try {
       final authenticated = await _localAuth.authenticate(
@@ -79,11 +89,13 @@ class _LockScreenState extends State<LockScreen> {
           biometricOnly: true,
         ),
       );
-      
+
       if (authenticated) {
         final success = await _auth.silentUnlock();
         if (success && mounted) {
-          Navigator.of(context).pop(true);
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop(true);
+          }
         } else {
           if (mounted) {
             setState(() {
@@ -106,8 +118,12 @@ class _LockScreenState extends State<LockScreen> {
   }
 
   void _onDigit(String digit) {
+    if (_verifying) return;
     if (_pinInput.length >= _pinLength) return;
-    setState(() { _pinInput += digit; _error = null; });
+    setState(() {
+      _pinInput += digit;
+      _error = null;
+    });
     if (_pinInput.length == _pinLength) _verifyPin();
   }
 
@@ -117,6 +133,8 @@ class _LockScreenState extends State<LockScreen> {
   }
 
   Future<void> _verifyPin() async {
+    if (_verifying) return;
+    if (!mounted) return;
     setState(() => _verifying = true);
 
     bool ok = await _auth.verifyPin(_pinInput);
@@ -131,7 +149,10 @@ class _LockScreenState extends State<LockScreen> {
     if (ok && mounted) {
       await _auth.clearLockScreenAttempts();
       await _auth.unlockWithPin(_pinInput);
-      if (mounted) Navigator.of(context).pop(true);
+      if (!mounted) return;
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(true);
+      }
     } else if (mounted) {
       await _auth.recordFailedLockScreenAttempt();
       HapticFeedback.heavyImpact();
@@ -146,7 +167,10 @@ class _LockScreenState extends State<LockScreen> {
   Future<void> _verifyCode() async {
     final code = _codeCtrl.text.trim().toUpperCase();
     if (code.isEmpty) return;
-    setState(() { _codeLoading = true; _error = null; });
+    setState(() {
+      _codeLoading = true;
+      _error = null;
+    });
     final result = await _auth.login(code);
     if (!mounted) return;
     if (result.success) {
@@ -167,16 +191,21 @@ class _LockScreenState extends State<LockScreen> {
     super.dispose();
   }
 
-    @override
+  @override
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
         backgroundColor: cVoid,
-        body: Center(child: SizedBox(width: 20, height: 20,
-            child: CircularProgressIndicator(strokeWidth: 1, color: cGold))),
+        body: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 1, color: cGold),
+          ),
+        ),
       );
     }
-    
+
     return Focus(
       autofocus: true,
       onKeyEvent: (node, event) {
@@ -209,40 +238,69 @@ class _LockScreenState extends State<LockScreen> {
                   child: IntrinsicHeight(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32),
-                      child: Column(children: [
-                        const Spacer(),
-                        const Text('L o r e', style: TextStyle(fontSize: 13,
-                            color: cGold, letterSpacing: 6, fontWeight: FontWeight.w300)),
-                        const SizedBox(height: 48),
-                        if (_mode == 'pin') _buildPinPrompt() else _buildCodePrompt(),
-                        const Spacer(),
-                        if (_mode == 'pin') ...[
-                          GestureDetector(
-                            onTap: () => setState(() { _mode = 'code'; _error = null; }),
-                            child: const Text('Forgot PIN — use unique code',
-                                style: TextStyle(fontFamily: 'monospace', fontSize: 9,
-                                    color: cSmoke, letterSpacing: 1)),
+                      child: Column(
+                        children: [
+                          const Spacer(),
+                          const Text(
+                            'L o r e',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: cGold,
+                              letterSpacing: 6,
+                              fontWeight: FontWeight.w300,
+                            ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 48),
+                          if (_mode == 'pin')
+                            _buildPinPrompt()
+                          else
+                            _buildCodePrompt(),
+                          const Spacer(),
+                          if (_mode == 'pin') ...[
+                            GestureDetector(
+                              onTap: () => setState(() {
+                                _mode = 'code';
+                                _error = null;
+                              }),
+                              child: const Text(
+                                'Forgot PIN — use unique code',
+                                style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 9,
+                                  color: cSmoke,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          if (_mode == 'code') ...[
+                            GestureDetector(
+                              onTap: () => setState(() {
+                                _mode = 'pin';
+                                _error = null;
+                                _codeCtrl.clear();
+                              }),
+                              child: const Text(
+                                '← Back to PIN',
+                                style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 9,
+                                  color: cSmoke,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          const SizedBox(height: 32),
                         ],
-                        if (_mode == 'code') ...[
-                          GestureDetector(
-                            onTap: () => setState(() {
-                              _mode = 'pin'; _error = null; _codeCtrl.clear();
-                            }),
-                            child: const Text('← Back to PIN',
-                                style: TextStyle(fontFamily: 'monospace', fontSize: 9,
-                                    color: cSmoke, letterSpacing: 1)),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                        const SizedBox(height: 32),
-                      ]),
+                      ),
                     ),
                   ),
                 ),
               );
-            }
+            },
           ),
         ),
       ),
@@ -250,92 +308,163 @@ class _LockScreenState extends State<LockScreen> {
   }
 
   Widget _buildPinPrompt() {
-    return Column(children: [
-      Text('Enter your $_pinLength-digit PIN',
-          style: const TextStyle(fontSize: 16, color: cMist,
-              fontWeight: FontWeight.w300, fontStyle: FontStyle.italic)),
-      const SizedBox(height: 32),
-      Row(mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(_pinLength, (i) => Container(
-          margin: const EdgeInsets.symmetric(horizontal: 8),
-          width: 14, height: 14,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: i < _pinInput.length ? cGold : Colors.transparent,
-            border: Border.all(color: i < _pinInput.length ? cGold : cAsh),
-          ),
-        )),
-      ),
-      if (_biometricsAvailable) ...[
-        const SizedBox(height: 24),
-        GestureDetector(
-          onTap: _promptBiometrics,
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: cGold.withValues(alpha: 0.3)),
-            ),
-            child: const Icon(Icons.fingerprint, size: 32, color: cGold),
+    return Column(
+      children: [
+        Text(
+          'Enter your $_pinLength-digit PIN',
+          style: const TextStyle(
+            fontSize: 16,
+            color: cMist,
+            fontWeight: FontWeight.w300,
+            fontStyle: FontStyle.italic,
           ),
         ),
+        const SizedBox(height: 32),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+            _pinLength,
+            (i) => Container(
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: i < _pinInput.length ? cGold : Colors.transparent,
+                border: Border.all(color: i < _pinInput.length ? cGold : cAsh),
+              ),
+            ),
+          ),
+        ),
+        if (_biometricsAvailable) ...[
+          const SizedBox(height: 24),
+          GestureDetector(
+            onTap: _promptBiometrics,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: cGold.withValues(alpha: 0.3)),
+              ),
+              child: const Icon(Icons.fingerprint, size: 32, color: cGold),
+            ),
+          ),
+        ],
+        if (_error != null) ...[
+          const SizedBox(height: 16),
+          Text(
+            _error!,
+            style: const TextStyle(
+              fontSize: 11,
+              color: cEmber,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+        const SizedBox(height: 40),
+        _buildNumpad(),
       ],
-      if (_error != null) ...[
-        const SizedBox(height: 16),
-        Text(_error!, style: const TextStyle(fontSize: 11,
-            color: cEmber, fontStyle: FontStyle.italic)),
-      ],
-      const SizedBox(height: 40),
-      _buildNumpad(),
-    ]);
+    );
   }
 
   Widget _buildCodePrompt() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Enter your unique code',
-          style: TextStyle(fontSize: 16, color: cMist,
-              fontWeight: FontWeight.w300, fontStyle: FontStyle.italic)),
-      const SizedBox(height: 8),
-      const Text('Use this if you\'ve forgotten your PIN.',
-          style: TextStyle(fontSize: 11, color: cSmoke, fontStyle: FontStyle.italic)),
-      const SizedBox(height: 24),
-      TextField(
-        controller: _codeCtrl,
-        textCapitalization: TextCapitalization.characters,
-        style: const TextStyle(fontFamily: 'monospace',
-            fontSize: 18, color: cParchment, letterSpacing: 4),
-        decoration: InputDecoration(
-          filled: true, fillColor: cInk,
-          hintText: 'LR-XXXX-XXXX',
-          hintStyle: const TextStyle(fontFamily: 'monospace',
-              fontSize: 14, color: cAsh, letterSpacing: 2),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          border: const OutlineInputBorder(borderRadius: BorderRadius.zero,
-              borderSide: BorderSide(color: cAsh)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.zero,
-              borderSide: BorderSide(color: cGold.withValues(alpha: 0.6))),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Enter your unique code',
+          style: TextStyle(
+            fontSize: 16,
+            color: cMist,
+            fontWeight: FontWeight.w300,
+            fontStyle: FontStyle.italic,
+          ),
         ),
-      ),
-      if (_error != null) ...[
         const SizedBox(height: 8),
-        Text(_error!, style: const TextStyle(fontSize: 11,
-            color: cEmber, fontStyle: FontStyle.italic)),
-      ],
-      const SizedBox(height: 16),
-      GestureDetector(
-        onTap: _codeLoading ? null : _verifyCode,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          color: cGold.withValues(alpha: 0.15),
-          child: Center(child: _codeLoading
-              ? const SizedBox(width: 16, height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 1.5, color: cGold))
-              : const Text('Unlock', style: TextStyle(fontFamily: 'monospace',
-                  fontSize: 10, color: cGold, letterSpacing: 3))),
+        const Text(
+          'Use this if you\'ve forgotten your PIN.',
+          style: TextStyle(
+            fontSize: 11,
+            color: cSmoke,
+            fontStyle: FontStyle.italic,
+          ),
         ),
-      ),
-    ]);
+        const SizedBox(height: 24),
+        TextField(
+          controller: _codeCtrl,
+          textCapitalization: TextCapitalization.characters,
+          style: const TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 18,
+            color: cParchment,
+            letterSpacing: 4,
+          ),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: cInk,
+            hintText: 'LR-XXXX-XXXX',
+            hintStyle: const TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 14,
+              color: cAsh,
+              letterSpacing: 2,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            border: const OutlineInputBorder(
+              borderRadius: BorderRadius.zero,
+              borderSide: BorderSide(color: cAsh),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.zero,
+              borderSide: BorderSide(color: cGold.withValues(alpha: 0.6)),
+            ),
+          ),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            _error!,
+            style: const TextStyle(
+              fontSize: 11,
+              color: cEmber,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+        const SizedBox(height: 16),
+        GestureDetector(
+          onTap: _codeLoading ? null : _verifyCode,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            color: cGold.withValues(alpha: 0.15),
+            child: Center(
+              child: _codeLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: cGold,
+                      ),
+                    )
+                  : const Text(
+                      'Unlock',
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 10,
+                        color: cGold,
+                        letterSpacing: 3,
+                      ),
+                    ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildNumpad() => _verifying
@@ -345,24 +474,27 @@ class _LockScreenState extends State<LockScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
-                width: 22, height: 22,
+                width: 22,
+                height: 22,
                 child: CircularProgressIndicator(
-                    strokeWidth: 1.5, color: cGold),
+                  strokeWidth: 1.5,
+                  color: cGold,
+                ),
               ),
               SizedBox(height: 16),
-              Text('Unlocking...',
-                  style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 10,
-                      color: cSmoke,
-                      letterSpacing: 3)),
+              Text(
+                'Unlocking...',
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 10,
+                  color: cSmoke,
+                  letterSpacing: 3,
+                ),
+              ),
             ],
           ),
         )
-      : _Numpad(
-          onDigit: _onDigit,
-          onDelete: _onDelete,
-        );
+      : _Numpad(onDigit: _onDigit, onDelete: _onDelete);
 }
 
 /// Shared numpad with press feedback. Highlights the tapped key for
@@ -396,53 +528,75 @@ class _NumpadState extends State<_Numpad> {
 
   @override
   Widget build(BuildContext context) {
-    const rows = [['1','2','3'],['4','5','6'],['7','8','9'],['','0','⌫']];
-    return Column(children: rows.map((row) => Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(mainAxisAlignment: MainAxisAlignment.center,
-        children: row.map((d) {
-          if (d.isEmpty) return const SizedBox(width: 92, height: 72);
-          final isPressed = _pressed == d;
-          return GestureDetector(
-            onTapDown: (_) => setState(() => _pressed = d),
-            onTapUp: (_) {
-              _flash(d);
-              _tap(d);
-            },
-            onTapCancel: () => setState(() => _pressed = null),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 90),
-              width: 72, height: 72,
-              margin: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isPressed
-                    ? cGold.withValues(alpha: 0.15) : cInk,
-                border: Border.all(
-                  color: isPressed ? cGold : cAsh,
-                  width: isPressed ? 1.5 : 1,
-                ),
+    const rows = [
+      ['1', '2', '3'],
+      ['4', '5', '6'],
+      ['7', '8', '9'],
+      ['', '0', '⌫'],
+    ];
+    return Column(
+      children: rows
+          .map(
+            (row) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: row.map((d) {
+                  if (d.isEmpty) return const SizedBox(width: 92, height: 72);
+                  final isPressed = _pressed == d;
+                  return GestureDetector(
+                    onTapDown: (_) => setState(() => _pressed = d),
+                    onTapUp: (_) {
+                      _flash(d);
+                      _tap(d);
+                    },
+                    onTapCancel: () => setState(() => _pressed = null),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 90),
+                      width: 72,
+                      height: 72,
+                      margin: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isPressed ? cGold.withValues(alpha: 0.15) : cInk,
+                        border: Border.all(
+                          color: isPressed ? cGold : cAsh,
+                          width: isPressed ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: d == '⌫'
+                            ? Icon(
+                                Icons.backspace_outlined,
+                                size: 20,
+                                color: isPressed ? cGold : cSmoke,
+                              )
+                            : Text(
+                                d,
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  color: isPressed ? cGold : cParchment,
+                                  fontWeight: FontWeight.w300,
+                                ),
+                              ),
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
-              child: Center(child: d == '⌫'
-                  ? Icon(Icons.backspace_outlined, size: 20,
-                      color: isPressed ? cGold : cSmoke)
-                  : Text(d, style: TextStyle(
-                      fontSize: 22,
-                      color: isPressed ? cGold : cParchment,
-                      fontWeight: FontWeight.w300))),
             ),
-          );
-        }).toList()),
-    )).toList());
+          )
+          .toList(),
+    );
   }
 }
-
 
 // ── Lock Setup Screen ──
 class LockSetupScreen extends StatefulWidget {
   final bool isFirstTime;
   const LockSetupScreen({super.key, this.isFirstTime = false});
-  @override State<LockSetupScreen> createState() => _LockSetupScreenState();
+  @override
+  State<LockSetupScreen> createState() => _LockSetupScreenState();
 }
 
 class _LockSetupScreenState extends State<LockSetupScreen> {
@@ -450,6 +604,7 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
   final LocalAuthentication _localAuth = LocalAuthentication();
   bool _bioEnabled = false;
   bool _bioAvailable = false;
+  bool _togglingBio = false;
 
   int _step = 1;
   final int _pinLength = AuthService.pinMinLength;
@@ -457,6 +612,7 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
   String _pinInput = '';
   String? _error;
   bool _savingPin = false;
+  int _pinCompleteToken = 0;
 
   String _currentTiming = 'always';
   bool _loadingCurrent = true;
@@ -473,11 +629,13 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
 
   Future<void> _loadCurrent() async {
     final timing = await _auth.getLockTiming();
-    
+
     final bioEnabled = await _auth.isBiometricsEnabled();
     bool bioAvailable = false;
     try {
-      bioAvailable = await _localAuth.canCheckBiometrics && await _localAuth.isDeviceSupported();
+      bioAvailable =
+          await _localAuth.canCheckBiometrics &&
+          await _localAuth.isDeviceSupported();
     } catch (_) {}
 
     if (mounted) {
@@ -496,17 +654,25 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
     if (_pinInput.length >= _pinLength) return;
     setState(() { _pinInput += digit; _error = null; });
     if (_pinInput.length == _pinLength) {
-      Future.delayed(const Duration(milliseconds: 150), _onPinComplete);
+      final ticket = ++_pinCompleteToken;
+      Future.delayed(const Duration(milliseconds: 150), () {
+        _onPinComplete(ticket);
+      });
     }
   }
 
   void _onDelete() {
     if (_savingPin) return;
     if (_pinInput.isEmpty) return;
+    _pinCompleteToken++; // Cancel any pending completion — PIN is no longer full
     setState(() => _pinInput = _pinInput.substring(0, _pinInput.length - 1));
   }
 
-  void _onPinComplete() {
+    void _onPinComplete(int ticket) {
+    if (!mounted) return;
+    if (ticket != _pinCompleteToken) return; // Stale — user deleted / retyped
+    if (_savingPin) return;
+    if (_pinInput.length != _pinLength) return; // PIN is no longer full
     if (_step == 1) {
       setState(() { _pinFirst = _pinInput; _pinInput = ''; _step = 2; });
     } else if (_step == 2) {
@@ -524,16 +690,26 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
   }
 
   Future<void> _savePin() async {
-    setState(() { _savingPin = true; _error = null; });
+    setState(() {
+      _savingPin = true;
+      _error = null;
+    });
     try {
       await _auth.savePin(_pinFirst);
       await _auth.unlockWithPin(_pinFirst);
       if (!mounted) return;
       if (widget.isFirstTime) {
-        setState(() { _step = 4; _pinInput = ''; _savingPin = false; });
+        setState(() {
+          _step = 4;
+          _pinInput = '';
+          _savingPin = false;
+        });
       } else {
         setState(() {
-          _step = 0; _pinInput = ''; _pinFirst = ''; _savingPin = false;
+          _step = 0;
+          _pinInput = '';
+          _pinFirst = '';
+          _savingPin = false;
         });
       }
     } catch (e) {
@@ -543,14 +719,19 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
         _pinInput = '';
         _pinFirst = '';
         _step = 1;
-        _error = 'Could not save PIN. ${e.toString().replaceFirst('Invalid argument(s): ', '')}';
+        _error =
+            'Could not save PIN. ${e.toString().replaceFirst('Invalid argument(s): ', '')}';
       });
     }
   }
 
   Future<void> _saveTimingOnly(String timing) async {
     await _auth.saveLockTiming(timing);
-    if (mounted) setState(() { _currentTiming = timing; _step = 0; });
+    if (mounted)
+      setState(() {
+        _currentTiming = timing;
+        _step = 0;
+      });
   }
 
   @override
@@ -580,52 +761,85 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
         backgroundColor: cVoid,
         body: SafeArea(
           child: _loadingCurrent
-              ? const Center(child: SizedBox(width: 20, height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 1, color: cGold)))
-              : Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                if (widget.isFirstTime) ...[
-                  const Text('SECURE YOUR ACCOUNT', style: TextStyle(
-                      fontFamily: 'monospace', fontSize: 9,
-                      color: cGold, letterSpacing: 4)),
-                  const SizedBox(height: 8),
-                  Text(
-                    _step == 1
-                        ? 'Choose a $_pinLength-digit PIN. You\'ll need this to recover your account.'
-                        : _step == 2
-                            ? 'Enter your PIN again to confirm.'
-                            : '',
-                    style: const TextStyle(fontSize: 13, color: cSmoke,
-                        fontStyle: FontStyle.italic)),
-                  const SizedBox(height: 40),
-                ] else ...[
-                  Row(children: [
-                    GestureDetector(
-                      onTap: () {
-                        if (_step == 0) {
-                          Navigator.of(context).pop();
-                        } else {
-                          setState(() {
-                            _step = 0;
-                            _pinInput = '';
-                            _pinFirst = '';
-                            _error = null;
-                          });
-                        }
-                      },
-                      child: const Icon(Icons.arrow_back_ios, color: cSmoke, size: 16),
+              ? const Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1,
+                      color: cGold,
                     ),
-                    const SizedBox(width: 12),
-                    const Text('SECURITY SETTINGS', style: TextStyle(
-                        fontFamily: 'monospace', fontSize: 9,
-                        color: cGold, letterSpacing: 4)),
-                  ]),
-                  const SizedBox(height: 40),
-                ],
-                Expanded(child: _buildStep()),
-              ]),
-            ),
+                  ),
+                )
+              : Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (widget.isFirstTime) ...[
+                        const Text(
+                          'SECURE YOUR ACCOUNT',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 9,
+                            color: cGold,
+                            letterSpacing: 4,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _step == 1
+                              ? 'Choose a $_pinLength-digit PIN. You\'ll need this to recover your account.'
+                              : _step == 2
+                              ? 'Enter your PIN again to confirm.'
+                              : '',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: cSmoke,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                      ] else ...[
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                if (_step == 0) {
+                                  Navigator.of(context).pop();
+                                } else {
+                                  setState(() {
+                                    _step = 0;
+                                    _pinInput = '';
+                                    _pinFirst = '';
+                                    _error = null;
+                                  });
+                                }
+                              },
+                              child: const Icon(
+                                Icons.arrow_back_ios,
+                                color: cSmoke,
+                                size: 16,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'SECURITY SETTINGS',
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 9,
+                                color: cGold,
+                                letterSpacing: 4,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 40),
+                      ],
+                      Expanded(child: _buildStep()),
+                    ],
+                  ),
+                ),
         ),
       ),
     );
@@ -633,121 +847,179 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
 
   Widget _buildStep() {
     switch (_step) {
-      case 0:  return _buildOverview();
-      case 1:  return _buildPinEntry(isConfirm: false);
-      case 2:  return _buildPinEntry(isConfirm: true);
-      case 4:  return _buildDone();
-      case 12: return _buildTimingEdit();
-      default: return const SizedBox();
+      case 0:
+        return _buildOverview();
+      case 1:
+        return _buildPinEntry(isConfirm: false);
+      case 2:
+        return _buildPinEntry(isConfirm: true);
+      case 4:
+        return _buildDone();
+      case 12:
+        return _buildTimingEdit();
+      default:
+        return const SizedBox();
     }
   }
 
   Widget _buildOverview() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('PIN', style: TextStyle(fontSize: 9,
-          color: cSmoke, fontFamily: 'monospace', letterSpacing: 3)),
-      const SizedBox(height: 8),
-      GestureDetector(
-        onTap: () => setState(() {
-          _step = 1; _pinInput = ''; _pinFirst = ''; _error = null;
-        }),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(border: Border.all(color: cAsh)),
-          child: Row(children: [
-            const Text('Change PIN', style: TextStyle(fontSize: 15,
-                color: cParchment, fontWeight: FontWeight.w300)),
-            const Spacer(),
-            const Icon(Icons.chevron_right, size: 16, color: cAsh),
-          ]),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'PIN',
+          style: TextStyle(
+            fontSize: 9,
+            color: cSmoke,
+            fontFamily: 'monospace',
+            letterSpacing: 3,
+          ),
         ),
-      ),
-
-      if (_bioAvailable && !kIsWeb) ...[
-        const SizedBox(height: 24),
-        const Text('BIOMETRICS', style: TextStyle(fontSize: 9,
-            color: cSmoke, fontFamily: 'monospace', letterSpacing: 3)),
         const SizedBox(height: 8),
         GestureDetector(
-          onTap: () async {
-            try {
-              final success = await _localAuth.authenticate(
-                localizedReason: 'Confirm to enable biometric unlock',
-                options: const AuthenticationOptions(
-                  stickyAuth: true,
-                  biometricOnly: true,
-                ),
-              );
-              if (success) {
-                await _auth.setBiometricsEnabled(!_bioEnabled);
-                if (mounted) setState(() => _bioEnabled = !_bioEnabled);
-              }
-            } catch (e) {
-              debugPrint('Biometric setup error: $e');
-            }
-          },
+          onTap: () => setState(() {
+            _step = 1;
+            _pinInput = '';
+            _pinFirst = '';
+            _error = null;
+          }),
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              border: Border.all(
-                  color: _bioEnabled ? cGold.withValues(alpha: 0.4) : cAsh),
-            ),
+            decoration: BoxDecoration(border: Border.all(color: cAsh)),
             child: Row(
               children: [
-                const Icon(Icons.fingerprint, size: 20, color: cSmoke),
-                const SizedBox(width: 12),
-                Text(_bioEnabled ? 'Enabled' : 'Disabled',
-                    style: TextStyle(
-                        fontSize: 15,
-                        color: _bioEnabled ? cGold : cMist,
-                        fontWeight: FontWeight.w300)),
-                const Spacer(),
-                Container(
-                  width: 36, height: 20,
-                  decoration: BoxDecoration(
-                    color: _bioEnabled ? cGold.withValues(alpha: 0.2) : cAsh,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: AnimatedAlign(
-                    duration: const Duration(milliseconds: 150),
-                    alignment: _bioEnabled ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.all(2),
-                      child: Container(
-                        width: 14, height: 14,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _bioEnabled ? cGold : cSmoke,
-                        ),
-                      ),
-                    ),
+                const Text(
+                  'Change PIN',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: cParchment,
+                    fontWeight: FontWeight.w300,
                   ),
                 ),
+                const Spacer(),
+                const Icon(Icons.chevron_right, size: 16, color: cAsh),
               ],
             ),
           ),
         ),
-      ],
 
-      const SizedBox(height: 32),
-      const Text('LOCK BEHAVIOUR', style: TextStyle(fontSize: 9,
-          color: cSmoke, fontFamily: 'monospace', letterSpacing: 3)),
-      const SizedBox(height: 8),
-      Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(border: Border.all(color: cAsh)),
-        child: const Text(
-          'Your PIN is required every time Lore opens, to unlock your '
-          'encryption keys. This protects your stories if your phone '
-          'is ever in someone else\'s hands.',
-          style: TextStyle(fontSize: 12, color: cMist,
-              fontStyle: FontStyle.italic, height: 1.6),
+        if (_bioAvailable && !kIsWeb) ...[
+          const SizedBox(height: 24),
+          const Text(
+            'BIOMETRICS',
+            style: TextStyle(
+              fontSize: 9,
+              color: cSmoke,
+              fontFamily: 'monospace',
+              letterSpacing: 3,
+            ),
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () async {
+              if (_togglingBio) return;
+              _togglingBio = true;
+              try {
+                final success = await _localAuth.authenticate(
+                  localizedReason: 'Confirm to enable biometric unlock',
+                  options: const AuthenticationOptions(
+                    stickyAuth: true,
+                    biometricOnly: true,
+                  ),
+                );
+                if (success && mounted) {
+                  final next = !_bioEnabled;
+                  await _auth.setBiometricsEnabled(next);
+                  if (mounted) setState(() => _bioEnabled = next);
+                }
+              } catch (e) {
+                debugPrint('Biometric setup error: $e');
+              } finally {
+                _togglingBio = false;
+              }
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: _bioEnabled ? cGold.withValues(alpha: 0.4) : cAsh,
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.fingerprint, size: 20, color: cSmoke),
+                  const SizedBox(width: 12),
+                  Text(
+                    _bioEnabled ? 'Enabled' : 'Disabled',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: _bioEnabled ? cGold : cMist,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    width: 36,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: _bioEnabled ? cGold.withValues(alpha: 0.2) : cAsh,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: AnimatedAlign(
+                      duration: const Duration(milliseconds: 150),
+                      alignment: _bioEnabled
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: Container(
+                          width: 14,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _bioEnabled ? cGold : cSmoke,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 32),
+        const Text(
+          'LOCK BEHAVIOUR',
+          style: TextStyle(
+            fontSize: 9,
+            color: cSmoke,
+            fontFamily: 'monospace',
+            letterSpacing: 3,
+          ),
         ),
-      ),
-    ]);
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(border: Border.all(color: cAsh)),
+          child: const Text(
+            'Your PIN is required every time Lore opens, to unlock your '
+            'encryption keys. This protects your stories if your phone '
+            'is ever in someone else\'s hands.',
+            style: TextStyle(
+              fontSize: 12,
+              color: cMist,
+              fontStyle: FontStyle.italic,
+              height: 1.6,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildPinEntry({required bool isConfirm}) {
@@ -756,23 +1028,30 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const SizedBox(
-            width: 24, height: 24,
-            child: CircularProgressIndicator(
-                strokeWidth: 1.5, color: cGold),
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(strokeWidth: 1.5, color: cGold),
           ),
           const SizedBox(height: 24),
           const Text(
             'Securing your account...',
-            style: TextStyle(fontSize: 14, color: cMist,
-                fontStyle: FontStyle.italic),
+            style: TextStyle(
+              fontSize: 14,
+              color: cMist,
+              fontStyle: FontStyle.italic,
+            ),
           ),
           const SizedBox(height: 8),
           const Text(
             'Generating your encryption key. This takes a few seconds, '
             'but only happens once.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11, color: cSmoke,
-                fontStyle: FontStyle.italic, height: 1.5),
+            style: TextStyle(
+              fontSize: 11,
+              color: cSmoke,
+              fontStyle: FontStyle.italic,
+              height: 1.5,
+            ),
           ),
         ],
       );
@@ -780,47 +1059,88 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
 
     final title = isConfirm ? 'Confirm your PIN' : 'Set your PIN';
     return SingleChildScrollView(
-      child: Column(children: [
-        Text(title, style: const TextStyle(fontSize: 20, color: cParchment,
-            fontWeight: FontWeight.w300, fontStyle: FontStyle.italic)),
-        const SizedBox(height: 32),
-        Row(mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_pinLength, (i) => Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            width: 14, height: 14,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: i < _pinInput.length ? cGold : Colors.transparent,
-              border: Border.all(color: i < _pinInput.length ? cGold : cAsh),
+      child: Column(
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 20,
+              color: cParchment,
+              fontWeight: FontWeight.w300,
+              fontStyle: FontStyle.italic,
             ),
-          )),
-        ),
-        if (_error != null) ...[
-          const SizedBox(height: 16),
-          Text(_error!, textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 11,
-                  color: cEmber, fontStyle: FontStyle.italic)),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              _pinLength,
+              (i) => Container(
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: i < _pinInput.length ? cGold : Colors.transparent,
+                  border: Border.all(
+                    color: i < _pinInput.length ? cGold : cAsh,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 11,
+                color: cEmber,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+          const SizedBox(height: 40),
+          _buildNumpad(),
         ],
-        const SizedBox(height: 40),
-        _buildNumpad(),
-      ]),
+      ),
     );
   }
 
   Widget _buildTimingEdit() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('When should Lore lock?',
-          style: TextStyle(fontSize: 20, color: cParchment,
-              fontWeight: FontWeight.w300, fontStyle: FontStyle.italic)),
-      const SizedBox(height: 32),
-      _timingEditOption('Every time you open the app', 'always', 'Most secure'),
-      const SizedBox(height: 8),
-      _timingEditOption('After 5 minutes in background', 'background',
-          'Locks if you switch away for more than 5 minutes'),
-      const SizedBox(height: 8),
-      _timingEditOption('Only when fully closed', 'close',
-          'Only locks after you fully close the app'),
-    ]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'When should Lore lock?',
+          style: TextStyle(
+            fontSize: 20,
+            color: cParchment,
+            fontWeight: FontWeight.w300,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+        const SizedBox(height: 32),
+        _timingEditOption(
+          'Every time you open the app',
+          'always',
+          'Most secure',
+        ),
+        const SizedBox(height: 8),
+        _timingEditOption(
+          'After 5 minutes in background',
+          'background',
+          'Locks if you switch away for more than 5 minutes',
+        ),
+        const SizedBox(height: 8),
+        _timingEditOption(
+          'Only when fully closed',
+          'close',
+          'Only locks after you fully close the app',
+        ),
+      ],
+    );
   }
 
   Widget _timingEditOption(String label, String value, String sub) {
@@ -830,64 +1150,103 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          border: Border.all(color: selected ? cGold.withValues(alpha: 0.5) : cAsh),
+          border: Border.all(
+            color: selected ? cGold.withValues(alpha: 0.5) : cAsh,
+          ),
           color: selected ? cGold.withValues(alpha: 0.04) : Colors.transparent,
         ),
-        child: Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: const TextStyle(fontSize: 13,
-                color: cParchment, fontWeight: FontWeight.w300)),
-            const SizedBox(height: 2),
-            Text(sub, style: const TextStyle(fontSize: 11,
-                color: cSmoke, fontStyle: FontStyle.italic)),
-          ])),
-          if (selected) const Icon(Icons.check, size: 14, color: cGold),
-        ]),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: cParchment,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    sub,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: cSmoke,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (selected) const Icon(Icons.check, size: 14, color: cGold),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildDone() {
-    return Column(mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('All set.', style: TextStyle(fontSize: 28,
-          color: cParchment, fontWeight: FontWeight.w300,
-          fontStyle: FontStyle.italic)),
-      const SizedBox(height: 12),
-            const Text(
-        'Your story is yours. Every word, image, and note is protected by end-to-end encryption.\n\n'
-        'Your data is never shared, tracked, or sold. Only you and your writing partner hold the keys to your worlds.',
-        style: TextStyle(fontSize: 13, color: cSmoke,
-            fontStyle: FontStyle.italic, height: 1.7),
-      ),
-      const SizedBox(height: 48),
-      GestureDetector(
-        onTap: () {
-          if (widget.isFirstTime) {
-            // Show the tutorial first, then go to Home
-            Navigator.of(context).pushReplacement(
-              fadeRoute(const GesturesScreen(isFirstTime: true)),
-            );
-            // We use pushReplacement so they can't back out of the tutorial to the lock screen.
-            // We will handle going to Home from inside the GesturesScreen next.
-          } else {
-            Navigator.of(context).pop(true);
-          }
-        },
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          color: cGold.withValues(alpha: 0.15),
-          child: const Center(child: Text('Continue',
-              style: TextStyle(fontFamily: 'monospace', fontSize: 10,
-                  color: cGold, letterSpacing: 3))),
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'All set.',
+          style: TextStyle(
+            fontSize: 28,
+            color: cParchment,
+            fontWeight: FontWeight.w300,
+            fontStyle: FontStyle.italic,
+          ),
         ),
-      ),
-    ]);
+        const SizedBox(height: 12),
+        const Text(
+          'Your story is yours. Every word, image, and note is protected by end-to-end encryption.\n\n'
+          'Your data is never shared, tracked, or sold. Only you and your writing partner hold the keys to your worlds.',
+          style: TextStyle(
+            fontSize: 13,
+            color: cSmoke,
+            fontStyle: FontStyle.italic,
+            height: 1.7,
+          ),
+        ),
+        const SizedBox(height: 48),
+        GestureDetector(
+          onTap: () {
+            if (widget.isFirstTime) {
+              // Show the tutorial first, then go to Home
+              Navigator.of(context).pushReplacement(
+                fadeRoute(const GesturesScreen(isFirstTime: true)),
+              );
+              // We use pushReplacement so they can't back out of the tutorial to the lock screen.
+              // We will handle going to Home from inside the GesturesScreen next.
+            } else {
+              Navigator.of(context).pop(true);
+            }
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            color: cGold.withValues(alpha: 0.15),
+            child: const Center(
+              child: Text(
+                'Continue',
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 10,
+                  color: cGold,
+                  letterSpacing: 3,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
-  Widget _buildNumpad() => _Numpad(
-    onDigit: _onDigit,
-    onDelete: _onDelete,
-  );
+  Widget _buildNumpad() => _Numpad(onDigit: _onDigit, onDelete: _onDelete);
 }

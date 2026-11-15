@@ -17,6 +17,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tz;
 
 /// Scales a base font size by the user's Settings text-size preference.
 /// Medium (14pt, `appSettings.baseFontSize == 14.0`) is the reference.
@@ -30,6 +32,7 @@ double _dSize(double base) => base * (appSettings.baseFontSize / 14.0);
 final _notifPlugin = FlutterLocalNotificationsPlugin();
 
 Future<void> initDiaryNotifications() async {
+  tz.initializeTimeZones();
   const android = AndroidInitializationSettings('@mipmap/ic_launcher');
   const settings = InitializationSettings(android: android);
   await _notifPlugin.initialize(settings);
@@ -37,23 +40,30 @@ Future<void> initDiaryNotifications() async {
 
 Future<void> scheduleDiaryReminder(TimeOfDay time) async {
   await _notifPlugin.cancelAll();
-  final now = DateTime.now();
-  var scheduled = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+  final now = tz.TZDateTime.now(tz.local);
+  var scheduled = tz.TZDateTime(
+      tz.local, now.year, now.month, now.day, time.hour, time.minute);
   if (scheduled.isBefore(now)) {
     scheduled = scheduled.add(const Duration(days: 1));
   }
-  await _notifPlugin.show(
+  await _notifPlugin.zonedSchedule(
     0,
     'Time to write',
     'Your diary is waiting for you.',
+    scheduled,
     const NotificationDetails(
       android: AndroidNotificationDetails(
-        'diary_reminder', 'Diary Reminder',
+        'diary_reminder',
+        'Diary Reminder',
         channelDescription: 'Daily writing reminder',
         importance: Importance.high,
         priority: Priority.high,
       ),
     ),
+    androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    uiLocalNotificationDateInterpretation:
+        UILocalNotificationDateInterpretation.absoluteTime,
+    matchDateTimeComponents: DateTimeComponents.time,
   );
 }
 
@@ -61,9 +71,6 @@ Future<void> cancelDiaryReminder() async {
   await _notifPlugin.cancelAll();
 }
 
-// ─────────────────────────────────────────
-// DIARY STORAGE  (local + Firestore)
-// ─────────────────────────────────────────
 class DiaryStorage {
   static const _entriesKey = 'diary_entries';
   static const _reminderKey = 'diary_reminder_enabled';
@@ -79,14 +86,26 @@ class DiaryStorage {
     if (raw == null) return [];
     try {
       final list = jsonDecode(raw) as List;
-      return list.map((e) => DiaryEntry.fromJson(e as Map<String, dynamic>)).toList();
-    } catch (_) { return []; }
+      final out = <DiaryEntry>[];
+      for (final e in list) {
+        try {
+          out.add(DiaryEntry.fromJson(e as Map<String, dynamic>));
+        } catch (_) {
+          // One bad entry must not wipe the rest of the diary.
+        }
+      }
+      return out;
+    } catch (_) {
+      return [];
+    }
   }
 
   static Future<void> saveEntries(List<DiaryEntry> entries) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_entriesKey,
-        jsonEncode(entries.map((e) => e.toJson()).toList()));
+    await prefs.setString(
+      _entriesKey,
+      jsonEncode(entries.map((e) => e.toJson()).toList()),
+    );
   }
 
   static Future<bool> getReminderEnabled() async {
@@ -97,8 +116,8 @@ class DiaryStorage {
   static Future<TimeOfDay> getReminderTime() async {
     final prefs = await SharedPreferences.getInstance();
     return TimeOfDay(
-      hour: prefs.getInt(_reminderHourKey) ?? 20,
-      minute: prefs.getInt(_reminderMinKey) ?? 0,
+      hour: (prefs.getInt(_reminderHourKey) ?? 20).clamp(0, 23),
+      minute: (prefs.getInt(_reminderMinKey) ?? 0).clamp(0, 59),
     );
   }
 
@@ -122,9 +141,13 @@ class DiaryStorage {
     if (lastStr == todayStr) return; // already written today
     int streak = prefs.getInt(_streakKey) ?? 0;
     if (lastStr != null) {
-      final last = DateTime.parse(lastStr);
-      final diff = today.difference(last).inDays;
-      streak = diff == 1 ? streak + 1 : 1;
+      final last = DateTime.tryParse(lastStr);
+      if (last == null) {
+        streak = 1;
+      } else {
+        final diff = today.difference(last).inDays;
+        streak = diff == 1 ? streak + 1 : 1;
+      }
     } else {
       streak = 1;
     }
@@ -133,33 +156,23 @@ class DiaryStorage {
   }
 
   // ── Firestore sync ──
-    // ── Firestore sync ──
   static Future<void> syncToFirestore(
       String userCode, List<DiaryEntry> entries) async {
     final db = FirebaseFirestore.instance;
-    final collection = db.collection('users').doc(userCode).collection('diary');
-    
-    // 1. Get all existing documents from Firestore
+    final collection =
+        db.collection('users').doc(userCode).collection('diary');
     final existingDocs = await collection.get();
-    
-    // 2. Create a set of IDs that we currently have locally
     final localIds = entries.map((e) => e.id).toSet();
-    
     final batch = db.batch();
-    
-    // 3. If an existing Firestore doc is NOT in our local list, delete it!
     for (final doc in existingDocs.docs) {
       if (!localIds.contains(doc.id)) {
         batch.delete(doc.reference);
       }
     }
-    
-    // 4. Add or update all our local entries
     for (final e in entries) {
       final ref = collection.doc(e.id);
       batch.set(ref, e.toJson());
     }
-    
     await batch.commit();
   }
 
@@ -170,9 +183,15 @@ class DiaryStorage {
         .doc(userCode)
         .collection('diary')
         .get();
-    return snap.docs
-        .map((d) => DiaryEntry.fromJson(d.data()))
-        .toList();
+    final out = <DiaryEntry>[];
+    for (final d in snap.docs) {
+      try {
+        out.add(DiaryEntry.fromJson(d.data()));
+      } catch (_) {
+        // One bad remote doc must not wipe the rest.
+      }
+    }
+    return out;
   }
 }
 
@@ -193,7 +212,7 @@ class DiaryEntry {
   List<String> linkedWorldIds;
   final DateTime createdAt;
   DateTime updatedAt;
-  bool isFolder; 
+  bool isFolder;
   String? parentId;
   Color accentColor;
   String? coverImageUrl;
@@ -210,20 +229,19 @@ class DiaryEntry {
     List<String>? linkedWorldIds,
     Color? accentColor,
     this.coverImageUrl,
-    this.isFolder = false, // Default to false (it's a book)
+    this.isFolder = false,
     this.parentId,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : chapters = chapters ?? [],
         linkedCharacterIds = linkedCharacterIds ?? [],
         linkedWorldIds = linkedWorldIds ?? [],
-        accentColor = accentColor ?? Color(0xFFC9A96E),
+        accentColor = accentColor ?? const Color(0xFFC9A96E),
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
   String get displayTitle {
     if (title.isNotEmpty) return title;
-    // Use first 4 words of first chapter content
     for (final ch in chapters) {
       if (ch.plainText.isNotEmpty) {
         final words = ch.plainText.trim().split(RegExp(r'\s+'));
@@ -234,45 +252,69 @@ class DiaryEntry {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'title': title,
-    'genre': genre,
-    'wordsPerChapter': wordsPerChapter,
-    'chapterCount': chapterCount,
-    'mode': mode.name,
-    'chapters': chapters.map((c) => c.toJson()).toList(),
-    'linkedCharacterIds': linkedCharacterIds,
-    'linkedWorldIds': linkedWorldIds,
-    'isFolder': isFolder,     // NEW
-    'parentId': parentId,     // NEW
-    'createdAt': createdAt.toIso8601String(),
-    'updatedAt': updatedAt.toIso8601String(),
-    'accentColor': accentColor.toARGB32(),
-    'coverImageUrl': coverImageUrl,
-  };
+        'id': id,
+        'title': title,
+        'genre': genre,
+        'wordsPerChapter': wordsPerChapter,
+        'chapterCount': chapterCount,
+        'mode': mode.name,
+        'chapters': chapters.map((c) => c.toJson()).toList(),
+        'linkedCharacterIds': linkedCharacterIds,
+        'linkedWorldIds': linkedWorldIds,
+        'isFolder': isFolder,
+        'parentId': parentId,
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
+        'accentColor': accentColor.toARGB32(),
+        'coverImageUrl': coverImageUrl,
+      };
 
   factory DiaryEntry.fromJson(Map<String, dynamic> j) => DiaryEntry(
-    id: j['id'] as String,
-    title: j['title'] as String? ?? '',
-    genre: j['genre'] as String? ?? '',
-    wordsPerChapter: j['wordsPerChapter'] as int? ?? 500,
-    chapterCount: j['chapterCount'] as int? ?? 1,
-    mode: DiaryMode.values.firstWhere(
-        (m) => m.name == j['mode'], orElse: () => DiaryMode.chapters),
-    chapters: (j['chapters'] as List? ?? [])
-        .map((c) => DiaryChapter.fromJson(c as Map<String, dynamic>))
-        .toList(),
-    linkedCharacterIds: List<String>.from(j['linkedCharacterIds'] ?? []),
-    linkedWorldIds: List<String>.from(j['linkedWorldIds'] ?? []),
-    isFolder: j['isFolder'] as bool? ?? false, // NEW
-    parentId: j['parentId'] as String?,        // NEW
-    createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ?? DateTime.now(),
-    updatedAt: DateTime.tryParse(j['updatedAt'] as String? ?? '') ?? DateTime.now(),
-    accentColor: j['accentColor'] != null ? Color(j['accentColor'] as int) : null,
-    coverImageUrl: j['coverImageUrl'] as String?,
-  );
+        id: j['id'] is String ? j['id'] as String : '',
+        title: j['title'] as String? ?? '',
+        genre: j['genre'] as String? ?? '',
+        wordsPerChapter: j['wordsPerChapter'] is int
+            ? j['wordsPerChapter'] as int
+            : 500,
+        chapterCount:
+            j['chapterCount'] is int ? j['chapterCount'] as int : 1,
+        mode: DiaryMode.values.firstWhere(
+          (m) => m.name == j['mode'],
+          orElse: () => DiaryMode.chapters,
+        ),
+        chapters: (j['chapters'] as List? ?? []).map((c) {
+          try {
+            return DiaryChapter.fromJson(c as Map<String, dynamic>);
+          } catch (_) {
+            return DiaryChapter(
+              id: const Uuid().v4(),
+              title: 'Recovered chapter',
+            );
+          }
+        }).toList(),
+        linkedCharacterIds: (j['linkedCharacterIds'] as List? ?? [])
+            .whereType<String>()
+            .toList(),
+        linkedWorldIds: (j['linkedWorldIds'] as List? ?? [])
+            .whereType<String>()
+            .toList(),
+        isFolder: j['isFolder'] as bool? ?? false,
+        parentId: j['parentId'] as String?,
+        createdAt:
+            DateTime.tryParse(j['createdAt'] as String? ?? '') ??
+                DateTime.now(),
+        updatedAt:
+            DateTime.tryParse(j['updatedAt'] as String? ?? '') ??
+                DateTime.now(),
+        accentColor:
+            j['accentColor'] is int ? Color(j['accentColor'] as int) : null,
+        coverImageUrl: j['coverImageUrl'] as String?,
+      );
 }
 
+// ─────────────────────────────────────────
+// DIARY STORAGE  (local + Firestore)
+// ─────────────────────────────────────────
 class DiaryChapter {
   final String id;
   String title;
@@ -299,7 +341,7 @@ class DiaryChapter {
   };
 
   factory DiaryChapter.fromJson(Map<String, dynamic> j) => DiaryChapter(
-    id: j['id'] as String,
+    id: j['id'] is String ? j['id'] as String : const Uuid().v4(),
     title: j['title'] as String? ?? '',
     deltaJson: j['deltaJson'] as String? ?? '',
     plainText: j['plainText'] as String? ?? '',
@@ -378,11 +420,16 @@ class _DiaryScreenState extends State<DiaryScreen> {
     await DiaryStorage.saveEntries(_entries);
     final code = _auth.currentCode;
     if (code != null) {
-      DiaryStorage.syncToFirestore(code, _entries);
+      try {
+        await DiaryStorage.syncToFirestore(code, _entries);
+      } catch (e) {
+        debugPrint('[Diary] syncToFirestore failed: $e');
+      }
     }
   }
 
   void _deleteEntry(String id) {
+    if (!mounted) return;
     setState(() => _entries.removeWhere((e) => e.id == id));
     _saveEntries();
   }
@@ -410,6 +457,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
       ),
     );
     if (picked != null) {
+      if (!mounted) return;
       setState(() => _reminderTime = picked);
       await DiaryStorage.saveReminder(_reminderEnabled, picked);
       if (_reminderEnabled) await scheduleDiaryReminder(picked);
@@ -477,6 +525,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
     }
 
     // 3. Save and Open
+    if (!mounted) return;
     setState(() => _entries.insert(0, newEntry));
     _saveEntries();
     _openEntry(newEntry);
@@ -857,7 +906,7 @@ class _DiaryCard extends StatelessWidget {
                                           color: c.avatarUrl == null ? c.accentColor : null,
                                         ),
                                         child: c.avatarUrl == null 
-                                            ? Center(child: Text(c.name[0].toUpperCase(), style: const TextStyle(fontSize: 10, color: cVoid)))
+                                            ? Center(child: Text(c.name.isNotEmpty ? c.name[0].toUpperCase() : '?', style: const TextStyle(fontSize: 10, color: cVoid)))
                                             : null,
                                       ),
                                     );
@@ -1312,15 +1361,18 @@ class _NewEntrySetupState extends State<_NewEntrySetup> {
 class _EntryScreen extends StatefulWidget {
   final DiaryEntry entry;
   final void Function(DiaryEntry) onSave;
+
   const _EntryScreen({required this.entry, required this.onSave});
-  @override State<_EntryScreen> createState() => _EntryScreenState();
+
+  @override
+  State<_EntryScreen> createState() => _EntryScreenState();
 }
 
 class _EntryScreenState extends State<_EntryScreen> {
   late DiaryEntry _entry;
-  bool _bookScrollMode = true; // true=scroll, false=page flip
+  bool _bookScrollMode = true; // true = scroll, false = page flip
 
-    @override
+  @override
   void initState() {
     super.initState();
     _entry = widget.entry;
@@ -1337,7 +1389,7 @@ class _EntryScreenState extends State<_EntryScreen> {
     super.dispose();
   }
 
-    void _showCustomizeSheet() {
+  void _showCustomizeSheet() {
     bool isUploading = false;
     showModalBottomSheet(
       context: context,
@@ -1350,62 +1402,100 @@ class _EntryScreenState extends State<_EntryScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('CUSTOMIZE BOOK', style: TextStyle(fontFamily: 'monospace', fontSize: 11, color: cGold, letterSpacing: 3)),
+                const Text(
+                  'CUSTOMIZE BOOK',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 11,
+                    color: cGold,
+                    letterSpacing: 3,
+                  ),
+                ),
                 const SizedBox(height: 20),
-                const Text('Accent Colour', style: TextStyle(color: cSmoke, fontSize: 12)),
+                const Text(
+                  'Accent Colour',
+                  style: TextStyle(color: cSmoke, fontSize: 12),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 10,
-                  children: [cGold, cIce, cEmber, cMagic, cVine, Colors.blueAccent, Colors.purpleAccent].map((color) {
+                  children: [
+                    cGold,
+                    cIce,
+                    cEmber,
+                    cMagic,
+                    cVine,
+                    Colors.blueAccent,
+                    Colors.purpleAccent,
+                  ].map((color) {
                     return GestureDetector(
                       onTap: () {
                         setModalState(() => _entry.accentColor = color);
                         widget.onSave(_entry); // Auto-save
                       },
                       child: Container(
-                        width: 30, height: 30,
+                        width: 30,
+                        height: 30,
                         decoration: BoxDecoration(
                           color: color,
                           shape: BoxShape.circle,
-                          border: Border.all(color: _entry.accentColor == color ? Colors.white : Colors.transparent, width: 2),
+                          border: Border.all(
+                            color: _entry.accentColor == color
+                                ? Colors.white
+                                : Colors.transparent,
+                            width: 2,
+                          ),
                         ),
                       ),
                     );
                   }).toList(),
                 ),
                 const SizedBox(height: 24),
-                                GestureDetector(
+                GestureDetector(
                   onTap: () async {
                     final picker = ImagePicker();
-                    final image = await picker.pickImage(source: ImageSource.gallery);
+                    final image =
+                        await picker.pickImage(source: ImageSource.gallery);
                     if (image != null) {
-                      // Show a loading state instead of a fake URL
-                      setModalState(() => isUploading = true); 
+                      if (!ctx.mounted) return;
+                      setModalState(() => isUploading = true);
                       try {
                         final bytes = await image.readAsBytes();
-                        final ref = FirebaseStorage.instance.ref().child('diary_covers/${_entry.id}.jpg');
+                        final ref = FirebaseStorage.instance
+                            .ref()
+                            .child('diary_covers/${_entry.id}.jpg');
                         await ref.putData(bytes);
                         final url = await ref.getDownloadURL();
-                        
+
+                        if (!ctx.mounted) return;
                         setModalState(() {
                           _entry.coverImageUrl = url;
                           isUploading = false;
                         });
                         widget.onSave(_entry); // Save to local storage/Firestore
-                        
+
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                            backgroundColor: cVine, // Green for success
-                            content: Text('Cover image updated!', style: TextStyle(color: Colors.white)),
-                          ));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              backgroundColor: cVine, // Green for success
+                              content: Text(
+                                'Cover image updated!',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          );
                         }
                       } catch (e) {
-                        setModalState(() => isUploading = false);
+                        if (ctx.mounted) {
+                          setModalState(() => isUploading = false);
+                        }
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            backgroundColor: cEmber,
-                            content: Text('Upload failed: $e'),
-                          ));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: cEmber,
+                              content: Text('Upload failed: $e'),
+                            ),
+                          );
                         }
                       }
                     }
@@ -1413,18 +1503,30 @@ class _EntryScreenState extends State<_EntryScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     width: double.infinity,
-                    decoration: BoxDecoration(border: Border.all(color: cAsh)),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: cAsh),
+                    ),
                     child: Center(
-                      child: isUploading 
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: cGold, strokeWidth: 2))
-                          : const Text('Upload Cover Image', style: TextStyle(color: cGold)),
+                      child: isUploading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: cGold,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Upload Cover Image',
+                              style: TextStyle(color: cGold),
+                            ),
                     ),
                   ),
                 ),
               ],
             ),
           );
-        }
+        },
       ),
     );
   }
@@ -1892,7 +1994,7 @@ class _ChapterEditorState extends State<_ChapterEditor> {
     final plain = _quill.document.toPlainText();
     final wc = plain.trim().isEmpty ? 0
         : plain.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
-    if (wc != _wordCount) setState(() => _wordCount = wc);
+    if (wc != _wordCount && mounted) setState(() => _wordCount = wc);
   }
 
   @override

@@ -1,13 +1,30 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'card_shape.dart';
+
 /// Rarity tiers for Lore cards.
 /// Every tier gets MORE of everything — more frame, more glow,
 /// more tilt, more parallax, more colour. No tier is just a colour swap.
 ///
 /// Legendary = Lore gold. Achievable with dedication.
 /// Mythic = hidden gem. Only one. Shows as ??? until unlocked.
-enum CardRarity { common, rare, epic, legendary, mythic }
+enum CardRarity {
+  common,
+  rare,
+  epic,
+  legendary,
+  mythic;
+
+  /// Safe parse for stored values (Firestore, prefs, JSON).
+  /// Unknown / missing / old strings fall back to common instead of throwing.
+  static CardRarity fromName(String? name) {
+    if (name == null) return CardRarity.common;
+    for (final rarity in CardRarity.values) {
+      if (rarity.name == name) return rarity;
+    }
+    return CardRarity.common;
+  }
+}
 
 extension CardRaritySpec on CardRarity {
   String get label {
@@ -33,7 +50,10 @@ extension CardRaritySpec on CardRarity {
 
   // ── Frame ──
   bool get ornate => this != CardRarity.common;
-  bool get dense => index >= 2; // Epic and up
+  bool get dense => switch (this) {
+    CardRarity.epic || CardRarity.legendary || CardRarity.mythic => true,
+    _ => false,
+  };
   bool get glow => this != CardRarity.common;
 
   // ── How alive the card feels ──
@@ -130,19 +150,19 @@ extension CardRaritySpec on CardRarity {
         return '???';
     }
   }
+
   CardShape get shape {
-  switch (this) {
-    case CardRarity.common:
-      return CardShape.square;
-    case CardRarity.rare:
-      return CardShape.bevelled;
-    case CardRarity.epic:
-      return CardShape.octagon;
-    case CardRarity.legendary:
-      return CardShape.jagged;
-    case CardRarity.mythic:
-      return CardShape.crystal;
+    switch (this) {
+      case CardRarity.common:
+        return CardShape.square;
+      case CardRarity.rare:
+        return CardShape.bevelled;
+      case CardRarity.epic:
+        return CardShape.octagon;
+      case CardRarity.legendary:
+        return CardShape.jagged;
+      case CardRarity.mythic:
+        return CardShape.crystal;
+    }
   }
 }
-}
-

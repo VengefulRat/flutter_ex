@@ -26,10 +26,7 @@ class BlockStyle {
   });
 
   bool get isDefault =>
-      background == null &&
-      glowColor == null &&
-      !glowEnabled &&
-      accent == null;
+      background == null && glowColor == null && !glowEnabled && accent == null;
 
   BlockStyle copyWith({
     Color? background,
@@ -67,9 +64,7 @@ class BlockStyle {
       glowColor: j['gc'] != null
           ? Color(j['gc'] as int)
           : (j['bc'] != null ? Color(j['bc'] as int) : null),
-      glowEnabled: hasNewGlow
-          ? (j['ge'] as bool? ?? false)
-          : legacyGlow,
+      glowEnabled: hasNewGlow ? (j['ge'] as bool? ?? false) : legacyGlow,
       accent: j['ac'] != null ? Color(j['ac'] as int) : null,
     );
   }
@@ -349,6 +344,11 @@ class AppSettings extends ChangeNotifier {
     if (bg != null) _bgGlowColor = Color(bg);
     final bc = p.getInt(_kBorderColor);
     if (bc != null) _profileBorderColor = Color(bc);
+    // Glow fallback has to run AFTER the border colour is loaded,
+    // otherwise it inherits the default, not your saved colour.
+    if (savedGlowColor == null) {
+      _profileGlowColor = _profileBorderColor;
+    }
 
     // Text colours — new format first, then legacy migration
     final tcNew = p.getString(_kTextColours);
@@ -523,6 +523,12 @@ class AppSettings extends ChangeNotifier {
     'continueMode': _continueMode,
     'continueIds': _continueIds,
     'blockStyles': _blockStyles.map((k, v) => MapEntry(k, v.toJson())),
+    'notifRpPost': _notifRpPost,
+    'notifOoc': _notifOoc,
+    'notifBrainstorm': _notifBrainstorm,
+    'discoverable': _discoverable,
+    'enterToSend': _enterToSend,
+    'homeOrder': _homeOrder,
   };
 
   void _applyCloudJson(Map<String, dynamic> j) {
@@ -564,6 +570,10 @@ class AppSettings extends ChangeNotifier {
     _continueMode = j['continueMode'] as String? ?? _continueMode;
     _continueIds = List<String>.from(j['continueIds'] ?? _continueIds);
     _enterToSend = j['enterToSend'] as bool? ?? _enterToSend;
+    _notifRpPost = j['notifRpPost'] as bool? ?? _notifRpPost;
+    _notifOoc = j['notifOoc'] as bool? ?? _notifOoc;
+    _notifBrainstorm = j['notifBrainstorm'] as bool? ?? _notifBrainstorm;
+    _discoverable = j['discoverable'] as bool? ?? _discoverable;
 
     if (j['bgGlowColor'] is int) {
       _bgGlowColor = Color(j['bgGlowColor'] as int);
@@ -1099,6 +1109,10 @@ class AppSettings extends ChangeNotifier {
     _continueMode = continueModeCycle;
     _continueIds = [];
     _continueLastShown = null;
+    _enterToSend = false;
+    _discoverable = true;
+    _homeOrder = [];
+    _devModeUnlocked = false;
     _bgGlowColor = const Color(0xFFC9A96E);
     _profileBorderColor = const Color(0xFF2a2a2a);
     _profileGradient = [const Color(0xFF080808), const Color(0xFF0E0E0E)];
@@ -1144,6 +1158,8 @@ class AppSettings extends ChangeNotifier {
     await p.remove(_kContinueMode);
     await p.remove(_kContinueIds);
     await p.remove(_kContinueLastShown);
+    await p.remove('as_home_order');
+    await p.remove(_kDevModeUnlocked);
     await p.remove(_kBlockStyles);
     await p.remove(_kEnterToSend);
     await p.remove(_kAnimatedBorderThickness);
