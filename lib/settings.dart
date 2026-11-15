@@ -83,6 +83,8 @@ class AppSettings extends ChangeNotifier {
   static const _kGradient = 'as_gradient';
   static const _kBorderColor = 'as_border_color';
   static const _kBorderStyle = 'as_border_style';
+  static const _kProfileGlowColor = 'as_profile_glow_color';
+  static const _kProfileGlowEnabled = 'as_profile_glow_enabled';
   static const _kAiMood = 'as_ai_mood';
   static const _kNotifPost = 'as_notif_post';
   static const _kNotifInterest = 'as_notif_interest';
@@ -249,6 +251,12 @@ class AppSettings extends ChangeNotifier {
   String _animatedBorderPattern = 'waves';
   double _animatedBorderFrameOutset = 10.0;
   String _profileBorderStyle = 'solid';
+  // EDIT 9a: Glow is now its own thing, not a border style.
+  // Frame colour drives the AnimatedBorder pattern, glow colour drives
+  // only the soft halo. Separate so you can contrast them, e.g.
+  // white Runes on a black glow.
+  bool _profileGlowEnabled = false;
+  Color _profileGlowColor = Colors.black;
   bool _aiMood = true;
   bool _notifNewPost = true;
   bool _notifRpPost = true;
@@ -305,6 +313,17 @@ class AppSettings extends ChangeNotifier {
     _enterToSend = p.getBool(_kEnterToSend) ?? false;
     _discoverable = p.getBool(_kDiscoverable) ?? true;
     _profileBorderStyle = p.getString(_kBorderStyle) ?? 'solid';
+    // EDIT 9a migration: if no glow setting saved yet, inherit from the
+    // old world — glow on iff old style was 'glow', glow colour = old
+    // frame colour. So nobody's existing card suddenly loses its glow.
+    final savedGlowEnabled = p.getBool(_kProfileGlowEnabled);
+    _profileGlowEnabled = savedGlowEnabled ?? (_profileBorderStyle == 'glow');
+    final savedGlowColor = p.getInt(_kProfileGlowColor);
+    if (savedGlowColor != null) {
+      _profileGlowColor = Color(savedGlowColor);
+    } else {
+      _profileGlowColor = _profileBorderColor;
+    }
     _animatedBorderThickness = p.getDouble(_kAnimatedBorderThickness) ?? 3.0;
     _animatedBorderWaviness = p.getDouble(_kAnimatedBorderWaviness) ?? 4.0;
     _animatedBorderSpeed = p.getDouble(_kAnimatedBorderSpeed) ?? 1.0;
@@ -479,6 +498,8 @@ class AppSettings extends ChangeNotifier {
     'bgGlowColor': _bgGlowColor.toARGB32(),
     'profileBorderColor': _profileBorderColor.toARGB32(),
     'profileBorderStyle': _profileBorderStyle,
+    'profileGlowEnabled': _profileGlowEnabled,
+    'profileGlowColor': _profileGlowColor.toARGB32(),
     'animatedBorderThickness': _animatedBorderThickness,
     'animatedBorderWaviness': _animatedBorderWaviness,
     'animatedBorderSpeed': _animatedBorderSpeed,
@@ -505,6 +526,11 @@ class AppSettings extends ChangeNotifier {
     _soundEnabled = j['soundEnabled'] as bool? ?? _soundEnabled;
     _profileBorderStyle =
         j['profileBorderStyle'] as String? ?? _profileBorderStyle;
+    _profileGlowEnabled =
+        j['profileGlowEnabled'] as bool? ?? _profileGlowEnabled;
+    if (j['profileGlowColor'] is int) {
+      _profileGlowColor = Color(j['profileGlowColor'] as int);
+    }
     _animatedBorderThickness =
         (j['animatedBorderThickness'] as num?)?.toDouble() ??
         _animatedBorderThickness;
@@ -520,7 +546,7 @@ class AppSettings extends ChangeNotifier {
         j['animatedBorderPattern'] as String? ?? _animatedBorderPattern;
     _animatedBorderFrameOutset =
         (j['animatedBorderFrameOutset'] as num?)?.toDouble() ??
-            _animatedBorderFrameOutset;
+        _animatedBorderFrameOutset;
     _aiMood = j['aiMood'] as bool? ?? _aiMood;
     _notifNewPost = j['notifNewPost'] as bool? ?? _notifNewPost;
     _notifInterest = j['notifInterest'] as bool? ?? _notifInterest;
@@ -574,6 +600,8 @@ class AppSettings extends ChangeNotifier {
     await p.setString(_kOrientation, _orientation);
     await p.setBool(_kSound, _soundEnabled);
     await p.setString(_kBorderStyle, _profileBorderStyle);
+    await p.setBool(_kProfileGlowEnabled, _profileGlowEnabled);
+    await p.setInt(_kProfileGlowColor, _profileGlowColor.toARGB32());
     await p.setDouble(_kAnimatedBorderThickness, _animatedBorderThickness);
     await p.setDouble(_kAnimatedBorderWaviness, _animatedBorderWaviness);
     await p.setDouble(_kAnimatedBorderSpeed, _animatedBorderSpeed);
@@ -623,6 +651,8 @@ class AppSettings extends ChangeNotifier {
   List<Color> get profileGradient => List.unmodifiable(_profileGradient);
   Color get profileBorderColor => _profileBorderColor;
   String get profileBorderStyle => _profileBorderStyle;
+  bool get profileGlowEnabled => _profileGlowEnabled;
+  Color get profileGlowColor => _profileGlowColor;
   double get animatedBorderThickness => _animatedBorderThickness;
   double get animatedBorderWaviness => _animatedBorderWaviness;
   double get animatedBorderSpeed => _animatedBorderSpeed;
@@ -791,6 +821,23 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setProfileGlowEnabled(bool v) async {
+    _profileGlowEnabled = v;
+    (await SharedPreferences.getInstance()).setBool(_kProfileGlowEnabled, v);
+    _touch();
+    notifyListeners();
+  }
+
+  Future<void> setProfileGlowColor(Color v) async {
+    _profileGlowColor = v;
+    (await SharedPreferences.getInstance()).setInt(
+      _kProfileGlowColor,
+      v.toARGB32(),
+    );
+    _touch();
+    notifyListeners();
+  }
+
   Future<void> setAnimatedBorderThickness(double v) async {
     _animatedBorderThickness = v;
     (await SharedPreferences.getInstance()).setDouble(
@@ -829,7 +876,20 @@ class AppSettings extends ChangeNotifier {
   }
 
   Future<void> setAnimatedBorderPattern(String v) async {
-        if (v != 'waves' && v != 'spikes' && v != 'gears' && v != 'dice' && v != 'swords' && v != 'leaves' && v != 'shields' && v != 'flames' && v != 'stars' && v != 'runes' && v != 'thorns' && v != 'feathers' && v != 'claws') return;
+    if (v != 'waves' &&
+        v != 'spikes' &&
+        v != 'gears' &&
+        v != 'dice' &&
+        v != 'swords' &&
+        v != 'leaves' &&
+        v != 'shields' &&
+        v != 'flames' &&
+        v != 'stars' &&
+        v != 'runes' &&
+        v != 'thorns' &&
+        v != 'feathers' &&
+        v != 'claws')
+      return;
     _animatedBorderPattern = v;
     (await SharedPreferences.getInstance()).setString(
       _kAnimatedBorderPattern,
@@ -1020,6 +1080,8 @@ class AppSettings extends ChangeNotifier {
     _oocSide = 'Right';
     _discoverable = true;
     _profileBorderStyle = 'solid';
+    _profileGlowEnabled = false;
+    _profileGlowColor = Colors.black;
     _animatedBorderThickness = 3.0;
     _animatedBorderWaviness = 4.0;
     _animatedBorderSpeed = 1.0;
@@ -1060,6 +1122,8 @@ class AppSettings extends ChangeNotifier {
     await p.remove(_kGradient);
     await p.remove(_kBorderColor);
     await p.remove(_kBorderStyle);
+    await p.remove(_kProfileGlowColor);
+    await p.remove(_kProfileGlowEnabled);
     await p.remove(_kAiMood);
     await p.remove(_kNotifPost);
     await p.remove(_kNotifInterest);

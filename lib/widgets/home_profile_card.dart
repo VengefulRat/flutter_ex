@@ -304,21 +304,18 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
 
   BoxDecoration _cardDecoration(Color borderColor) {
     final gradient = appSettings.profileGradient;
-    final style = appSettings.profileBorderStyle;
 
-    // EDIT 6: No static edge border anymore.
-    // The AnimatedBorder frame is now the border — drawing a Border.all
-    // line here as well just double-drew the edge and fought with the
-    // frame. Colour is NOT lost: the frame still uses this same
-    // profileBorderColor via `AnimatedBorder(color: effectiveAccent)`.
-    //
-    // Only thing kept: the 'glow' style's soft ambient shadow, because
-    // that's glow, not an edge line. All other styles get no shadow.
+    // EDIT 9b: Glow is no longer a border style, it's its own setting.
+    // `borderColor` here is the FRAME colour (AnimatedBorder pattern).
+    // Glow colour is independent, so you can contrast them:
+    // e.g. white Runes on a black glow. Glow off = no shadow at all.
+    // No Border.all here — the frame is the border (Edits 6-8).
     List<BoxShadow>? shadows;
-    if (style == 'glow') {
+    if (appSettings.profileGlowEnabled) {
+      final glowColor = appSettings.profileGlowColor;
       shadows = [
         BoxShadow(
-          color: borderColor.withValues(alpha: 0.35),
+          color: glowColor.withValues(alpha: 0.35),
           blurRadius: 16,
           spreadRadius: 2,
         ),

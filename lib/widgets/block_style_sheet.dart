@@ -578,7 +578,9 @@ class ProfileStyleSheet extends StatefulWidget {
 class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
   List<Color> get _gradient => appSettings.profileGradient;
   Color get _borderColor => appSettings.profileBorderColor;
-  String get _borderStyle => appSettings.profileBorderStyle;
+  // EDIT 9c: No _borderStyle anymore. Glow is its own on/off + colour.
+  bool get _glowEnabled => appSettings.profileGlowEnabled;
+  Color get _glowColor => appSettings.profileGlowColor;
 
   static const List<String> _textKeys = [
     AppSettings.textKeyProfileName,
@@ -596,8 +598,13 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _setBorderStyle(String s) async {
-    await appSettings.setProfileBorderStyle(s);
+  Future<void> _setGlowEnabled(bool v) async {
+    await appSettings.setProfileGlowEnabled(v);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _setGlowColor(Color c) async {
+    await appSettings.setProfileGlowColor(c);
     if (mounted) setState(() {});
   }
 
@@ -630,7 +637,7 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
               const SizedBox(height: 12),
               const Text(
                 'Reset the profile card to its default appearance? '
-                'This clears the gradient, border, and profile text colours.',
+                'This clears the gradient, frame colour, glow, and profile text colours.',
                 style: TextStyle(
                   fontSize: 13,
                   color: cMist,
@@ -697,7 +704,8 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
       const Color(0xFF0E0E0E),
     ]);
     await appSettings.setProfileBorderColor(const Color(0xFF2a2a2a));
-    await appSettings.setProfileBorderStyle('solid');
+    await appSettings.setProfileGlowEnabled(false);
+    await appSettings.setProfileGlowColor(Colors.black);
     for (final k in _textKeys) {
       await appSettings.setTextColour(k, null);
     }
@@ -796,20 +804,20 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
                   _section('BORDER'),
                   const SizedBox(height: 14),
                   _colourRow(
-                    label: 'Border colour',
+                    label: 'Frame colour',
                     current: _borderColor,
                     onPicked: (c) {
                       if (c != null) _setBorderColor(c);
                     },
                   ),
                   const SizedBox(height: 18),
-                  _borderStyleRow(),
+                  _glowRow(),
 
                   const SizedBox(height: 24),
                   _section('ANIMATED BORDER'),
                   const SizedBox(height: 6),
                   const Text(
-                    'Pattern running around the card. Colour comes from Border colour above.',
+                    'Pattern running around the card. Colour comes from Frame colour above.',
                     style: TextStyle(
                       fontSize: 11,
                       color: cSmoke,
@@ -1158,13 +1166,38 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
     );
   }
 
-  Widget _borderStyleRow() {
-    const options = ['solid', 'double', 'glow', 'none'];
+  Widget _glowRow() {
+    // EDIT 9c: Replaces the dead Border style chips.
+    // Glow is not a border style anymore — it's an on/off halo with
+    // its own colour, so it can contrast with the frame:
+    // e.g. white Runes on a black glow.
+    Widget chip({required String label, required bool active, required VoidCallback onTap}) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            border: Border.all(color: active ? cGold : cAsh),
+            color: active ? cGold.withValues(alpha: 0.08) : Colors.transparent,
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 10,
+              letterSpacing: 1,
+              color: active ? cGold : cSmoke,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Border style',
+          'Glow',
           style: TextStyle(
             fontSize: 13,
             color: cMist,
@@ -1175,34 +1208,21 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
         Wrap(
           spacing: 6,
           runSpacing: 6,
-          children: options.map((o) {
-            final active = _borderStyle == o;
-            return GestureDetector(
-              onTap: () => _setBorderStyle(o),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(color: active ? cGold : cAsh),
-                  color: active
-                      ? cGold.withValues(alpha: 0.08)
-                      : Colors.transparent,
-                ),
-                child: Text(
-                  o[0].toUpperCase() + o.substring(1),
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 10,
-                    letterSpacing: 1,
-                    color: active ? cGold : cSmoke,
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
+          children: [
+            chip(label: 'ON', active: _glowEnabled, onTap: () => _setGlowEnabled(true)),
+            chip(label: 'OFF', active: !_glowEnabled, onTap: () => _setGlowEnabled(false)),
+          ],
         ),
+        if (_glowEnabled) ...[
+          const SizedBox(height: 18),
+          _colourRow(
+            label: 'Glow colour',
+            current: _glowColor,
+            onPicked: (c) {
+              if (c != null) _setGlowColor(c);
+            },
+          ),
+        ],
       ],
     );
   }
