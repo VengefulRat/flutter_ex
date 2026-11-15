@@ -218,17 +218,7 @@ class _BlockStyleSheetState extends State<BlockStyleSheet> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  _colourRow(
-                    label: 'Border colour',
-                    current: s.borderColor,
-                    onPicked: (c) => _updateTile(
-                      s.copyWith(borderColor: c, clearBorderColor: c == null),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  _borderStyleRow(s),
-                  const SizedBox(height: 18),
-                  _shapeRow(s), // <--- KEEP THIS ONE
+                  _glowRow(s),
                   const SizedBox(height: 18),
                   _colourRow(
                     label: 'Accent (icon & badge)',
@@ -237,7 +227,6 @@ class _BlockStyleSheetState extends State<BlockStyleSheet> {
                       s.copyWith(accent: c, clearAccent: c == null),
                     ),
                   ),
-
                   if (_textKeys.isNotEmpty) ...[
                     const SizedBox(height: 24),
                     _sectionLabel('TEXT INSIDE'),
@@ -262,7 +251,6 @@ class _BlockStyleSheetState extends State<BlockStyleSheet> {
                       ),
                     ),
                   ],
-
                   const SizedBox(height: 8),
                   Container(height: 1, color: cAsh),
                   const SizedBox(height: 16),
@@ -414,13 +402,38 @@ class _BlockStyleSheetState extends State<BlockStyleSheet> {
     );
   }
 
-  Widget _borderStyleRow(BlockStyle s) {
-    const options = ['solid', 'thick', 'faded', 'glow'];
+  Widget _glowRow(BlockStyle s) {
+    // EDIT 10c: Replaces Border style + Shape rows.
+    // Both were dead — the tile renderer never read borderStyle or
+    // shape. Tile now has only Glow on/off + its own Glow colour,
+    // same model as the profile card.
+    Widget chip({required String label, required bool active, required VoidCallback onTap}) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            border: Border.all(color: active ? cGold : cAsh),
+            color: active ? cGold.withValues(alpha: 0.08) : Colors.transparent,
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 10,
+              letterSpacing: 1,
+              color: active ? cGold : cSmoke,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Border style',
+          'Glow',
           style: TextStyle(
             fontSize: 13,
             color: cMist,
@@ -431,34 +444,29 @@ class _BlockStyleSheetState extends State<BlockStyleSheet> {
         Wrap(
           spacing: 6,
           runSpacing: 6,
-          children: options.map((o) {
-            final active = s.borderStyle == o;
-            return GestureDetector(
-              onTap: () => _updateTile(s.copyWith(borderStyle: o)),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(color: active ? cGold : cAsh),
-                  color: active
-                      ? cGold.withValues(alpha: 0.08)
-                      : Colors.transparent,
-                ),
-                child: Text(
-                  o[0].toUpperCase() + o.substring(1),
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 10,
-                    letterSpacing: 1,
-                    color: active ? cGold : cSmoke,
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
+          children: [
+            chip(
+              label: 'ON',
+              active: s.glowEnabled,
+              onTap: () => _updateTile(s.copyWith(glowEnabled: true)),
+            ),
+            chip(
+              label: 'OFF',
+              active: !s.glowEnabled,
+              onTap: () => _updateTile(s.copyWith(glowEnabled: false)),
+            ),
+          ],
         ),
+        if (s.glowEnabled) ...[
+          const SizedBox(height: 18),
+          _colourRow(
+            label: 'Glow colour',
+            current: s.glowColor,
+            onPicked: (c) => _updateTile(
+              s.copyWith(glowColor: c, clearGlowColor: c == null),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -506,55 +514,6 @@ class _BlockStyleSheetState extends State<BlockStyleSheet> {
       ),
     );
   }
-
-  Widget _shapeRow(BlockStyle s) {
-    const options = ['square', 'rounded', 'pill', 'hexagon'];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Shape',
-          style: TextStyle(
-            fontSize: 13,
-            color: cMist,
-            fontWeight: FontWeight.w300,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: options.map((o) {
-            final active = s.shape == o;
-            return GestureDetector(
-              onTap: () => _updateTile(s.copyWith(shape: o)),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(color: active ? cGold : cAsh),
-                  color: active
-                      ? cGold.withValues(alpha: 0.08)
-                      : Colors.transparent,
-                ),
-                child: Text(
-                  o[0].toUpperCase() + o.substring(1),
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 10,
-                    letterSpacing: 1,
-                    color: active ? cGold : cSmoke,
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
 }
 
 /// Long-press customization sheet for the profile card.
@@ -578,15 +537,9 @@ class ProfileStyleSheet extends StatefulWidget {
 class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
   List<Color> get _gradient => appSettings.profileGradient;
   Color get _borderColor => appSettings.profileBorderColor;
-  // EDIT 9c: No _borderStyle anymore. Glow is its own on/off + colour.
   bool get _glowEnabled => appSettings.profileGlowEnabled;
   Color get _glowColor => appSettings.profileGlowColor;
-
-  static const List<String> _textKeys = [
-    AppSettings.textKeyProfileName,
-    AppSettings.textKeyProfileBio,
-    AppSettings.textKeyProfileCode,
-  ];
+  List<String> get _textKeys => appSettings.textKeysForBlock('profile');
 
   Future<void> _setGradient(List<Color> g) async {
     await appSettings.setProfileGradient(g);
@@ -799,7 +752,6 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
                       ]);
                     },
                   ),
-
                   const SizedBox(height: 24),
                   _section('BORDER'),
                   const SizedBox(height: 14),
@@ -812,7 +764,6 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
                   ),
                   const SizedBox(height: 18),
                   _glowRow(),
-
                   const SizedBox(height: 24),
                   _section('ANIMATED BORDER'),
                   const SizedBox(height: 6),
@@ -829,8 +780,7 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
                   const SizedBox(height: 14),
                   _valueSlider(
                     label: 'Thickness',
-                    valueLabel: appSettings.animatedBorderThickness
-                        .toStringAsFixed(1),
+                    valueLabel: appSettings.animatedBorderThickness.toStringAsFixed(1),
                     value: appSettings.animatedBorderThickness,
                     min: 1,
                     max: 8,
@@ -838,8 +788,7 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
                   ),
                   _valueSlider(
                     label: 'Waviness',
-                    valueLabel: appSettings.animatedBorderWaviness
-                        .toStringAsFixed(1),
+                    valueLabel: appSettings.animatedBorderWaviness.toStringAsFixed(1),
                     value: appSettings.animatedBorderWaviness,
                     min: 0,
                     max: 12,
@@ -847,8 +796,7 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
                   ),
                   _valueSlider(
                     label: 'Speed',
-                    valueLabel:
-                        '${appSettings.animatedBorderSpeed.toStringAsFixed(1)}x',
+                    valueLabel: '${appSettings.animatedBorderSpeed.toStringAsFixed(1)}x',
                     value: appSettings.animatedBorderSpeed,
                     min: 0.3,
                     max: 2.5,
@@ -856,8 +804,7 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
                   ),
                   _valueSlider(
                     label: 'Opacity',
-                    valueLabel:
-                        '${(appSettings.animatedBorderOpacity * 100).round()}%',
+                    valueLabel: '${(appSettings.animatedBorderOpacity * 100).round()}%',
                     value: appSettings.animatedBorderOpacity,
                     min: 0.3,
                     max: 1.0,
@@ -865,15 +812,12 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
                   ),
                   _valueSlider(
                     label: 'Frame outset',
-                    valueLabel:
-                        '${appSettings.animatedBorderFrameOutset.toStringAsFixed(0)}',
+                    valueLabel: '${appSettings.animatedBorderFrameOutset.toStringAsFixed(0)}',
                     value: appSettings.animatedBorderFrameOutset,
                     min: -8,
                     max: 20,
-                    onChanged: (v) =>
-                        appSettings.setAnimatedBorderFrameOutset(v),
+                    onChanged: (v) => appSettings.setAnimatedBorderFrameOutset(v),
                   ),
-
                   const SizedBox(height: 24),
                   _section('TEXT INSIDE'),
                   const SizedBox(height: 6),
@@ -896,7 +840,6 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 8),
                   Container(height: 1, color: cAsh),
                   const SizedBox(height: 16),
@@ -960,7 +903,7 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
   }
 
   Widget _patternRow() {
-        const options = ['waves', 'spikes', 'gears', 'dice', 'swords', 'leaves', 'shields', 'flames', 'stars', 'runes', 'thorns', 'feathers', 'claws'];
+    const options = ['waves', 'spikes', 'gears', 'dice', 'swords', 'leaves', 'shields', 'flames', 'stars', 'runes', 'thorns', 'feathers', 'claws'];
     return Wrap(
       spacing: 6,
       runSpacing: 6,
@@ -975,9 +918,7 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
               border: Border.all(color: active ? cGold : cAsh),
-              color: active
-                  ? cGold.withValues(alpha: 0.08)
-                  : Colors.transparent,
+              color: active ? cGold.withValues(alpha: 0.08) : Colors.transparent,
             ),
             child: Text(
               o[0].toUpperCase() + o.substring(1),
@@ -1003,6 +944,7 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
       letterSpacing: 3,
     ),
   );
+
   Widget _valueSlider({
     required String label,
     required String valueLabel,
@@ -1108,9 +1050,7 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
                   height: 34,
                   decoration: BoxDecoration(
                     border: Border.all(color: current == null ? cGold : cAsh),
-                    color: current == null
-                        ? cGold.withValues(alpha: 0.08)
-                        : Colors.transparent,
+                    color: current == null ? cGold.withValues(alpha: 0.08) : Colors.transparent,
                   ),
                   child: Center(
                     child: Icon(

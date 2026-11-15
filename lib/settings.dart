@@ -14,58 +14,65 @@ final appSettings = AppSettings();
 // ════════════════════════════════════════
 class BlockStyle {
   final Color? background;
-  final Color? borderColor;
-  final String borderStyle; // 'solid' | 'thick' | 'faded' | 'glow'
+  final Color? glowColor;
+  final bool glowEnabled;
   final Color? accent;
-  final String shape; // 'square' | 'rounded' | 'pill' | 'hexagon'
 
   const BlockStyle({
     this.background,
-    this.borderColor,
-    this.borderStyle = 'solid',
+    this.glowColor,
+    this.glowEnabled = false,
     this.accent,
-    this.shape = 'square',
   });
 
   bool get isDefault =>
       background == null &&
-      borderColor == null &&
-      accent == null &&
-      borderStyle == 'solid' &&
-      shape == 'square';
+      glowColor == null &&
+      !glowEnabled &&
+      accent == null;
 
   BlockStyle copyWith({
     Color? background,
-    Color? borderColor,
-    String? borderStyle,
+    Color? glowColor,
+    bool? glowEnabled,
     Color? accent,
-    String? shape,
     bool clearBackground = false,
-    bool clearBorderColor = false,
+    bool clearGlowColor = false,
     bool clearAccent = false,
   }) => BlockStyle(
     background: clearBackground ? null : (background ?? this.background),
-    borderColor: clearBorderColor ? null : (borderColor ?? this.borderColor),
-    borderStyle: borderStyle ?? this.borderStyle,
+    glowColor: clearGlowColor ? null : (glowColor ?? this.glowColor),
+    glowEnabled: glowEnabled ?? this.glowEnabled,
     accent: clearAccent ? null : (accent ?? this.accent),
-    shape: shape ?? this.shape,
   );
 
   Map<String, dynamic> toJson() => {
     if (background != null) 'bg': background!.toARGB32(),
-    if (borderColor != null) 'bc': borderColor!.toARGB32(),
-    'bs': borderStyle,
+    if (glowColor != null) 'gc': glowColor!.toARGB32(),
+    'ge': glowEnabled,
     if (accent != null) 'ac': accent!.toARGB32(),
-    'sh': shape,
   };
 
-  factory BlockStyle.fromJson(Map<String, dynamic> j) => BlockStyle(
-    background: j['bg'] != null ? Color(j['bg'] as int) : null,
-    borderColor: j['bc'] != null ? Color(j['bc'] as int) : null,
-    borderStyle: j['bs'] as String? ?? 'solid',
-    accent: j['ac'] != null ? Color(j['ac'] as int) : null,
-    shape: j['sh'] as String? ?? 'square',
-  );
+  factory BlockStyle.fromJson(Map<String, dynamic> j) {
+    // EDIT 10a migration: old tiles saved 'bc' (border colour),
+    // 'bs' (border style), 'sh' (shape). Border style + shape are
+    // retired — they were never read by the tile renderer. If a tile
+    // had glow as its old border style, keep glow on and carry its
+    // old border colour over as the glow colour, so nothing visually
+    // disappears. Otherwise glow starts off.
+    final hasNewGlow = j.containsKey('gc') || j.containsKey('ge');
+    final legacyGlow = j['bs'] == 'glow';
+    return BlockStyle(
+      background: j['bg'] != null ? Color(j['bg'] as int) : null,
+      glowColor: j['gc'] != null
+          ? Color(j['gc'] as int)
+          : (j['bc'] != null ? Color(j['bc'] as int) : null),
+      glowEnabled: hasNewGlow
+          ? (j['ge'] as bool? ?? false)
+          : legacyGlow,
+      accent: j['ac'] != null ? Color(j['ac'] as int) : null,
+    );
+  }
 }
 
 // ════════════════════════════════════════

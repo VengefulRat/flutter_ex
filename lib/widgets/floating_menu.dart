@@ -331,15 +331,18 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
   Widget _buildMenuCard(FloatingMenuItem item) {
     final style = appSettings.styleForBlock(item.blockKey);
     final bg = style.background ?? cInk;
-    final borderColor = style.borderColor ?? cAsh;
     final accent = style.accent ?? item.accent;
+    // EDIT 10b: No static tile border anymore. borderStyle / shape were
+    // never read here — Border.all(1.5) + radius 10 were hardcoded.
+    // Tile now has only: background, accent, and its own glow
+    // (on/off + colour, same model as the profile card).
+    final glowColor = style.glowColor ?? accent;
 
     Widget tile = Container(
       width: _cardSize,
       height: _cardSize,
       decoration: BoxDecoration(
         color: bg,
-        border: Border.all(color: borderColor, width: 1.5),
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
@@ -347,12 +350,12 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
-          BoxShadow(
-            color: accent.withValues(alpha: 0.25),
-            blurRadius: 28,
-            offset: const Offset(0, 12),
-            spreadRadius: -4,
-          ),
+          if (style.glowEnabled)
+            BoxShadow(
+              color: glowColor.withValues(alpha: 0.35),
+              blurRadius: 22,
+              spreadRadius: 2,
+            ),
         ],
       ),
       child: Column(
