@@ -96,8 +96,10 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
     }
   }
 
-  // ── Safe radius: shrink the arc if cards would clip off-screen ──
-  double _getRadius(Offset origin, Size screen, double baseAngle) {
+  // ── Safe radius for a given spread: shrink the arc if cards would
+  // clip off-screen. Spread is a parameter now, because when the
+  // radius shrinks we widen the spread to keep tile spacing.
+  double _getRadius(Offset origin, Size screen, double baseAngle, double spread) {
     final n = widget.items.length;
     if (n < 2) return _radius;
     final half = _cardSize / 2;
@@ -109,7 +111,7 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
     double safe = _radius;
     for (int i = 0; i < n; i++) {
       final t = (i / (n - 1)) - 0.5;
-      final a = baseAngle + t * _spread;
+      final a = baseAngle + t * spread;
       final c = math.cos(a);
       final s = math.sin(a);
       if (c > 0.01) safe = math.min(safe, (maxX - origin.dx) / c);
@@ -117,7 +119,7 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
       if (s > 0.01) safe = math.min(safe, (maxY - origin.dy) / s);
       if (s < -0.01) safe = math.min(safe, (minY - origin.dy) / s);
     }
-    return safe.clamp(_radius * 0.65, _radius);
+    return safe.clamp(_radius * 0.55, _radius);
   }
 
   // ── Drag ──
@@ -284,19 +286,61 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
     final screenCenter = Offset(screen.width / 2, screen.height / 2);
     final toCenter = screenCenter - origin;
     final baseAngle = math.atan2(toCenter.dy, toCenter.dx);
-
     final half = _cardSize / 2;
-    final radius = _getRadius(origin, screen, baseAngle);
+
+    // EDIT 11: Keep neighbour spacing constant. When the corner
+    // forces a smaller radius, widen the spread so tiles don't
+    // crush together. Chord between neighbours =
+    // 2 * radius * sin(delta / 2), delta = spread / (n - 1).
+    // We want that chord >= card + 10 gap.
+    double spread = _spread;
+    double radius = _radius;
+    if (n > 1) {
+      for (int attempt = 0; attempt < 12; attempt++) {
+        radius = _getRadius(origin, screen, baseAngle, spread);
+        final delta = spread / (n - 1);
+        final chord = 2 * radius * math.sin(delta / 2);
+        if (chord >= _cardSize + 10 || spread >= 2.9) break;
+        spread += 0.18;
+      }
+    } else {
+      radius = _getRadius(origin, screen, baseAngle, spread);
+    }
+
+    // Raw fan positions, no per-tile clamping.
+    final raw = List.generate(n, (i) {
+      final t = n == 1 ? 0.0 : (i / (n - 1)) - 0.5;
+      final angle = baseAngle + t * spread;
+      return Offset(
+        origin.dx + radius * math.cos(angle),
+        origin.dy + radius * math.sin(angle),
+      );
+    });
+
+    // EDIT 11: Shift the WHOLE fan back on-screen as one piece.
+    // Per-tile clamp() was collapsing two tiles onto the same
+    // x/y in corners — that's the hovering-over-each-other bug.
+    // A single shared shift keeps every tile's spacing intact.
+    double shiftX = 0;
+    double shiftY = 0;
+    if (raw.isNotEmpty) {
+      final minX = raw.map((p) => p.dx).reduce(math.min) - half;
+      final maxX = raw.map((p) => p.dx).reduce(math.max) + half;
+      final minY = raw.map((p) => p.dy).reduce(math.min) - half;
+      final maxY = raw.map((p) => p.dy).reduce(math.max) + half;
+      if (minX < _pad) shiftX = _pad - minX;
+      if (maxX + shiftX > screen.width - _pad) {
+        shiftX = screen.width - _pad - maxX;
+      }
+      if (minY < _pad) shiftY = _pad - minY;
+      if (maxY + shiftY > screen.height - _pad) {
+        shiftY = screen.height - _pad - maxY;
+      }
+    }
 
     return List.generate(n, (i) {
-      final t = n == 1 ? 0.0 : (i / (n - 1)) - 0.5;
-      final angle = baseAngle + t * _spread;
-
-      final rawX = origin.dx + radius * math.cos(angle);
-      final rawY = origin.dy + radius * math.sin(angle);
-
-      final x = rawX.clamp(_pad + half, screen.width - _pad - half);
-      final y = rawY.clamp(_pad + half, screen.height - _pad - half);
+      final x = raw[i].dx + shiftX;
+      final y = raw[i].dy + shiftY;
 
       final item = widget.items[i];
       final startFrac = i * 0.08;
