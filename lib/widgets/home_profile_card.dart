@@ -134,22 +134,25 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
                 color: effectiveAccent,
                 child: Container(
                   decoration: _cardDecoration(effectiveAccent),
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: LoreCardFace(
-                      title: widget.name,
-                      code: widget.code,
-                      subtitle: widget.subtitle,
-                      seed: seed,
-                      accent: effectiveAccent,
-                      fillHeight: widget.fillHeight,
-                      backgroundImageUrl: widget.avatarUrl,
-                      art: _buildBioText(),
-                      statsStrip: widget.stats.isEmpty
-                          ? null
-                          : _buildStatsRow(),
-                      footer: _buildFooterRow(),
-                    ),
+                  // EDIT 7: No Padding(6) here anymore.
+                  // That 6px gap was letting the gradient show through as
+                  // a stuck purple edge ring around LoreCardFace. It was
+                  // never a Border, which is why border colour / style
+                  // did nothing to it. Face now fills the card, gradient
+                  // stays behind it as background only.
+                  child: LoreCardFace(
+                    title: widget.name,
+                    code: widget.code,
+                    subtitle: widget.subtitle,
+                    seed: seed,
+                    accent: effectiveAccent,
+                    fillHeight: widget.fillHeight,
+                    backgroundImageUrl: widget.avatarUrl,
+                    art: _buildBioText(),
+                    statsStrip: widget.stats.isEmpty
+                        ? null
+                        : _buildStatsRow(),
+                    footer: _buildFooterRow(),
                   ),
                 ),
               ),
@@ -303,31 +306,23 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
     final gradient = appSettings.profileGradient;
     final style = appSettings.profileBorderStyle;
 
-    Border border;
+    // EDIT 6: No static edge border anymore.
+    // The AnimatedBorder frame is now the border — drawing a Border.all
+    // line here as well just double-drew the edge and fought with the
+    // frame. Colour is NOT lost: the frame still uses this same
+    // profileBorderColor via `AnimatedBorder(color: effectiveAccent)`.
+    //
+    // Only thing kept: the 'glow' style's soft ambient shadow, because
+    // that's glow, not an edge line. All other styles get no shadow.
     List<BoxShadow>? shadows;
-
-    switch (style) {
-      case 'double':
-        border = Border.all(color: borderColor, width: 3);
-        break;
-      case 'glow':
-        border = Border.all(
-          color: borderColor.withValues(alpha: 0.7),
-          width: 1,
-        );
-        shadows = [
-          BoxShadow(
-            color: borderColor.withValues(alpha: 0.35),
-            blurRadius: 16,
-            spreadRadius: 2,
-          ),
-        ];
-        break;
-      case 'none':
-        border = Border.all(color: Colors.transparent, width: 1);
-        break;
-      default:
-        border = Border.all(color: borderColor, width: 1.5);
+    if (style == 'glow') {
+      shadows = [
+        BoxShadow(
+          color: borderColor.withValues(alpha: 0.35),
+          blurRadius: 16,
+          spreadRadius: 2,
+        ),
+      ];
     }
 
     return BoxDecoration(
@@ -336,7 +331,6 @@ class _HomeProfileCardState extends State<HomeProfileCard> {
         end: Alignment.bottomRight,
         colors: gradient,
       ),
-      border: border,
       boxShadow: shadows,
       borderRadius: BorderRadius.circular(4),
     );
