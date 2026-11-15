@@ -2389,12 +2389,17 @@ class _SettingsContentState extends State<_SettingsContent> {
               fontStyle: FontStyle.italic,
             ),
           ),
-          const SizedBox(height: 12),
-          LoreTap(
+                    const SizedBox(height: 10),
+                    LoreTap(
             onTap: () async {
-              final demo = await DevTools.ensureDemoSession();
-              if (!context.mounted) return;
-              if (demo == null) {
+              final rpDemo = await DevTools.ensureDemoSession(
+                status: 'active',
+              );
+              final preludeDemo = await DevTools.ensureDemoSession(
+                status: 'brainstorm',
+              );
+              if (rpDemo == null || preludeDemo == null) {
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     backgroundColor: cInk,
@@ -2406,13 +2411,25 @@ class _SettingsContentState extends State<_SettingsContent> {
                 );
                 return;
               }
+              // Push RP first, then prelude on top of it —
+              // so both rooms are open. Back from prelude lands in RP.
               Navigator.of(context).push(
                 fadeRoute(
                   RPRoomScreen(
-                    partnerName: demo.partnerName,
-                    partnerCode: demo.partnerCode,
-                    genre: demo.genre,
-                    sessionId: demo.sessionId,
+                    partnerName: rpDemo.partnerName,
+                    partnerCode: rpDemo.partnerCode,
+                    genre: rpDemo.genre,
+                    sessionId: rpDemo.sessionId,
+                  ),
+                ),
+              );
+              Navigator.of(context).push(
+                fadeRoute(
+                  BrainstormRoomScreen(
+                    partnerName: preludeDemo.partnerName,
+                    partnerCode: preludeDemo.partnerCode,
+                    genre: preludeDemo.genre,
+                    sessionId: preludeDemo.sessionId,
                   ),
                 ),
               );
@@ -2428,7 +2445,7 @@ class _SettingsContentState extends State<_SettingsContent> {
                   Icon(Icons.developer_mode, size: 16, color: cEmber),
                   SizedBox(width: 12),
                   Text(
-                    'Open demo RP room',
+                    'Open demo rooms',
                     style: TextStyle(
                       fontSize: 14,
                       color: cMist,
@@ -5092,114 +5109,52 @@ class _BrainstormContent extends StatelessWidget {
   final void Function(_RPData b) onEnter;
   const _BrainstormContent({required this.brainstorms, required this.onEnter});
   @override
-  Widget build(BuildContext context) => brainstorms.isEmpty
-      ? const Padding(
-          padding: EdgeInsets.symmetric(vertical: 24),
-          child: Column(
-            children: [
-              Text(
-                'No brainstorm rooms.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: cMist,
-                  fontStyle: FontStyle.italic,
-                  fontWeight: FontWeight.w300,
-                ),
+  Widget build(BuildContext context) {
+    if (brainstorms.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Column(
+          children: [
+            Text(
+              'No preludes.',
+              style: TextStyle(
+                fontSize: 14,
+                color: cMist,
+                fontStyle: FontStyle.italic,
+                fontWeight: FontWeight.w300,
               ),
-              SizedBox(height: 8),
-              Text(
-                'Accept an interest to start planning.',
-                style: TextStyle(fontSize: 12, color: cSmoke),
-              ),
-            ],
-          ),
-        )
-      : Column(
-          children: brainstorms
-              .map(
-                (b) => LoreTap(
-                  onTap: () => onEnter(b),
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: HoloCardV2(
-                      accent: cIce,
-                      intensity: 0.3,
-                      seed: b.id.hashCode,
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: cInk,
-                          border: Border.all(color: cAsh),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    b.partner,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w300,
-                                      fontStyle: FontStyle.italic,
-                                      color: cParchment,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    b.genre,
-                                    style: const TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 10,
-                                      color: cSmoke,
-                                      letterSpacing: 1,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                if (b.yourTurn)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 3,
-                                    ),
-                                    color: cIce,
-                                    child: const Text(
-                                      'WAITING',
-                                      style: TextStyle(
-                                        fontFamily: 'monospace',
-                                        fontSize: 8,
-                                        color: cVoid,
-                                        letterSpacing: 1,
-                                      ),
-                                    ),
-                                  ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  'Enter →',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: cSmoke,
-                                    letterSpacing: 1,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Accept an interest to start planning.',
+              style: TextStyle(fontSize: 12, color: cSmoke),
+            ),
+          ],
+        ),
+      );
+    }
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 200,
+        childAspectRatio: 0.7,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: brainstorms.length,
+      itemBuilder: (context, index) {
+        final b = brainstorms[index];
+        return _RPSelectionCard(
+          rp: b,
+          onTap: () => onEnter(b),
+          onLongPress: () {},
         );
+      },
+    );
+  }
 }
+
 
 class _RequestCardContent extends StatefulWidget {
   @override

@@ -37,6 +37,7 @@ class DevTools {
     String partnerName = 'Echo',
     String genre = 'Fantasy',
     bool seedPosts = true,
+    String status = 'active',
   }) async {
     final myCode = _auth.currentCode;
     final myName = _auth.currentName;
@@ -50,6 +51,7 @@ class DevTools {
         .collection('sessions')
         .where('participants', arrayContains: myCode)
         .where('isDemo', isEqualTo: true)
+        .where('status', isEqualTo: status)
         .limit(1)
         .get();
 
@@ -107,7 +109,7 @@ class DevTools {
       'participants': [myCode, fakeCode],
       'participantNames': {myCode: myName, fakeCode: partnerName},
       'genre': genre,
-      'status': 'active',
+      'status': status,
       'createdAt': FieldValue.serverTimestamp(),
       'lastPostAt': FieldValue.serverTimestamp(),
       'postCount': 0,
@@ -133,7 +135,7 @@ class DevTools {
       print('[DevTools] seedFakePartnerStats failed: $e');
     }
 
-    if (seedPosts) {
+    if (seedPosts && status == 'active') {
       await _seedPosts(sessionRef.id, fakeCode, partnerName);
     }
 

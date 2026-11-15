@@ -608,122 +608,94 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
   }
 
   Widget _buildMessage(_BSMessage msg) {
-    if (msg.type != _BSType.chat) {
-      return GestureDetector(
-        onLongPress: () => _showPinMenu(msg),
-        behavior: HitTestBehavior.opaque,
-        child: _buildPinnedNote(msg),
-      );
-    }
+    // Same card shape as RP _PostCard: full-width, dark fill,
+    // thin cAsh border, coloured left accent.
+    final isPinned = msg.type != _BSType.chat;
+    final config = _noteConfig(msg.type);
+    final accent = isPinned
+        ? config.color
+        : (msg.isUser ? cGold : cSmoke);
 
     return GestureDetector(
       onLongPress: () => _showPinMenu(msg),
       behavior: HitTestBehavior.opaque,
-      child: Align(
-      alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.78,
+        decoration: BoxDecoration(
+          color: const Color(0xFF08080A).withValues(alpha: 0.82),
+          border: Border(
+            left: BorderSide(color: accent, width: isPinned ? 2 : 1),
+            top: const BorderSide(color: cAsh),
+            right: const BorderSide(color: cAsh),
+            bottom: const BorderSide(color: cAsh),
+          ),
         ),
         child: Column(
-          crossAxisAlignment:
-              msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (!msg.isUser)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4, left: 2),
-                child: Text(
-                  msg.author,
-                  style: TextStyle(
-                    fontFamily: 'monospace', fontSize: 9,
-                    color: appSettings.textColourFor('partner_name') ?? cSmoke,
-                    letterSpacing: 2,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+              child: Row(
+                children: [
+                  if (isPinned) ...[
+                    Icon(config.icon, size: 12, color: config.color),
+                    const SizedBox(width: 6),
+                    Text(
+                      config.label.toUpperCase(),
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 8,
+                        color: config.color,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Text(
+                      msg.author,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 10,
+                        color: isPinned
+                            ? config.color
+                            : (msg.isUser
+                                ? cGold
+                                : (appSettings.textColourFor('partner_name') ??
+                                    cMist)),
+                        letterSpacing: 2,
+                      ),
+                    ),
                   ),
-                ),
+                  Text(
+                    _timeLabel(msg.timestamp),
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 9,
+                      color: appSettings.textColourFor('timestamp') ?? cSmoke,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ],
               ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: msg.isUser ? cAsh : cInk,
-                border: Border.all(
-                  color: msg.isUser ? cSmoke.withValues(alpha: 0.4) : cAsh,
-                ),
-              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: Text(
                 msg.content,
                 style: TextStyle(
                   fontSize: 14,
-                  color: appSettings.textColourFor('brainstorm') ?? cParchment,
-                  height: 1.6, fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 3, left: 2, right: 2),
-              child: Text(
-                _timeLabel(msg.timestamp),
-                style: TextStyle(
-                  fontFamily: 'monospace', fontSize: 8,
-                  color: appSettings.textColourFor('timestamp') ?? cSmoke,
-                  letterSpacing: 1,
+                  color: appSettings.textColourFor('prelude') ?? cParchment,
+                  height: 1.6,
+                  fontStyle: FontStyle.italic,
                 ),
               ),
             ),
           ],
         ),
       ),
-      ),
-    );
-  }
-
-  Widget _buildPinnedNote(_BSMessage msg) {
-    final config = _noteConfig(msg.type);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: config.color.withValues(alpha: 0.06),
-        border: Border(
-          left: BorderSide(color: config.color, width: 2),
-          top: BorderSide(color: config.color.withValues(alpha: 0.25)),
-          right: BorderSide(color: config.color.withValues(alpha: 0.25)),
-          bottom: BorderSide(color: config.color.withValues(alpha: 0.25)),
-        ),
-      ),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Icon(config.icon, size: 12, color: config.color),
-              const SizedBox(width: 6),
-              Text(
-                config.label.toUpperCase(),
-                style: TextStyle(
-                  fontFamily: 'monospace', fontSize: 8,
-                  color: config.color, letterSpacing: 2,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                msg.author,
-                style: const TextStyle(
-                  fontFamily: 'monospace', fontSize: 8,
-                  color: cSmoke, letterSpacing: 1,
-                ),
-              ),
-            ]),
-            const SizedBox(height: 8),
-            Text(
-              msg.content,
-              style: const TextStyle(
-                fontSize: 14, color: cParchment,
-                fontStyle: FontStyle.italic, height: 1.6,
-              ),
-            ),
-          ]),
-        ),
-      ]),
     );
   }
 
@@ -1073,7 +1045,7 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Start writing with ${widget.partnerName}. This brainstorm room stays open — you can always come back.',
+              'Start writing with ${widget.partnerName}. This prelude room stays open — you can always come back.',
               style: const TextStyle(
                 fontSize: 13, color: cSmoke,
                 fontStyle: FontStyle.italic, height: 1.6,
