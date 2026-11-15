@@ -855,6 +855,16 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
                     max: 1.0,
                     onChanged: (v) => appSettings.setAnimatedBorderOpacity(v),
                   ),
+                  _valueSlider(
+                    label: 'Frame outset',
+                    valueLabel:
+                        '${appSettings.animatedBorderFrameOutset.toStringAsFixed(0)}',
+                    value: appSettings.animatedBorderFrameOutset,
+                    min: -8,
+                    max: 20,
+                    onChanged: (v) =>
+                        appSettings.setAnimatedBorderFrameOutset(v),
+                  ),
 
                   const SizedBox(height: 24),
                   _section('TEXT INSIDE'),

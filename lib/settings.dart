@@ -104,6 +104,7 @@ class AppSettings extends ChangeNotifier {
   static const _kAnimatedBorderSpeed = 'as_animated_border_speed';
   static const _kAnimatedBorderOpacity = 'as_animated_border_opacity';
   static const _kAnimatedBorderPattern = 'as_animated_border_pattern';
+  static const _kAnimatedBorderFrameOutset = 'as_animated_border_frame_outset';
 
   // ── Stat keys ──
   static const statActiveRPs = 'active_rps';
@@ -246,6 +247,7 @@ class AppSettings extends ChangeNotifier {
   double _animatedBorderSpeed = 1.0;
   double _animatedBorderOpacity = 0.7;
   String _animatedBorderPattern = 'waves';
+  double _animatedBorderFrameOutset = 10.0;
   String _profileBorderStyle = 'solid';
   bool _aiMood = true;
   bool _notifNewPost = true;
@@ -308,6 +310,8 @@ class AppSettings extends ChangeNotifier {
     _animatedBorderSpeed = p.getDouble(_kAnimatedBorderSpeed) ?? 1.0;
     _animatedBorderOpacity = p.getDouble(_kAnimatedBorderOpacity) ?? 0.7;
     _animatedBorderPattern = p.getString(_kAnimatedBorderPattern) ?? 'waves';
+    _animatedBorderFrameOutset =
+        p.getDouble(_kAnimatedBorderFrameOutset) ?? 10.0;
     _profileStatsMaster = p.getBool(_kProfileStatsMaster) ?? true;
     _continueMode = p.getString(_kContinueMode) ?? continueModeCycle;
     _continueIds = p.getStringList(_kContinueIds) ?? [];
@@ -480,6 +484,7 @@ class AppSettings extends ChangeNotifier {
     'animatedBorderSpeed': _animatedBorderSpeed,
     'animatedBorderOpacity': _animatedBorderOpacity,
     'animatedBorderPattern': _animatedBorderPattern,
+    'animatedBorderFrameOutset': _animatedBorderFrameOutset,
     'aiMood': _aiMood,
     'notifNewPost': _notifNewPost,
     'notifInterest': _notifInterest,
@@ -513,6 +518,9 @@ class AppSettings extends ChangeNotifier {
         _animatedBorderOpacity;
     _animatedBorderPattern =
         j['animatedBorderPattern'] as String? ?? _animatedBorderPattern;
+    _animatedBorderFrameOutset =
+        (j['animatedBorderFrameOutset'] as num?)?.toDouble() ??
+            _animatedBorderFrameOutset;
     _aiMood = j['aiMood'] as bool? ?? _aiMood;
     _notifNewPost = j['notifNewPost'] as bool? ?? _notifNewPost;
     _notifInterest = j['notifInterest'] as bool? ?? _notifInterest;
@@ -571,6 +579,7 @@ class AppSettings extends ChangeNotifier {
     await p.setDouble(_kAnimatedBorderSpeed, _animatedBorderSpeed);
     await p.setDouble(_kAnimatedBorderOpacity, _animatedBorderOpacity);
     await p.setString(_kAnimatedBorderPattern, _animatedBorderPattern);
+    await p.setDouble(_kAnimatedBorderFrameOutset, _animatedBorderFrameOutset);
     await p.setBool(_kAiMood, _aiMood);
     await p.setBool(_kNotifPost, _notifNewPost);
     await p.setBool('as_notif_rp_post', _notifRpPost);
@@ -619,6 +628,7 @@ class AppSettings extends ChangeNotifier {
   double get animatedBorderSpeed => _animatedBorderSpeed;
   double get animatedBorderOpacity => _animatedBorderOpacity;
   String get animatedBorderPattern => _animatedBorderPattern;
+  double get animatedBorderFrameOutset => _animatedBorderFrameOutset;
   bool get aiMood => _aiMood;
   bool get notifNewPost => _notifNewPost;
   bool get notifInterest => _notifInterest;
@@ -829,6 +839,16 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setAnimatedBorderFrameOutset(double v) async {
+    _animatedBorderFrameOutset = v;
+    (await SharedPreferences.getInstance()).setDouble(
+      _kAnimatedBorderFrameOutset,
+      v,
+    );
+    _touch();
+    notifyListeners();
+  }
+
   Future<void> setAiMood(bool v) async {
     _aiMood = v;
     (await SharedPreferences.getInstance()).setBool(_kAiMood, v);
@@ -1005,6 +1025,7 @@ class AppSettings extends ChangeNotifier {
     _animatedBorderSpeed = 1.0;
     _animatedBorderOpacity = 0.7;
     _animatedBorderPattern = 'waves';
+    _animatedBorderFrameOutset = 10.0;
     _profileStatsMaster = true;
     _continueMode = continueModeCycle;
     _continueIds = [];
@@ -1059,6 +1080,7 @@ class AppSettings extends ChangeNotifier {
     await p.remove(_kAnimatedBorderSpeed);
     await p.remove(_kAnimatedBorderOpacity);
     await p.remove(_kAnimatedBorderPattern);
+    await p.remove(_kAnimatedBorderFrameOutset);
 
     // Cancel any in-flight debounce so a stale push doesn't fire after
     // the next user is signed in.

@@ -266,7 +266,7 @@ class _AnimatedBorderState extends State<AnimatedBorder>
         //   bleed past the card edge instead of being clipped to it.
         // - foregroundPainter is kept: the frame still paints ON TOP,
         //   just on its own layer now, not as part of the card.
-        final outset = widget.frameOutset ?? 10.0;
+        final outset = widget.frameOutset ?? appSettings.animatedBorderFrameOutset;
         final content = Stack(
           clipBehavior: Clip.none,
           children: [
