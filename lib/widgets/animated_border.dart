@@ -92,6 +92,26 @@ const Map<AnimatedBorderPattern, double> _patternThicknessScale = {
   AnimatedBorderPattern.claws: 1.1,
 };
 
+/// Per-pattern waviness feel, multiplied on top of the user's
+/// Waviness slider. High = wilder / looser, low = crisper / tighter.
+/// Gears and Runes stay low on purpose: gears need to mesh cleanly,
+/// runes need to stay readable.
+const Map<AnimatedBorderPattern, double> _patternWavinessScale = {
+  AnimatedBorderPattern.waves: 1.2,
+  AnimatedBorderPattern.spikes: 0.9,
+  AnimatedBorderPattern.gears: 0.7,
+  AnimatedBorderPattern.dice: 0.8,
+  AnimatedBorderPattern.swords: 0.9,
+  AnimatedBorderPattern.leaves: 1.2,
+  AnimatedBorderPattern.shields: 0.8,
+  AnimatedBorderPattern.flames: 1.4,
+  AnimatedBorderPattern.stars: 0.85,
+  AnimatedBorderPattern.runes: 0.7,
+  AnimatedBorderPattern.thorns: 1.3,
+  AnimatedBorderPattern.feathers: 1.25,
+  AnimatedBorderPattern.claws: 1.1,
+};
+
 class _AnimatedBorderState extends State<AnimatedBorder>
     with TickerProviderStateMixin {
   late AnimationController _controller;
@@ -188,7 +208,9 @@ class _AnimatedBorderState extends State<AnimatedBorder>
         final thickness =
             (widget.borderWidth ?? appSettings.animatedBorderThickness) *
                 (_patternThicknessScale[pattern] ?? 1.0);
-        final waviness = widget.waviness ?? appSettings.animatedBorderWaviness;
+        final waviness =
+            (widget.waviness ?? appSettings.animatedBorderWaviness) *
+                (_patternWavinessScale[pattern] ?? 1.0);
         final opacity = widget.opacity ?? appSettings.animatedBorderOpacity;
         final col = widget.color.withValues(alpha: opacity);
 
