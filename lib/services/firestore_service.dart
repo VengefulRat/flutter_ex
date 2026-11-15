@@ -16,7 +16,7 @@ class FirestoreService {
   final AuthService _auth = AuthService();
   final CryptoService _crypto = CryptoService();
 
-    // ── Helper: get session key, creating it if needed ──
+  // ── Helper: get session key, creating it if needed ──
   Future<dynamic> _sessionKey(String sessionId) async {
     final code = _auth.currentCode;
     if (code == null) return null;
@@ -115,8 +115,26 @@ class FirestoreService {
   Future<void> updateProfile(Map<String, dynamic> data) async {
     final code = _auth.currentCode;
     if (code == null) return;
+    // Never let a profile edit overwrite auth / crypto fields,
+    // even if a caller accidentally passes them.
+    const blockedKeys = {
+      'pinHash',
+      'pinSalt',
+      'publicKey',
+      'encryptedPrivateKey',
+      'privateKeySalt',
+      'privateKeyIv',
+      'deviceLocked',
+      'transferPending',
+      'transferCode',
+      'pinAttempts',
+      'pinLockedUntil',
+      'code',
+    };
+    final safeData = Map<String, dynamic>.from(data)
+      ..removeWhere((key, _) => blockedKeys.contains(key));
     await _db.collection('users').doc(code).update({
-      ...data,
+      ...safeData,
       'lastSeen': FieldValue.serverTimestamp(),
     });
   }
@@ -1030,7 +1048,8 @@ class FirestoreService {
       );
     }
   }
-    Future<void> deleteNotification(String notifId) async {
+
+  Future<void> deleteNotification(String notifId) async {
     try {
       await _db.collection('notifications').doc(notifId).delete();
     } catch (e) {
@@ -1040,11 +1059,12 @@ class FirestoreService {
 
   Future<void> markAllNotificationsRead(String code) async {
     try {
-      final snap = await _db.collection('notifications')
+      final snap = await _db
+          .collection('notifications')
           .where('toCode', isEqualTo: code)
           .where('read', isEqualTo: false)
           .get();
-      
+
       final batch = _db.batch();
       for (final doc in snap.docs) {
         batch.update(doc.reference, {'read': true});
@@ -1054,7 +1074,8 @@ class FirestoreService {
       print('[markAllRead] failed: $e');
     }
   }
-   Future<void> updateSessionDetails(
+
+  Future<void> updateSessionDetails(
     String sessionId, {
     required String title,
     required String summary,
@@ -1069,7 +1090,11 @@ class FirestoreService {
     await _db.collection('sessions').doc(sessionId).update(data);
   }
 
-    Future<void> saveImportedItems(String sessionId, List<String> characterIds, List<String> worldIds) async {
+  Future<void> saveImportedItems(
+    String sessionId,
+    List<String> characterIds,
+    List<String> worldIds,
+  ) async {
     try {
       await _db.collection('sessions').doc(sessionId).update({
         'importedCharacterIds': characterIds,
@@ -1080,12 +1105,16 @@ class FirestoreService {
     }
   }
 
-    Future<void> deleteSessionCompletely(String sessionId) async {
+  Future<void> deleteSessionCompletely(String sessionId) async {
     try {
       // 1. Delete subcollections (chunked to avoid timeouts)
       final subcollections = ['posts', 'ooc', 'brainstorm', 'stats'];
       for (var sub in subcollections) {
-        final snap = await _db.collection('sessions').doc(sessionId).collection(sub).get();
+        final snap = await _db
+            .collection('sessions')
+            .doc(sessionId)
+            .collection(sub)
+            .get();
         final batch = _db.batch();
         for (var doc in snap.docs) {
           batch.delete(doc.reference);
@@ -1095,14 +1124,16 @@ class FirestoreService {
 
       // 2. Delete all files in Firebase Storage for this session
       try {
-        final storageRef = FirebaseStorage.instance.ref().child('sessions/$sessionId');
+        final storageRef = FirebaseStorage.instance.ref().child(
+          'sessions/$sessionId',
+        );
         final listResult = await storageRef.listAll();
-        
+
         // Delete items directly in the folder (e.g., background.jpg)
         for (var item in listResult.items) {
           await item.delete();
         }
-        
+
         // Delete nested files (e.g., media/123.jpg, media/456.enc)
         for (var prefix in listResult.prefixes) {
           final nestedList = await prefix.listAll();
@@ -1117,7 +1148,7 @@ class FirestoreService {
 
       // 3. Finally, delete the main session document
       await _db.collection('sessions').doc(sessionId).delete();
-      
+
       print('[deleteSession] Successfully deleted session $sessionId');
     } catch (e) {
       print('[deleteSession] FAILED: $e');
@@ -1125,7 +1156,3 @@ class FirestoreService {
     }
   }
 }
-
-
-
- 

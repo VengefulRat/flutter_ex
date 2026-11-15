@@ -284,9 +284,11 @@ class CryptoService {
     final partnerPubKey = _decodePublicKey(partnerPubKeyB64);
 
     // Encrypt session key with my public key and partner's public key
+    final myPubKey = _publicKey;
+    if (myPubKey == null) return;
     final myEncrypted = _rsaEncrypt(
       Uint8List.fromList(sessionKeyBytes),
-      _publicKey!,
+      myPubKey,
     );
     final partnerEncrypted = _rsaEncrypt(
       Uint8List.fromList(sessionKeyBytes),

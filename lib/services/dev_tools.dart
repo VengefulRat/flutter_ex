@@ -147,10 +147,12 @@ class DevTools {
     );
   }
 
-    /// Seeds a stat block for the fake partner so partner-stats display
+  /// Seeds a stat block for the fake partner so partner-stats display
   /// works in the demo room. Idempotent — won't clobber if one exists.
   static Future<void> _seedFakePartnerStats(
-      String sessionId, String fakeCode) async {
+    String sessionId,
+    String fakeCode,
+  ) async {
     if (fakeCode.isEmpty) return;
     final ref = _db
         .collection('sessions')
@@ -245,11 +247,7 @@ class DevTools {
 
     for (final seed in seeds) {
       final enc = await _crypto.encryptContent(seed.content, sessionKey);
-      await _db
-          .collection('sessions')
-          .doc(sessionId)
-          .collection('posts')
-          .add({
+      await _db.collection('sessions').doc(sessionId).collection('posts').add({
         'authorCode': fakeCode,
         'authorName': fakeName,
         'characterName': fakeName,
@@ -277,6 +275,10 @@ class DevTools {
     final myCode = _auth.currentCode;
     if (myCode == null) return;
 
+    // Collect the fake partner codes from MY demo sessions only,
+    // so we never delete another user's demo partner.
+    final fakeCodes = <String>{};
+
     // Demo sessions + their posts
     final sessions = await _db
         .collection('sessions')
@@ -284,6 +286,12 @@ class DevTools {
         .where('isDemo', isEqualTo: true)
         .get();
     for (final s in sessions.docs) {
+      final participants = List<String>.from(
+        (s.data()['participants'] as List?) ?? [],
+      );
+      for (final p in participants) {
+        if (p != myCode) fakeCodes.add(p);
+      }
       final posts = await s.reference.collection('posts').get();
       for (final p in posts.docs) {
         await p.reference.delete();
@@ -295,11 +303,12 @@ class DevTools {
       await s.reference.delete();
     }
 
-    // Demo users
-    final users =
-        await _db.collection('users').where('isDemo', isEqualTo: true).get();
-    for (final u in users.docs) {
-      await u.reference.delete();
+    // Demo users — only the fake partners from MY sessions.
+    for (final fakeCode in fakeCodes) {
+      final userDoc = await _db.collection('users').doc(fakeCode).get();
+      if (userDoc.exists && userDoc.data()?['isDemo'] == true) {
+        await userDoc.reference.delete();
+      }
     }
   }
 }

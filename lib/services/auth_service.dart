@@ -211,9 +211,16 @@ class AuthService {
         return LoginResult.error('Code not found. Check and try again.');
       }
 
-      final data = doc.data() ?? {};
+            final data = doc.data() ?? {};
+      final locked = data['deviceLocked'] as bool? ?? false;
+      final transferPending = data['transferRequestedAt'] != null;
+
+      if (locked || transferPending) {
+        return LoginResult.deviceLocked();
+      }
+
       final name = data['displayNameOriginal'] as String? ?? '';
-      
+
       // Generate a new web session version (kicks out other web browsers)
       final newVersion = DateTime.now().millisecondsSinceEpoch;
 
