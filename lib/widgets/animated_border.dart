@@ -73,6 +73,25 @@ const Map<AnimatedBorderPattern, double> _patternOutsetBonus = {
   AnimatedBorderPattern.claws: 1,
 };
 
+/// Per-pattern thickness feel, multiplied on top of the user's
+/// Thickness slider. Slider is still the master control — this just
+/// keeps each pattern reading correctly at any slider value.
+const Map<AnimatedBorderPattern, double> _patternThicknessScale = {
+  AnimatedBorderPattern.waves: 1.0,
+  AnimatedBorderPattern.spikes: 1.0,
+  AnimatedBorderPattern.gears: 1.0,
+  AnimatedBorderPattern.dice: 1.0,
+  AnimatedBorderPattern.swords: 1.15,
+  AnimatedBorderPattern.leaves: 1.0,
+  AnimatedBorderPattern.shields: 1.2,
+  AnimatedBorderPattern.flames: 0.9,
+  AnimatedBorderPattern.stars: 0.95,
+  AnimatedBorderPattern.runes: 0.9,
+  AnimatedBorderPattern.thorns: 1.1,
+  AnimatedBorderPattern.feathers: 0.85,
+  AnimatedBorderPattern.claws: 1.1,
+};
+
 class _AnimatedBorderState extends State<AnimatedBorder>
     with TickerProviderStateMixin {
   late AnimationController _controller;
@@ -163,12 +182,14 @@ class _AnimatedBorderState extends State<AnimatedBorder>
     return AnimatedBuilder(
       animation: Listenable.merge([_controller, _diceController, appSettings]),
       builder: (_, _) {
+                // pattern first, so thickness can use it for the per-pattern scale.
+        // No new variables here — same 4 declarations, just reordered.
+        final pattern = widget.pattern ?? _parse(appSettings.animatedBorderPattern);
         final thickness =
-            widget.borderWidth ?? appSettings.animatedBorderThickness;
+            (widget.borderWidth ?? appSettings.animatedBorderThickness) *
+                (_patternThicknessScale[pattern] ?? 1.0);
         final waviness = widget.waviness ?? appSettings.animatedBorderWaviness;
         final opacity = widget.opacity ?? appSettings.animatedBorderOpacity;
-        final pattern =
-            widget.pattern ?? _parse(appSettings.animatedBorderPattern);
         final col = widget.color.withValues(alpha: opacity);
 
         CustomPainter painter;
