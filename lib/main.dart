@@ -13,7 +13,6 @@ import 'screens/rp_room.dart';
 import 'screens/sandbox_screen.dart';
 import 'screens/brainstorm_room.dart';
 import 'screens/login_screen.dart';
-import 'screens/web_landing_screen.dart';
 import 'screens/lock_screen.dart';
 import 'settings.dart';
 import 'services/auth_service.dart';
@@ -40,7 +39,6 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'widgets/holo_card_v2.dart';
 import 'widgets/floating_menu.dart';
 import 'services/update_service.dart';
-import 'screens/web_landing_screen.dart';
 
 // Must be top-level for FCM background handling
 @pragma('vm:entry-point')
@@ -190,7 +188,7 @@ class _SplashScreenState extends State<SplashScreen>
         fadeRoute(
           hasSession
               ? const HomeScreen()
-              : (kIsWeb ? const WebLandingScreen() : const LandingScreen()),
+              : (kIsWeb ? const LandingScreen() : const LandingScreen()),
         ),
       );
     });
