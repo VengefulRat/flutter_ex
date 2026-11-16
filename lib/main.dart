@@ -625,12 +625,15 @@ class _HomeScreenState extends State<HomeScreen>
         }
       } catch (_) {}
     } else if (type == 'interest' || type == 'accepted') {
-      setState(() {});
-    }
+  _openNotifications();
+}
 
-    if (notifId.isNotEmpty) {
-      FirestoreService().markNotificationRead(notifId);
-    }
+// Don't mark interest / accepted as read on tap - if we do,
+// the Accept / "Tap to choose" buttons disappear because
+// they only show when !n.read
+if (notifId.isNotEmpty && type != 'interest' && type != 'accepted') {
+  FirestoreService().markNotificationRead(notifId);
+}
   }
 
   Future<void> _loadData() async {
