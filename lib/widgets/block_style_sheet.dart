@@ -541,6 +541,75 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
   Color get _glowColor => appSettings.profileGlowColor;
   List<String> get _textKeys => appSettings.textKeysForBlock('profile');
 
+  String _selectedTarget = 'gradientStart';
+
+  String _selectedTargetLabel() {
+    if (_selectedTarget == 'gradientStart') return 'Gradient Start';
+    if (_selectedTarget == 'gradientEnd') return 'Gradient End';
+    if (_selectedTarget == 'frame') return 'Frame colour';
+    if (_selectedTarget == 'glow') return 'Glow colour';
+    if (_selectedTarget.startsWith('text:')) {
+      final key = _selectedTarget.substring(5);
+      return AppSettings.textKeyLabels[key] ?? key;
+    }
+    return 'Colour';
+  }
+
+  Color? _currentForSelected() {
+    if (_selectedTarget == 'gradientStart') {
+      return _gradient.isNotEmpty ? _gradient[0] : null;
+    }
+    if (_selectedTarget == 'gradientEnd') {
+      return _gradient.length > 1 ? _gradient[1] : null;
+    }
+    if (_selectedTarget == 'frame') return _borderColor;
+    if (_selectedTarget == 'glow') return _glowColor;
+    if (_selectedTarget.startsWith('text:')) {
+      return appSettings.textColourFor(_selectedTarget.substring(5));
+    }
+    return null;
+  }
+
+  Future<void> _applyToSelected(Color? c) async {
+    if (_selectedTarget == 'gradientStart') {
+      if (c == null) return;
+      await _setGradient([c, _gradient.length > 1 ? _gradient[1] : c]);
+    } else if (_selectedTarget == 'gradientEnd') {
+      if (c == null) return;
+      await _setGradient([_gradient.isNotEmpty ? _gradient[0] : c, c]);
+    } else if (_selectedTarget == 'frame') {
+      if (c != null) await _setBorderColor(c);
+    } else if (_selectedTarget == 'glow') {
+      if (c != null) await _setGlowColor(c);
+    } else if (_selectedTarget.startsWith('text:')) {
+      await _setText(_selectedTarget.substring(5), c);
+    }
+  }
+
+  Widget _targetChip(String label, String target) {
+    final active = _selectedTarget == target;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedTarget = target),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: active ? cGold : cAsh),
+          color: active ? cGold.withValues(alpha: 0.08) : Colors.transparent,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 10,
+            letterSpacing: 1,
+            color: active ? cGold : cSmoke,
+          ),
+        ),
+      ),
+    );
+  }
+
+
   Future<void> _setGradient(List<Color> g) async {
     await appSettings.setProfileGradient(g);
     if (mounted) setState(() {});
@@ -727,40 +796,38 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _section('BACKGROUND GRADIENT'),
-                  const SizedBox(height: 14),
-                  _colourRow(
-                    label: 'Start',
-                    current: _gradient.isNotEmpty ? _gradient[0] : null,
-                    onPicked: (c) {
-                      if (c == null) return;
-                      _setGradient([
-                        c,
-                        _gradient.length > 1 ? _gradient[1] : c,
-                      ]);
-                    },
+                  _section('COLOUR'),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'What do you want to change?',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: cSmoke,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _targetChip('Gradient Start', 'gradientStart'),
+                      _targetChip('Gradient End', 'gradientEnd'),
+                      _targetChip('Frame colour', 'frame'),
+                      if (_glowEnabled) _targetChip('Glow colour', 'glow'),
+                      ..._textKeys.map(
+                        (key) => _targetChip(
+                          AppSettings.textKeyLabels[key] ?? key,
+                          'text:$key',
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 18),
                   _colourRow(
-                    label: 'End',
-                    current: _gradient.length > 1 ? _gradient[1] : null,
-                    onPicked: (c) {
-                      if (c == null) return;
-                      _setGradient([
-                        _gradient.isNotEmpty ? _gradient[0] : c,
-                        c,
-                      ]);
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  _section('BORDER'),
-                  const SizedBox(height: 14),
-                  _colourRow(
-                    label: 'Frame colour',
-                    current: _borderColor,
-                    onPicked: (c) {
-                      if (c != null) _setBorderColor(c);
-                    },
+                    label: _selectedTargetLabel(),
+                    current: _currentForSelected(),
+                    onPicked: (c) => _applyToSelected(c),
                   ),
                   const SizedBox(height: 18),
                   _glowRow(),
@@ -818,28 +885,7 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
                     max: 20,
                     onChanged: (v) => appSettings.setAnimatedBorderFrameOutset(v),
                   ),
-                  const SizedBox(height: 24),
-                  _section('TEXT INSIDE'),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Colours of the profile card text on the home screen.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: cSmoke,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  ..._textKeys.map(
-                    (key) => Padding(
-                      padding: const EdgeInsets.only(bottom: 18),
-                      child: _colourRow(
-                        label: AppSettings.textKeyLabels[key] ?? key,
-                        current: appSettings.textColourFor(key),
-                        onPicked: (c) => _setText(key, c),
-                      ),
-                    ),
-                  ),
+
                   const SizedBox(height: 8),
                   Container(height: 1, color: cAsh),
                   const SizedBox(height: 16),
@@ -1153,16 +1199,6 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
             chip(label: 'OFF', active: !_glowEnabled, onTap: () => _setGlowEnabled(false)),
           ],
         ),
-        if (_glowEnabled) ...[
-          const SizedBox(height: 18),
-          _colourRow(
-            label: 'Glow colour',
-            current: _glowColor,
-            onPicked: (c) {
-              if (c != null) _setGlowColor(c);
-            },
-          ),
-        ],
       ],
     );
   }

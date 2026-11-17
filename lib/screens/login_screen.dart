@@ -9,6 +9,8 @@ import '../services/sandbox_sync.dart';
 import '../services/firestore_service.dart';
 import '../widgets/support_link.dart';
 import 'lock_screen.dart';
+import 'web_qr_panel.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class LoginScreen extends StatefulWidget {
   final bool startOnLogin;
@@ -37,8 +39,13 @@ class _LoginScreenState extends State<LoginScreen> {
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 400),
           child: _mode == 0
-              ? _LoginPanel(onSwitch: () => setState(() => _mode = 1))
-              : _RegisterPanel(onSwitch: () => setState(() => _mode = 0)),
+              ? _LoginPanel(
+                  onSwitch: () => setState(() => _mode = 1),
+                  onWebLogin: () => setState(() => _mode = 2),
+                )
+              : _mode == 1
+              ? _RegisterPanel(onSwitch: () => setState(() => _mode = 0))
+              : const WebQRPanel(),
         ),
       ),
     );
@@ -574,7 +581,8 @@ class _RegisterPanelState extends State<_RegisterPanel> {
 // ════════════════════════════════════════
 class _LoginPanel extends StatefulWidget {
   final VoidCallback onSwitch;
-  const _LoginPanel({required this.onSwitch});
+  final VoidCallback onWebLogin;
+  const _LoginPanel({required this.onSwitch, required this.onWebLogin});
   @override
   State<_LoginPanel> createState() => _LoginPanelState();
 }
@@ -937,13 +945,37 @@ class _LoginPanelState extends State<_LoginPanel> {
             ),
             const SizedBox(height: 16),
             const SizedBox(height: 12),
+            if (kIsWeb) ...[
+              const SizedBox(height: 16),
+              Center(
+                child: LoreTap(
+                  onTap: widget.onWebLogin,
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.qr_code_scanner, size: 16, color: cGold),
+                      SizedBox(width: 8),
+                      Text(
+                        'Log in with your phone',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 11,
+                          color: cGold,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const Center(
               child: SupportLink(contextNote: 'Sent from the login screen.'),
             ),
             const SizedBox(height: 40),
           ],
-        ),
-      ),
-    );
-  }
-}
+        ), // Column
+      ), // SingleChildScrollView
+    ); // ScrollConfiguration
+  } // build
+} // class

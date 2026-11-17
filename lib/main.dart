@@ -625,15 +625,15 @@ class _HomeScreenState extends State<HomeScreen>
         }
       } catch (_) {}
     } else if (type == 'interest' || type == 'accepted') {
-  _openNotifications();
-}
+      _openNotifications();
+    }
 
-// Don't mark interest / accepted as read on tap - if we do,
-// the Accept / "Tap to choose" buttons disappear because
-// they only show when !n.read
-if (notifId.isNotEmpty && type != 'interest' && type != 'accepted') {
-  FirestoreService().markNotificationRead(notifId);
-}
+    // Don't mark interest / accepted as read on tap - if we do,
+    // the Accept / "Tap to choose" buttons disappear because
+    // they only show when !n.read
+    if (notifId.isNotEmpty && type != 'interest' && type != 'accepted') {
+      FirestoreService().markNotificationRead(notifId);
+    }
   }
 
   Future<void> _loadData() async {
@@ -1518,17 +1518,24 @@ if (notifId.isNotEmpty && type != 'interest' && type != 'accepted') {
     return Center(child: SizedBox(width: 900, child: _buildMobileBody()));
   }
 
-  // ── DESKTOP: SPLIT ──────────────────────
-  // Left sidebar (fixed width) + right content panel (expands).
-  Widget _buildDesktopSplitBody() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _buildSideNav(),
-        Expanded(child: _buildContentPanel()),
-      ],
-    );
-  }
+  // DESKTOP: SPLIT
+// Left sidebar (fixed width) + right content panel (expands).
+// Capped at 1280 total so it doesn't stretch across a 4K monitor.
+// Side nav 280 + content ~1000 = comfortable reading width.
+Widget _buildDesktopSplitBody() {
+  return Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 1280),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildSideNav(),
+          Expanded(child: _buildContentPanel()),
+        ],
+      ),
+    ),
+  );
+}
 
   // The persistent left rail shown in split mode.
   Widget _buildSideNav() {
@@ -4591,6 +4598,13 @@ class _NotificationsContentState extends State<_NotificationsContent> {
               ),
             ),
             onDismissed: (_) {
+              // Remove from the on-screen list IMMEDIATELY, not just
+              // from Firestore. If we wait for Firestore to come back,
+              // Flutter rebuilds with the dismissed widget still in
+              // the tree and throws the red screen.
+              setState(() {
+                widget.notifications.removeWhere((x) => x.id == n.id);
+              });
               _fs.deleteNotification(n.id);
             },
             child: LoreTap(
