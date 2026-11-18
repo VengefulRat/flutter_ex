@@ -815,7 +815,6 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   bool _oocOpen = false;
   int _oocUnread = 0;
   int _oocTotalNonUser = 0;
-  void _clearOocUnread() { if (_oocUnread != 0) setState(() => _oocUnread = 0); }
 
   final _oocCtrl = TextEditingController();
   final _oocScrollCtrl = ScrollController();
