@@ -97,6 +97,7 @@ class AppSettings extends ChangeNotifier {
   static const _kShowFloatingButton = 'as_show_fab';
   static const _kGyroEnabled = 'as_gyro_enabled';
   static const _kFloatingMenuColor = 'as_floating_menu_color';
+  static const _kFanCardSize = 'as_fan_card_size';
   static const _kHiddenBlocks = 'as_hidden_blocks';
   static const _kProfileGlowEnabled = 'as_profile_glow_enabled';
   static const _kAiMood = 'as_ai_mood';
@@ -277,6 +278,7 @@ class AppSettings extends ChangeNotifier {
   bool _showFloatingButton = true;
   bool _gyroEnabled = true;
   Color _floatingMenuColor = const Color(0xFFC9A96E);
+  String _fanCardSize = 'normal';
   Set<String> _hiddenBlocks = {};
   bool _aiMood = true;
   bool _notifNewPost = true;
@@ -531,6 +533,7 @@ class AppSettings extends ChangeNotifier {
     'showFloatingButton': _showFloatingButton,
     'gyroEnabled': _gyroEnabled,
     'floatingMenuColor': _floatingMenuColor.toARGB32(),
+    'fanCardSize': _fanCardSize,
     'hiddenBlocks': _hiddenBlocks.toList(),
     'animatedBorderThickness': _animatedBorderThickness,
     'animatedBorderWaviness': _animatedBorderWaviness,
@@ -572,6 +575,9 @@ class AppSettings extends ChangeNotifier {
     _gyroEnabled = j['gyroEnabled'] as bool? ?? _gyroEnabled;
     if (j['floatingMenuColor'] is int) {
       _floatingMenuColor = Color(j['floatingMenuColor'] as int);
+    }
+    if (j['fanCardSize'] is String) {
+      _fanCardSize = j['fanCardSize'] as String;
     }
     if (j['hiddenBlocks'] is List) {
       _hiddenBlocks = Set<String>.from((j['hiddenBlocks'] as List).map((e) => e.toString()));
@@ -902,6 +908,17 @@ class AppSettings extends ChangeNotifier {
   bool get showFloatingButton => _showFloatingButton;
   bool get gyroEnabled => _gyroEnabled;
   Color get floatingMenuColor => _floatingMenuColor;
+  String get fanCardSize => _fanCardSize;
+  double get fanCardSizePx {
+    switch (_fanCardSize) {
+      case 'small':
+        return 64;
+      case 'large':
+        return 100;
+      default:
+        return 82;
+    }
+  }
   Set<String> get hiddenBlocks => Set.unmodifiable(_hiddenBlocks);
   bool isBlockHidden(String id) => _hiddenBlocks.contains(id);
 
@@ -930,6 +947,12 @@ class AppSettings extends ChangeNotifier {
     _gyroEnabled = v;
     (await SharedPreferences.getInstance()).setBool(_kGyroEnabled, v);
     _touch();
+    notifyListeners();
+  }
+
+  Future<void> setFanCardSize(String v) async {
+    _fanCardSize = v;
+    (await SharedPreferences.getInstance()).setString(_kFanCardSize, v);
     notifyListeners();
   }
 

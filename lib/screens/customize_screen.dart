@@ -119,6 +119,21 @@ class CustomizeScreen extends StatelessWidget {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          const Text(
+                            'Fan card size',
+                            style: TextStyle(fontSize: 13, color: cMist, fontWeight: FontWeight.w300),
+                          ),
+                          const Spacer(),
+                          _fanSizeChip('S', 'small'),
+                          const SizedBox(width: 6),
+                          _fanSizeChip('M', 'normal'),
+                          const SizedBox(width: 6),
+                          _fanSizeChip('L', 'large'),
+                        ],
+                      ),
                       const SizedBox(height: 24),
                       const Divider(color: cAsh),
                       const SizedBox(height: 16),
@@ -177,6 +192,29 @@ class CustomizeScreen extends StatelessWidget {
       MapEntry(AppSettings.blockRequestCard, 'Request Card'),
       MapEntry(AppSettings.blockSettings, 'Settings'),
     ];
+  }
+
+  static Widget _fanSizeChip(String label, String value) {
+    final active = appSettings.fanCardSize == value;
+    return GestureDetector(
+      onTap: () => appSettings.setFanCardSize(value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: active ? cGold : cAsh),
+          color: active ? cGold.withValues(alpha: 0.08) : Colors.transparent,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 10,
+            letterSpacing: 1,
+            color: active ? cGold : cSmoke,
+          ),
+        ),
+      ),
+    );
   }
 
   static Widget _section(String text) => Text(

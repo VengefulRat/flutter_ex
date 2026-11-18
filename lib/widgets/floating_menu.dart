@@ -51,7 +51,7 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
 
   late final AnimationController _menuCtrl;
 
-  static const double _cardSize = 82;
+  double get _cardSize => appSettings.fanCardSizePx;
   static const double _radius = 210; // was 170
   static const double _spread = 1.42; // was 1.15
   static const double _pad = 10;
