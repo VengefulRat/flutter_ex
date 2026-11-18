@@ -99,6 +99,18 @@ class AppSettings extends ChangeNotifier {
   static const _kFloatingMenuColor = 'as_floating_menu_color';
   static const _kFanCardSize = 'as_fan_card_size';
   static const _kHiddenBlocks = 'as_hidden_blocks';
+  static const _kRpHeaderShow = 'as_rp_header_show';
+  static const _kRpHeaderSize = 'as_rp_header_size';
+  static const _kRpHeaderAccent = 'as_rp_header_accent';
+  static const _kRpMoodOverride = 'as_rp_mood_override';
+  static const _kRpBgColor = 'as_rp_bg_color';
+  static const _kRpParticlesOn = 'as_rp_particles_on';
+  static const _kRpPostSize = 'as_rp_post_size';
+  static const _kRpEditorSize = 'as_rp_editor_size';
+  static const _kRpShowLogSidebar = 'as_rp_show_log_sidebar';
+  static const _kRpShowToolsSidebar = 'as_rp_show_tools_sidebar';
+  static const _kRpShowOoc = 'as_rp_show_ooc';
+  static const _kRpOocBadgeOn = 'as_rp_ooc_badge_on';
   static const _kProfileGlowEnabled = 'as_profile_glow_enabled';
   static const _kAiMood = 'as_ai_mood';
   static const _kNotifPost = 'as_notif_post';
@@ -280,6 +292,18 @@ class AppSettings extends ChangeNotifier {
   Color _floatingMenuColor = const Color(0xFFC9A96E);
   String _fanCardSize = 'normal';
   Set<String> _hiddenBlocks = {};
+  bool _rpHeaderShow = true;
+  String _rpHeaderSize = 'M';
+  Color _rpHeaderAccent = const Color(0xFFD1D41E);
+  String _rpMoodOverride = 'off';
+  Color _rpBgColor = const Color(0xFF050810);
+  bool _rpParticlesOn = true;
+  String _rpPostSize = 'M';
+  String _rpEditorSize = 'M';
+  bool _rpShowLogSidebar = true;
+  bool _rpShowToolsSidebar = true;
+  bool _rpShowOoc = true;
+  bool _rpOocBadgeOn = true;
   bool _aiMood = true;
   bool _notifNewPost = true;
   bool _notifRpPost = true;
@@ -326,6 +350,18 @@ class AppSettings extends ChangeNotifier {
     _orientation = p.getString(_kOrientation) ?? 'Both';
     _soundEnabled = p.getBool(_kSound) ?? true;
     _aiMood = p.getBool(_kAiMood) ?? true;
+    _rpHeaderShow = p.getBool(_kRpHeaderShow) ?? true;
+    _rpHeaderSize = p.getString(_kRpHeaderSize) ?? 'M';
+    final rpHA = p.getInt(_kRpHeaderAccent); if (rpHA != null) _rpHeaderAccent = Color(rpHA);
+    _rpMoodOverride = p.getString(_kRpMoodOverride) ?? 'off';
+    final rpBg = p.getInt(_kRpBgColor); if (rpBg != null) _rpBgColor = Color(rpBg);
+    _rpParticlesOn = p.getBool(_kRpParticlesOn) ?? true;
+    _rpPostSize = p.getString(_kRpPostSize) ?? 'M';
+    _rpEditorSize = p.getString(_kRpEditorSize) ?? 'M';
+    _rpShowLogSidebar = p.getBool(_kRpShowLogSidebar) ?? true;
+    _rpShowToolsSidebar = p.getBool(_kRpShowToolsSidebar) ?? true;
+    _rpShowOoc = p.getBool(_kRpShowOoc) ?? true;
+    _rpOocBadgeOn = p.getBool(_kRpOocBadgeOn) ?? true;
     _notifNewPost = p.getBool(_kNotifPost) ?? true;
     _notifRpPost = p.getBool('as_notif_rp_post') ?? true;
     _notifOoc = p.getBool('as_notif_ooc') ?? true;
@@ -535,6 +571,18 @@ class AppSettings extends ChangeNotifier {
     'floatingMenuColor': _floatingMenuColor.toARGB32(),
     'fanCardSize': _fanCardSize,
     'hiddenBlocks': _hiddenBlocks.toList(),
+    'rpHeaderShow': _rpHeaderShow,
+    'rpHeaderSize': _rpHeaderSize,
+    'rpHeaderAccent': _rpHeaderAccent.toARGB32(),
+    'rpMoodOverride': _rpMoodOverride,
+    'rpBgColor': _rpBgColor.toARGB32(),
+    'rpParticlesOn': _rpParticlesOn,
+    'rpPostSize': _rpPostSize,
+    'rpEditorSize': _rpEditorSize,
+    'rpShowLogSidebar': _rpShowLogSidebar,
+    'rpShowToolsSidebar': _rpShowToolsSidebar,
+    'rpShowOoc': _rpShowOoc,
+    'rpOocBadgeOn': _rpOocBadgeOn,
     'animatedBorderThickness': _animatedBorderThickness,
     'animatedBorderWaviness': _animatedBorderWaviness,
     'animatedBorderSpeed': _animatedBorderSpeed,
@@ -581,6 +629,18 @@ class AppSettings extends ChangeNotifier {
     }
     if (j['hiddenBlocks'] is List) {
       _hiddenBlocks = Set<String>.from((j['hiddenBlocks'] as List).map((e) => e.toString()));
+    _rpHeaderShow = j['rpHeaderShow'] as bool? ?? _rpHeaderShow;
+    _rpHeaderSize = j['rpHeaderSize'] as String? ?? _rpHeaderSize;
+    if (j['rpHeaderAccent'] is int) _rpHeaderAccent = Color(j['rpHeaderAccent'] as int);
+    _rpMoodOverride = j['rpMoodOverride'] as String? ?? _rpMoodOverride;
+    if (j['rpBgColor'] is int) _rpBgColor = Color(j['rpBgColor'] as int);
+    _rpParticlesOn = j['rpParticlesOn'] as bool? ?? _rpParticlesOn;
+    _rpPostSize = j['rpPostSize'] as String? ?? _rpPostSize;
+    _rpEditorSize = j['rpEditorSize'] as String? ?? _rpEditorSize;
+    _rpShowLogSidebar = j['rpShowLogSidebar'] as bool? ?? _rpShowLogSidebar;
+    _rpShowToolsSidebar = j['rpShowToolsSidebar'] as bool? ?? _rpShowToolsSidebar;
+    _rpShowOoc = j['rpShowOoc'] as bool? ?? _rpShowOoc;
+    _rpOocBadgeOn = j['rpOocBadgeOn'] as bool? ?? _rpOocBadgeOn;
     }
     if (j['profileGlowColor'] is int) {
       _profileGlowColor = Color(j['profileGlowColor'] as int);
@@ -920,6 +980,18 @@ class AppSettings extends ChangeNotifier {
     }
   }
   Set<String> get hiddenBlocks => Set.unmodifiable(_hiddenBlocks);
+  bool get rpHeaderShow => _rpHeaderShow;
+  String get rpHeaderSize => _rpHeaderSize;
+  Color get rpHeaderAccent => _rpHeaderAccent;
+  String get rpMoodOverride => _rpMoodOverride;
+  Color get rpBgColor => _rpBgColor;
+  bool get rpParticlesOn => _rpParticlesOn;
+  String get rpPostSize => _rpPostSize;
+  String get rpEditorSize => _rpEditorSize;
+  bool get rpShowLogSidebar => _rpShowLogSidebar;
+  bool get rpShowToolsSidebar => _rpShowToolsSidebar;
+  bool get rpShowOoc => _rpShowOoc;
+  bool get rpOocBadgeOn => _rpOocBadgeOn;
   bool isBlockHidden(String id) => _hiddenBlocks.contains(id);
 
   Future<void> setShowLogo(bool v) async {
@@ -974,6 +1046,19 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
+
+  Future<void> setRpHeaderShow(bool v) async { _rpHeaderShow = v; (await SharedPreferences.getInstance()).setBool(_kRpHeaderShow, v); _touch(); notifyListeners(); }
+  Future<void> setRpHeaderSize(String v) async { _rpHeaderSize = v; (await SharedPreferences.getInstance()).setString(_kRpHeaderSize, v); _touch(); notifyListeners(); }
+  Future<void> setRpHeaderAccent(Color v) async { _rpHeaderAccent = v; (await SharedPreferences.getInstance()).setInt(_kRpHeaderAccent, v.toARGB32()); _touch(); notifyListeners(); }
+  Future<void> setRpMoodOverride(String v) async { _rpMoodOverride = v; (await SharedPreferences.getInstance()).setString(_kRpMoodOverride, v); _touch(); notifyListeners(); }
+  Future<void> setRpBgColor(Color v) async { _rpBgColor = v; (await SharedPreferences.getInstance()).setInt(_kRpBgColor, v.toARGB32()); _touch(); notifyListeners(); }
+  Future<void> setRpParticlesOn(bool v) async { _rpParticlesOn = v; (await SharedPreferences.getInstance()).setBool(_kRpParticlesOn, v); _touch(); notifyListeners(); }
+  Future<void> setRpPostSize(String v) async { _rpPostSize = v; (await SharedPreferences.getInstance()).setString(_kRpPostSize, v); _touch(); notifyListeners(); }
+  Future<void> setRpEditorSize(String v) async { _rpEditorSize = v; (await SharedPreferences.getInstance()).setString(_kRpEditorSize, v); _touch(); notifyListeners(); }
+  Future<void> setRpShowLogSidebar(bool v) async { _rpShowLogSidebar = v; (await SharedPreferences.getInstance()).setBool(_kRpShowLogSidebar, v); _touch(); notifyListeners(); }
+  Future<void> setRpShowToolsSidebar(bool v) async { _rpShowToolsSidebar = v; (await SharedPreferences.getInstance()).setBool(_kRpShowToolsSidebar, v); _touch(); notifyListeners(); }
+  Future<void> setRpShowOoc(bool v) async { _rpShowOoc = v; (await SharedPreferences.getInstance()).setBool(_kRpShowOoc, v); _touch(); notifyListeners(); }
+  Future<void> setRpOocBadgeOn(bool v) async { _rpOocBadgeOn = v; (await SharedPreferences.getInstance()).setBool(_kRpOocBadgeOn, v); _touch(); notifyListeners(); }
 
   Future<void> setAnimatedBorderThickness(double v) async {
     _animatedBorderThickness = v;
@@ -1211,6 +1296,18 @@ class AppSettings extends ChangeNotifier {
     _orientation = 'Both';
     _soundEnabled = true;
     _aiMood = true;
+    _rpHeaderShow = true;
+    _rpHeaderSize = 'M';
+    _rpHeaderAccent = const Color(0xFFD1D41E);
+    _rpMoodOverride = 'off';
+    _rpBgColor = const Color(0xFF050810);
+    _rpParticlesOn = true;
+    _rpPostSize = 'M';
+    _rpEditorSize = 'M';
+    _rpShowLogSidebar = true;
+    _rpShowToolsSidebar = true;
+    _rpShowOoc = true;
+    _rpOocBadgeOn = true;
     _notifNewPost = true;
     _notifInterest = true;
     _autoScroll = true;
@@ -1266,6 +1363,18 @@ class AppSettings extends ChangeNotifier {
     await p.remove(_kProfileGlowColor);
     await p.remove(_kProfileGlowEnabled);
     await p.remove(_kAiMood);
+    await p.remove(_kRpHeaderShow);
+    await p.remove(_kRpHeaderSize);
+    await p.remove(_kRpHeaderAccent);
+    await p.remove(_kRpMoodOverride);
+    await p.remove(_kRpBgColor);
+    await p.remove(_kRpParticlesOn);
+    await p.remove(_kRpPostSize);
+    await p.remove(_kRpEditorSize);
+    await p.remove(_kRpShowLogSidebar);
+    await p.remove(_kRpShowToolsSidebar);
+    await p.remove(_kRpShowOoc);
+    await p.remove(_kRpOocBadgeOn);
     await p.remove(_kNotifPost);
     await p.remove(_kNotifInterest);
     await p.remove(_kNotifBrain);
