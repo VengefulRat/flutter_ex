@@ -1086,7 +1086,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   void _onSettingsChanged() {
     if (!mounted) return;
-    setState(() => _aiMoodEnabled = appSettings.aiMood);
+    setState(() { _aiMoodEnabled = appSettings.aiMood; _initParticles(); });
   }
 
   String get _draftKey =>
@@ -1184,6 +1184,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   void _initParticles() {
     _particles.clear();
+    if (!appSettings.rpParticlesOn) return;
     final base = switch (_currentMood) {
       StoryMood.rain => 45,
       StoryMood.snow => 28,
@@ -1734,11 +1735,17 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     return _buildMobileLayout();
   }
 
+  Color _effectiveBg(Color moodColor) {
+    if (appSettings.rpMoodOverride == 'fixed') return appSettings.rpBgColor;
+    if (appSettings.rpMoodOverride == 'tint') return Color.lerp(moodColor, appSettings.rpBgColor, 0.5) ?? moodColor;
+    return moodColor;
+  }
+
   Widget _buildDesktopLayout() {
     return AnimatedBuilder(
       animation: _moodCtrl,
       builder: (_, child) {
-        final bg = _bgAnim.value ?? cVoid;
+        final bg = _effectiveBg(_bgAnim.value ?? cVoid);
         return Scaffold(
           backgroundColor: bg,
           body: Stack(
@@ -2026,7 +2033,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     return AnimatedBuilder(
       animation: _moodCtrl,
       builder: (_, child) {
-        final moodColor = MoodEngine.bgColor(_currentMood);
+        final moodColor = _effectiveBg(MoodEngine.bgColor(_currentMood));
         return Scaffold(
           backgroundColor: cVoid,
           body: Stack(
