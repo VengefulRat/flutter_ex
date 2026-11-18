@@ -15,6 +15,7 @@ import 'screens/brainstorm_room.dart';
 import 'screens/login_screen.dart';
 import 'screens/lock_screen.dart';
 import 'settings.dart';
+import 'screens/customize_screen.dart';
 import 'services/auth_service.dart';
 import 'services/crypto_service.dart';
 import 'services/firestore_service.dart';
@@ -310,15 +311,16 @@ class _LandingScreenState extends State<LandingScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 48),
-                        const Text(
-                          'L o r e',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w300,
-                            color: cGold,
-                            letterSpacing: 8,
+                        if (appSettings.showLogo)
+                          Text(
+                            appSettings.logoText.split('').join(' '),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w300,
+                              color: cGold,
+                              letterSpacing: 8,
+                            ),
                           ),
-                        ),
                         const Spacer(),
                         const Text(
                           'Every story\nbegins with\nyou.',
@@ -1223,6 +1225,9 @@ class _HomeScreenState extends State<HomeScreen>
                               ),
                             ),
 
+                          if (!appSettings.showFloatingButton)
+                            _buildHomeBlocks(),
+                          const SizedBox(height: 16),
                           // ── FLOATING BOTTOM BAR ──
                           Container(
                             constraints: const BoxConstraints(minHeight: 96),
@@ -1446,9 +1451,162 @@ class _HomeScreenState extends State<HomeScreen>
             ),
 
             // ── THE FLOATING MENU BUTTON ──
-            FloatingMenuButton(items: _buildMenuItems()),
+            if (appSettings.showFloatingButton)
+              FloatingMenuButton(items: _buildMenuItems()),
           ],
         ),
+      ),
+    );
+  }
+
+  List<FloatingMenuItem> _orderedMenuItems() {
+    final items = _buildMenuItems();
+    // Hide hidden blocks
+    final visible = items.where((it) => !appSettings.isBlockHidden(it.blockKey)).toList();
+    // Order by saved homeOrder, unknown keys keep their original order at the end
+    final order = appSettings.homeOrder;
+    if (order.isEmpty) return visible;
+    visible.sort((a, b) {
+      final ia = order.indexOf(a.blockKey);
+      final ib = order.indexOf(b.blockKey);
+      if (ia == -1 && ib == -1) return 0;
+      if (ia == -1) return 1;
+      if (ib == -1) return -1;
+      return ia.compareTo(ib);
+    });
+    return visible;
+  }
+
+  Future<void> _moveHomeBlock(int index, int delta) async {
+    final visible = _orderedMenuItems();
+    final newIndex = index + delta;
+    if (newIndex < 0 || newIndex >= visible.length) return;
+    final item = visible.removeAt(index);
+    visible.insert(newIndex, item);
+    await appSettings.setHomeOrder(visible.map((e) => e.blockKey).toList());
+    if (mounted) setState(() {});
+  }
+
+  Widget _buildHomeBlocks() {
+    final items = _orderedMenuItems();
+    if (items.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Text(
+          'All blocks hidden. Turn them back on in Settings > Customize layout.',
+          style: TextStyle(fontSize: 12, color: cSmoke, fontStyle: FontStyle.italic),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      child: Column(
+        children: [
+          for (int i = 0; i < items.length; i++)
+            Container(
+              key: ValueKey(items[i].blockKey),
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: appSettings.styleForBlock(items[i].blockKey).background ??
+                    appSettings.surfaceColor,
+                border: Border.all(color: cAsh, width: 1.5),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: appSettings.styleForBlock(items[i].blockKey).glowEnabled
+                    ? [
+                        BoxShadow(
+                          color: (appSettings.styleForBlock(items[i].blockKey).glowColor ??
+                                  cGold)
+                              .withValues(alpha: 0.35),
+                          blurRadius: 14,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: appSettings.styleForBlock(items[i].blockKey).size == 'small'
+                      ? 8
+                      : appSettings.styleForBlock(items[i].blockKey).size == 'large'
+                          ? 22
+                          : 12,
+                  horizontal: 10,
+                ),
+                child: Row(
+                  children: [
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () => _moveHomeBlock(i, -1),
+                          child: Icon(
+                            Icons.keyboard_arrow_up,
+                            size: 18,
+                            color: i == 0 ? cAsh : cSmoke,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => _moveHomeBlock(i, 1),
+                          child: Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 18,
+                            color: i == items.length - 1 ? cAsh : cSmoke,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      items[i].icon,
+                      size: appSettings.styleForBlock(items[i].blockKey).size == 'small'
+                          ? 14
+                          : appSettings.styleForBlock(items[i].blockKey).size == 'large'
+                              ? 22
+                              : 18,
+                      color: appSettings.styleForBlock(items[i].blockKey).accent ?? items[i].accent,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: LoreTap(
+                        onTap: items[i].onTap,
+                        onLongPress: items[i].onLongPress,
+                        child: Text(
+                          items[i].label,
+                          style: TextStyle(
+                            fontSize: appSettings.styleForBlock(items[i].blockKey).size == 'small'
+                                ? 12
+                                : appSettings.styleForBlock(items[i].blockKey).size == 'large'
+                                    ? 16
+                                    : 14,
+                            color: cMist,
+                            fontWeight: FontWeight.w300,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (items[i].badge != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: cGold),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${items[i].badge}',
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 10,
+                            color: cGold,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right, size: 16, color: cSmoke),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -2215,6 +2373,48 @@ class _SettingsContentState extends State<_SettingsContent> {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 24),
+        const Divider(color: cAsh),
+        const SizedBox(height: 16),
+
+        // ── Customize ──
+        const Text(
+          'CUSTOMIZE',
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 9,
+            color: cGold,
+            letterSpacing: 3,
+          ),
+        ),
+        const SizedBox(height: 12),
+        LoreTap(
+          onTap: () =>
+              Navigator.of(context).push(fadeRoute(const CustomizeScreen())),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+            decoration: BoxDecoration(
+              color: cInk,
+              border: Border.all(color: cAsh),
+            ),
+            child: Row(
+              children: const [
+                Icon(Icons.palette_outlined, size: 16, color: cSmoke),
+                SizedBox(width: 12),
+                Text(
+                  'Customize layout',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: cMist,
+                    fontWeight: FontWeight.w300,
+                  ),
+                ),
+                Spacer(),
+                Icon(Icons.chevron_right, size: 16, color: cSmoke),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 24),
         const Divider(color: cAsh),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
+import '../settings.dart';
 import '../services/firestore_service.dart';
 
 class LoreTopBar extends StatelessWidget {
@@ -15,8 +16,17 @@ class LoreTopBar extends StatelessWidget {
     child: Row(children: [
       GestureDetector(
         onTap: onLogoTap,
-        child: const Text('L o r e', style: TextStyle(fontSize: 13,
-            color: cGold, letterSpacing: 6, fontWeight: FontWeight.w300)),
+        child: appSettings.showLogo
+            ? Text(
+                appSettings.logoText.split('').join(' '),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: cGold,
+                  letterSpacing: 6,
+                  fontWeight: FontWeight.w300,
+                ),
+              )
+            : const SizedBox.shrink(),
       ),
       const Spacer(),
       ?trailing,
