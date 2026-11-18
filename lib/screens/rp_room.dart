@@ -502,6 +502,7 @@ Widget _selectablePostText({
 // SCREEN
 // ─────────────────────────────────────────
 double _rpPostScale() => appSettings.rpPostSize == 'S' ? 0.85 : appSettings.rpPostSize == 'L' ? 1.18 : 1.0;
+double _rpEditorScale() => appSettings.rpEditorSize == 'S' ? 0.85 : appSettings.rpEditorSize == 'L' ? 1.18 : 1.0;
 
 class RPRoomScreen extends StatefulWidget {
   final String partnerName;
@@ -812,6 +813,10 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   bool _desktopOOCExpanded = false;
   bool _oocOpen = false;
+  int _oocUnread = 0;
+  int _oocTotalNonUser = 0;
+  void _clearOocUnread() { if (_oocUnread != 0) setState(() => _oocUnread = 0); }
+
   final _oocCtrl = TextEditingController();
   final _oocScrollCtrl = ScrollController();
 
@@ -988,11 +993,14 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         );
       }).toList();
       if (mounted) {
-        setState(
-          () => _oocMessages
-            ..clear()
-            ..addAll(msgs),
-        );
+        setState(() {
+          final newNonUser = msgs.where((m) => !m.isUser).length;
+          final isFirstLoad = _oocMessages.isEmpty && _oocTotalNonUser == 0;
+          final oocVisible = _oocOpen || _desktopOOCExpanded;
+          if (!isFirstLoad && !oocVisible && newNonUser > _oocTotalNonUser) _oocUnread += newNonUser - _oocTotalNonUser;
+          _oocTotalNonUser = newNonUser;
+          _oocMessages..clear()..addAll(msgs);
+        });
       }
     }, onError: _handleStreamError);
   }
@@ -1399,7 +1407,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             ),
             quotedAuthor: quotedPost?.characterName ?? quotedPost?.author,
             textColor: postColor,
-            fontSize: _fontSize,
+            fontSize: _fontSize * _rpEditorScale(),
             bold: _bold,
             italic: _italic,
             characterName: _activeCharacter?.name,
@@ -1782,7 +1790,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // Left Sidebar (Session Log)
-                          SizedBox(
+                          if (appSettings.rpShowLogSidebar) SizedBox(
                             width: 300,
                             child: Container(
                               decoration: const BoxDecoration(
@@ -1811,7 +1819,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                           ),
 
                           // Right Sidebar (Tools + OOC)
-                          SizedBox(
+                          if (appSettings.rpShowToolsSidebar) SizedBox(
                             width: 320,
                             child: Container(
                               decoration: const BoxDecoration(
@@ -1928,7 +1936,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                     ),
                                   ),
                                   const Divider(color: cAsh, height: 1),
-                                  AnimatedContainer(
+                                  if (appSettings.rpShowOoc) AnimatedContainer(
                                     duration: const Duration(milliseconds: 250),
                                     curve: Curves.easeInOut,
                                     height: _desktopOOCExpanded ? 300 : 50,
@@ -1942,8 +1950,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                                 () => _desktopOOCExpanded =
                                                     !_desktopOOCExpanded,
                                               );
-                                              if (_desktopOOCExpanded)
-                                                _scrollOocToBottom();
+                                              if (_desktopOOCExpanded) { _oocUnread = 0; _scrollOocToBottom(); }
                                             },
                                             child: Container(
                                               height: 50,
@@ -1972,6 +1979,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                                       letterSpacing: 4,
                                                     ),
                                                   ),
+                                                  if (_oocUnread > 0) _OocBadge(count: _oocUnread),
                                                   Icon(
                                                     _desktopOOCExpanded
                                                         ? Icons
@@ -2099,16 +2107,19 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               ),
 
               // ── OVERLAYS (OOC, Settings, Selection) ──
-              if (!_oocOpen)
+              if (!_oocOpen && appSettings.rpShowOoc)
                 Positioned(
                   right: 16,
                   bottom: _editorExpanded ? 320 : 90,
                   child: GestureDetector(
                     onTap: () {
-                      setState(() => _oocOpen = true);
+                      setState(() { _oocOpen = true; _oocUnread = 0; });
                       _scrollOocToBottom();
                     },
-                    child: Container(
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
@@ -2121,6 +2132,10 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                         color: cSmoke,
                         size: 20,
                       ),
+                        ),
+                        if (_oocUnread > 0)
+                          Positioned(top: -4, right: -4, child: _OocBadge(count: _oocUnread)),
+                      ],
                     ),
                   ),
                 ),
@@ -3559,7 +3574,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                       maxLines: null,
                       autofocus: true,
                       style: TextStyle(
-                        fontSize: _fontSize,
+                        fontSize: _fontSize * _rpEditorScale(),
                         color: _activeCharacter != null
                             ? charColor
                             : _fontColor,
@@ -3910,6 +3925,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                       letterSpacing: 4,
                     ),
                   ),
+                  if (_oocUnread > 0) Padding(padding: const EdgeInsets.only(left: 8), child: _OocBadge(count: _oocUnread)),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => setState(() => _oocOpen = false),
@@ -5124,6 +5140,34 @@ class _OocMediaPreviewState extends State<_OocMediaPreview> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _OocBadge extends StatefulWidget {
+  final int count;
+  const _OocBadge({required this.count});
+  @override
+  State<_OocBadge> createState() => _OocBadgeState();
+}
+
+class _OocBadgeState extends State<_OocBadge> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, child) => Transform.scale(
+        scale: 1.0 + _c.value * 0.15,
+        child: child,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(color: cGold, borderRadius: BorderRadius.circular(10), border: Border.all(color: cInk)),
+        child: Text('', style: const TextStyle(fontFamily: 'monospace', fontSize: 10, color: cInk, fontWeight: FontWeight.bold)),
       ),
     );
   }
