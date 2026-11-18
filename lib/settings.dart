@@ -17,22 +17,25 @@ class BlockStyle {
   final Color? glowColor;
   final bool glowEnabled;
   final Color? accent;
+  final String size;
 
   const BlockStyle({
     this.background,
     this.glowColor,
     this.glowEnabled = false,
     this.accent,
+    this.size = 'normal',
   });
 
   bool get isDefault =>
-      background == null && glowColor == null && !glowEnabled && accent == null;
+      background == null && glowColor == null && !glowEnabled && accent == null && size == 'normal';
 
   BlockStyle copyWith({
     Color? background,
     Color? glowColor,
     bool? glowEnabled,
     Color? accent,
+    String? size,
     bool clearBackground = false,
     bool clearGlowColor = false,
     bool clearAccent = false,
@@ -41,6 +44,7 @@ class BlockStyle {
     glowColor: clearGlowColor ? null : (glowColor ?? this.glowColor),
     glowEnabled: glowEnabled ?? this.glowEnabled,
     accent: clearAccent ? null : (accent ?? this.accent),
+    size: size ?? this.size,
   );
 
   Map<String, dynamic> toJson() => {
@@ -48,6 +52,7 @@ class BlockStyle {
     if (glowColor != null) 'gc': glowColor!.toARGB32(),
     'ge': glowEnabled,
     if (accent != null) 'ac': accent!.toARGB32(),
+    if (size != 'normal') 'sz': size,
   };
 
   factory BlockStyle.fromJson(Map<String, dynamic> j) {
@@ -66,6 +71,7 @@ class BlockStyle {
           : (j['bc'] != null ? Color(j['bc'] as int) : null),
       glowEnabled: hasNewGlow ? (j['ge'] as bool? ?? false) : legacyGlow,
       accent: j['ac'] != null ? Color(j['ac'] as int) : null,
+      size: j['sz'] as String? ?? 'normal',
     );
   }
 }
@@ -86,6 +92,12 @@ class AppSettings extends ChangeNotifier {
   static const _kBorderColor = 'as_border_color';
   static const _kBorderStyle = 'as_border_style';
   static const _kProfileGlowColor = 'as_profile_glow_color';
+  static const _kShowLogo = 'as_show_logo';
+  static const _kLogoText = 'as_logo_text';
+  static const _kShowFloatingButton = 'as_show_fab';
+  static const _kGyroEnabled = 'as_gyro_enabled';
+  static const _kFloatingMenuColor = 'as_floating_menu_color';
+  static const _kHiddenBlocks = 'as_hidden_blocks';
   static const _kProfileGlowEnabled = 'as_profile_glow_enabled';
   static const _kAiMood = 'as_ai_mood';
   static const _kNotifPost = 'as_notif_post';
@@ -259,6 +271,13 @@ class AppSettings extends ChangeNotifier {
   // white Runes on a black glow.
   bool _profileGlowEnabled = false;
   Color _profileGlowColor = Colors.black;
+  // Phase 1 - Level 2 customization
+  bool _showLogo = true;
+  String _logoText = 'LORE';
+  bool _showFloatingButton = true;
+  bool _gyroEnabled = true;
+  Color _floatingMenuColor = const Color(0xFFC9A96E);
+  Set<String> _hiddenBlocks = {};
   bool _aiMood = true;
   bool _notifNewPost = true;
   bool _notifRpPost = true;
@@ -507,6 +526,12 @@ class AppSettings extends ChangeNotifier {
     'profileBorderStyle': _profileBorderStyle,
     'profileGlowEnabled': _profileGlowEnabled,
     'profileGlowColor': _profileGlowColor.toARGB32(),
+    'showLogo': _showLogo,
+    'logoText': _logoText,
+    'showFloatingButton': _showFloatingButton,
+    'gyroEnabled': _gyroEnabled,
+    'floatingMenuColor': _floatingMenuColor.toARGB32(),
+    'hiddenBlocks': _hiddenBlocks.toList(),
     'animatedBorderThickness': _animatedBorderThickness,
     'animatedBorderWaviness': _animatedBorderWaviness,
     'animatedBorderSpeed': _animatedBorderSpeed,
@@ -541,6 +566,16 @@ class AppSettings extends ChangeNotifier {
         j['profileBorderStyle'] as String? ?? _profileBorderStyle;
     _profileGlowEnabled =
         j['profileGlowEnabled'] as bool? ?? _profileGlowEnabled;
+    _showLogo = j['showLogo'] as bool? ?? _showLogo;
+    _logoText = j['logoText'] as String? ?? _logoText;
+    _showFloatingButton = j['showFloatingButton'] as bool? ?? _showFloatingButton;
+    _gyroEnabled = j['gyroEnabled'] as bool? ?? _gyroEnabled;
+    if (j['floatingMenuColor'] is int) {
+      _floatingMenuColor = Color(j['floatingMenuColor'] as int);
+    }
+    if (j['hiddenBlocks'] is List) {
+      _hiddenBlocks = Set<String>.from((j['hiddenBlocks'] as List).map((e) => e.toString()));
+    }
     if (j['profileGlowColor'] is int) {
       _profileGlowColor = Color(j['profileGlowColor'] as int);
     }
@@ -619,6 +654,12 @@ class AppSettings extends ChangeNotifier {
     await p.setString(_kBorderStyle, _profileBorderStyle);
     await p.setBool(_kProfileGlowEnabled, _profileGlowEnabled);
     await p.setInt(_kProfileGlowColor, _profileGlowColor.toARGB32());
+    await p.setBool(_kShowLogo, _showLogo);
+    await p.setString(_kLogoText, _logoText);
+    await p.setBool(_kShowFloatingButton, _showFloatingButton);
+    await p.setBool(_kGyroEnabled, _gyroEnabled);
+    await p.setInt(_kFloatingMenuColor, _floatingMenuColor.toARGB32());
+    await p.setStringList(_kHiddenBlocks, _hiddenBlocks.toList());
     await p.setDouble(_kAnimatedBorderThickness, _animatedBorderThickness);
     await p.setDouble(_kAnimatedBorderWaviness, _animatedBorderWaviness);
     await p.setDouble(_kAnimatedBorderSpeed, _animatedBorderSpeed);
@@ -854,6 +895,62 @@ class AppSettings extends ChangeNotifier {
     _touch();
     notifyListeners();
   }
+
+  // --- Phase 1: Level 2 customization ---
+  bool get showLogo => _showLogo;
+  String get logoText => _logoText;
+  bool get showFloatingButton => _showFloatingButton;
+  bool get gyroEnabled => _gyroEnabled;
+  Color get floatingMenuColor => _floatingMenuColor;
+  Set<String> get hiddenBlocks => Set.unmodifiable(_hiddenBlocks);
+  bool isBlockHidden(String id) => _hiddenBlocks.contains(id);
+
+  Future<void> setShowLogo(bool v) async {
+    _showLogo = v;
+    (await SharedPreferences.getInstance()).setBool(_kShowLogo, v);
+    _touch();
+    notifyListeners();
+  }
+
+  Future<void> setLogoText(String v) async {
+    _logoText = v;
+    (await SharedPreferences.getInstance()).setString(_kLogoText, v);
+    _touch();
+    notifyListeners();
+  }
+
+  Future<void> setShowFloatingButton(bool v) async {
+    _showFloatingButton = v;
+    (await SharedPreferences.getInstance()).setBool(_kShowFloatingButton, v);
+    _touch();
+    notifyListeners();
+  }
+
+  Future<void> setGyroEnabled(bool v) async {
+    _gyroEnabled = v;
+    (await SharedPreferences.getInstance()).setBool(_kGyroEnabled, v);
+    _touch();
+    notifyListeners();
+  }
+
+  Future<void> setFloatingMenuColor(Color v) async {
+    _floatingMenuColor = v;
+    (await SharedPreferences.getInstance()).setInt(_kFloatingMenuColor, v.toARGB32());
+    _touch();
+    notifyListeners();
+  }
+
+  Future<void> setBlockHidden(String id, bool hidden) async {
+    if (hidden) {
+      _hiddenBlocks.add(id);
+    } else {
+      _hiddenBlocks.remove(id);
+    }
+    (await SharedPreferences.getInstance()).setStringList(_kHiddenBlocks, _hiddenBlocks.toList());
+    _touch();
+    notifyListeners();
+  }
+
 
   Future<void> setAnimatedBorderThickness(double v) async {
     _animatedBorderThickness = v;

@@ -44,6 +44,89 @@ class _BlockStyleSheetState extends State<BlockStyleSheet> {
   String get _blockLabel =>
       AppSettings.blockLabels[widget.blockKey] ?? widget.blockKey;
 
+  String _selectedTarget = 'background';
+
+  String _selectedTargetLabel() {
+    if (_selectedTarget == 'background') return 'Background';
+    if (_selectedTarget == 'accent') return 'Accent (icon & badge)';
+    if (_selectedTarget == 'glow') return 'Glow colour';
+    if (_selectedTarget.startsWith('text:')) {
+      final key = _selectedTarget.substring(5);
+      return AppSettings.textKeyLabels[key] ?? key;
+    }
+    return 'Colour';
+  }
+
+  Color? _currentForSelected() {
+    final s = _style;
+    if (_selectedTarget == 'background') return s.background;
+    if (_selectedTarget == 'accent') return s.accent;
+    if (_selectedTarget == 'glow') return s.glowColor;
+    if (_selectedTarget.startsWith('text:')) {
+      return appSettings.textColourFor(_selectedTarget.substring(5));
+    }
+    return null;
+  }
+
+  Future<void> _applyToSelected(Color? c) async {
+    final s = _style;
+    if (_selectedTarget == 'background') {
+      await _updateTile(s.copyWith(background: c, clearBackground: c == null));
+    } else if (_selectedTarget == 'accent') {
+      await _updateTile(s.copyWith(accent: c, clearAccent: c == null));
+    } else if (_selectedTarget == 'glow') {
+      await _updateTile(s.copyWith(glowColor: c, clearGlowColor: c == null));
+    } else if (_selectedTarget.startsWith('text:')) {
+      await _updateText(_selectedTarget.substring(5), c);
+    }
+  }
+
+  Widget _sizeChip(String label, String value) {
+    final active = _style.size == value;
+    return GestureDetector(
+      onTap: () => _updateTile(_style.copyWith(size: value)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: active ? cGold : cAsh),
+          color: active ? cGold.withValues(alpha: 0.08) : Colors.transparent,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 10,
+            letterSpacing: 1,
+            color: active ? cGold : cSmoke,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _targetChip(String label, String target) {
+    final active = _selectedTarget == target;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedTarget = target),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: active ? cGold : cAsh),
+          color: active ? cGold.withValues(alpha: 0.08) : Colors.transparent,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 10,
+            letterSpacing: 1,
+            color: active ? cGold : cSmoke,
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _updateTile(BlockStyle newStyle) async {
     await appSettings.setBlockStyle(widget.blockKey, newStyle);
     if (mounted) setState(() {});
@@ -208,49 +291,52 @@ class _BlockStyleSheetState extends State<BlockStyleSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _sectionLabel('TILE'),
-                  const SizedBox(height: 14),
-                  _colourRow(
-                    label: 'Background',
-                    current: s.background,
-                    onPicked: (c) => _updateTile(
-                      s.copyWith(background: c, clearBackground: c == null),
+                  _sectionLabel('COLOUR'),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'What do you want to change?',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: cSmoke,
+                      fontStyle: FontStyle.italic,
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _targetChip('Background', 'background'),
+                      _targetChip('Accent (icon & badge)', 'accent'),
+                      if (s.glowEnabled) _targetChip('Glow colour', 'glow'),
+                      ..._textKeys.map(
+                        (key) => _targetChip(
+                          AppSettings.textKeyLabels[key] ?? key,
+                          'text:$key',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  _colourRow(
+                    label: _selectedTargetLabel(),
+                    current: _currentForSelected(),
+                    onPicked: (c) => _applyToSelected(c),
                   ),
                   const SizedBox(height: 18),
                   _glowRow(s),
                   const SizedBox(height: 18),
-                  _colourRow(
-                    label: 'Accent (icon & badge)',
-                    current: s.accent,
-                    onPicked: (c) => _updateTile(
-                      s.copyWith(accent: c, clearAccent: c == null),
-                    ),
+                  _sectionLabel('SIZE'),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _sizeChip('Small', 'small'),
+                      _sizeChip('Normal', 'normal'),
+                      _sizeChip('Large', 'large'),
+                    ],
                   ),
-                  if (_textKeys.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    _sectionLabel('TEXT INSIDE'),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Colours used once you tap into this block.',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: cSmoke,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    ..._textKeys.map(
-                      (key) => Padding(
-                        padding: const EdgeInsets.only(bottom: 18),
-                        child: _colourRow(
-                          label: AppSettings.textKeyLabels[key] ?? key,
-                          current: appSettings.textColourFor(key),
-                          onPicked: (c) => _updateText(key, c),
-                        ),
-                      ),
-                    ),
-                  ],
                   const SizedBox(height: 8),
                   Container(height: 1, color: cAsh),
                   const SizedBox(height: 16),
@@ -457,16 +543,6 @@ class _BlockStyleSheetState extends State<BlockStyleSheet> {
             ),
           ],
         ),
-        if (s.glowEnabled) ...[
-          const SizedBox(height: 18),
-          _colourRow(
-            label: 'Glow colour',
-            current: s.glowColor,
-            onPicked: (c) => _updateTile(
-              s.copyWith(glowColor: c, clearGlowColor: c == null),
-            ),
-          ),
-        ],
       ],
     );
   }

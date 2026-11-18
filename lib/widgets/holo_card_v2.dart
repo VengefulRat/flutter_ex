@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'holo_parallax.dart';
+import '../settings.dart';
 import '../services/gyro_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -44,6 +45,7 @@ class _RotState {
 }
 
 class _HoloCardV2State extends State<HoloCardV2> with TickerProviderStateMixin {
+  bool get _gyroAllowed => widget.gyroEnabled && appSettings.gyroEnabled;
   ui.FragmentShader? _shader;
   final ValueNotifier<_RotState> _rot = ValueNotifier(const _RotState.rest());
   final ValueNotifier<Offset> _light = ValueNotifier(const Offset(0.5, 0.35));
@@ -73,7 +75,7 @@ class _HoloCardV2State extends State<HoloCardV2> with TickerProviderStateMixin {
       duration: const Duration(seconds: 1),
     );
     _loadShader();
-    if (widget.gyroEnabled && !kIsWeb) {
+    if (_gyroAllowed && !kIsWeb) {
       GyroService.instance.acquire();
       _gyroAcquired = true;
       GyroService.instance.tilt.addListener(_onGyroUpdate);
@@ -83,12 +85,13 @@ class _HoloCardV2State extends State<HoloCardV2> with TickerProviderStateMixin {
   @override
   void didUpdateWidget(covariant HoloCardV2 oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.gyroEnabled == widget.gyroEnabled) return;
-    if (widget.gyroEnabled && !kIsWeb && !_gyroAcquired) {
+    final oldAllowed = oldWidget.gyroEnabled && appSettings.gyroEnabled;
+    if (oldAllowed == _gyroAllowed) return;
+    if (_gyroAllowed && !kIsWeb && !_gyroAcquired) {
       GyroService.instance.acquire();
       _gyroAcquired = true;
       GyroService.instance.tilt.addListener(_onGyroUpdate);
-    } else if (!widget.gyroEnabled && _gyroAcquired) {
+    } else if (!_gyroAllowed && _gyroAcquired) {
       GyroService.instance.tilt.removeListener(_onGyroUpdate);
       GyroService.instance.release();
       _gyroAcquired = false;

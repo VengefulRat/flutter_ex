@@ -231,6 +231,7 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
       builder: (context, constraints) {
         final screen = Size(constraints.maxWidth, constraints.maxHeight);
         final pos = _currentPos(screen);
+        final menuColour = appSettings.floatingMenuColor;
         final buttonCenter =
             pos + Offset(widget.buttonSize / 2, widget.buttonSize / 2);
 
@@ -263,12 +264,12 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
                     shape: BoxShape.circle,
                     color: cInk,
                     border: Border.all(
-                      color: cGold.withValues(alpha: 0.7),
+                      color: menuColour.withValues(alpha: 0.7),
                       width: 1.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: cGold.withValues(alpha: 0.3),
+                        color: menuColour.withValues(alpha: 0.3),
                         blurRadius: 22,
                         spreadRadius: 2,
                       ),
@@ -286,7 +287,7 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
                       curve: Curves.easeOutCubic,
                       child: Icon(
                         _menuOpen ? Icons.close : widget.menuIcon,
-                        color: cGold,
+                        color: menuColour,
                         size: 24,
                       ),
                     ),
@@ -468,6 +469,7 @@ class _FloatingMenuButtonState extends State<FloatingMenuButton>
 
     tile = HoloCardV2(
       accent: accent,
+      gyroEnabled: appSettings.gyroEnabled,
       intensity: 0.35,
       seed: item.label.hashCode,
       maxTiltDegrees: 6,
