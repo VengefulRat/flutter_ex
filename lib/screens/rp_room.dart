@@ -2135,6 +2135,19 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   Widget _buildTopBar() {
+    if (!appSettings.rpHeaderShow) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(children: [
+          LoreTap(onTap: () => Navigator.of(context).pop(), child: const Icon(Icons.arrow_back_ios, color: cSmoke, size: 16)),
+          const Spacer(),
+          LoreTap(onTap: () => setState(() => _settingsOpen = !_settingsOpen), child: const Icon(Icons.tune, color: cSmoke, size: 18)),
+        ]),
+      );
+    }
+    final titleSize = appSettings.rpHeaderSize == 'S' ? 13.0 : appSettings.rpHeaderSize == 'L' ? 20.0 : 16.0;
+    final subSize = appSettings.rpHeaderSize == 'S' ? 8.0 : appSettings.rpHeaderSize == 'L' ? 10.0 : 9.0;
+    final vPad = appSettings.rpHeaderSize == 'S' ? 8.0 : appSettings.rpHeaderSize == 'L' ? 16.0 : 12.0;
     return ClipRect(
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(
@@ -2142,11 +2155,11 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           sigmaY: 8,
         ), // <-- The frosted glass blur
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: vPad),
           decoration: BoxDecoration(
             color: cInk.withValues(alpha: 0.65), // More transparent
-            border: const Border(
-              bottom: BorderSide(color: Color.fromARGB(255, 209, 212, 30)),
+            border: Border(
+              bottom: BorderSide(color: appSettings.rpHeaderAccent),
             ),
           ),
           child: Row(
@@ -2172,8 +2185,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                           _sessionTitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
+                          style: TextStyle(
+                            fontSize: titleSize,
                             fontWeight: FontWeight.w300,
                             fontStyle: FontStyle.italic,
                             color: cParchment,
@@ -2184,8 +2197,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                           widget.partnerName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
+                          style: TextStyle(
+                            fontSize: titleSize,
                             fontWeight: FontWeight.w300,
                             fontStyle: FontStyle.italic,
                             color: cParchment,
@@ -2197,9 +2210,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                             : widget.genre,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'monospace',
-                          fontSize: 9,
+                          fontSize: subSize,
                           color: cSmoke,
                           letterSpacing: 2,
                         ),
@@ -5361,3 +5374,4 @@ class _MoodShaderPainter extends CustomPainter {
       old.moodColor != moodColor ||
       old.intensity != intensity;
 }
+
