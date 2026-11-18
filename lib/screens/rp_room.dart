@@ -501,6 +501,8 @@ Widget _selectablePostText({
 // ─────────────────────────────────────────
 // SCREEN
 // ─────────────────────────────────────────
+double _rpPostScale() => appSettings.rpPostSize == 'S' ? 0.85 : appSettings.rpPostSize == 'L' ? 1.18 : 1.0;
+
 class RPRoomScreen extends StatefulWidget {
   final String partnerName;
   final String partnerCode;
@@ -2551,7 +2553,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                             child: _selectablePostText(
                               text: post.content,
                               style: TextStyle(
-                                fontSize: post.fontSize,
+                                fontSize: post.fontSize * _rpPostScale(),
                                 color:
                                     appSettings.textColourFor('post_content') ??
                                     post.textColor,
@@ -2699,7 +2701,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   _selectablePostText(
                     text: post.content,
                     style: TextStyle(
-                      fontSize: post.fontSize,
+                      fontSize: post.fontSize * _rpPostScale(),
                       color:
                           appSettings.textColourFor('post_content') ??
                           post.textColor,
@@ -5291,7 +5293,7 @@ class _PostCardState extends State<_PostCard>
               child: _selectablePostText(
                 text: preview,
                 style: TextStyle(
-                  fontSize: post.fontSize,
+                  fontSize: post.fontSize * _rpPostScale(),
                   color: post.textColor.withValues(alpha: 0.7),
                   fontStyle: post.italic ? FontStyle.italic : FontStyle.normal,
                   fontWeight: post.bold ? FontWeight.bold : FontWeight.w300,
@@ -5314,7 +5316,7 @@ class _PostCardState extends State<_PostCard>
                     _selectablePostText(
                       text: post.content,
                       style: TextStyle(
-                        fontSize: post.fontSize,
+                        fontSize: post.fontSize * _rpPostScale(),
                         color: post.textColor,
                         fontStyle: post.italic
                             ? FontStyle.italic
