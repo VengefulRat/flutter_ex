@@ -12,6 +12,7 @@ import '../theme.dart';
 import '../widgets/shared.dart';
 import '../widgets/rp_tools.dart';
 import '../widgets/session_log.dart';
+import '../widgets/colour_picker.dart';
 import '../models/world.dart';
 import '../settings.dart';
 import '../services/firestore_service.dart';
@@ -4311,6 +4312,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                     ),
                   ),
               ],
+              _buildRpCustomizeSection(),
               const Divider(color: cAsh, height: 1),
               Padding(
                 padding: const EdgeInsets.all(14),
@@ -4349,6 +4351,107 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     );
   }
 
+  Widget _buildRpCustomizeSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(color: cAsh, height: 1),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(14, 12, 14, 6),
+          child: Text('RP ROOM CUSTOMIZE', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+        ),
+        _settingToggle('Show header', appSettings.rpHeaderShow, (v) => appSettings.setRpHeaderShow(v)),
+        if (appSettings.rpHeaderShow) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
+            child: Row(children: [
+              const Text('Header size', style: TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+              const Spacer(),
+              _rpChip('S', appSettings.rpHeaderSize == 'S', () => appSettings.setRpHeaderSize('S')),
+              const SizedBox(width: 6),
+              _rpChip('M', appSettings.rpHeaderSize == 'M', () => appSettings.setRpHeaderSize('M')),
+              const SizedBox(width: 6),
+              _rpChip('L', appSettings.rpHeaderSize == 'L', () => appSettings.setRpHeaderSize('L')),
+            ]),
+          ),
+          _rpColorRow('Header accent', appSettings.rpHeaderAccent, (c) => appSettings.setRpHeaderAccent(c)),
+        ],
+        const Padding(
+          padding: EdgeInsets.fromLTRB(14, 10, 14, 6),
+          child: Text('BACKGROUND', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
+          child: Wrap(spacing: 6, children: [
+            _rpChip('Mood', appSettings.rpMoodOverride == 'off', () => appSettings.setRpMoodOverride('off')),
+            _rpChip('Tint', appSettings.rpMoodOverride == 'tint', () => appSettings.setRpMoodOverride('tint')),
+            _rpChip('Fixed', appSettings.rpMoodOverride == 'fixed', () => appSettings.setRpMoodOverride('fixed')),
+          ]),
+        ),
+        if (appSettings.rpMoodOverride != 'off') _rpColorRow('Background colour', appSettings.rpBgColor, (c) => appSettings.setRpBgColor(c)),
+        _settingToggle('Particles', appSettings.rpParticlesOn, (v) => appSettings.setRpParticlesOn(v)),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(14, 10, 14, 6),
+          child: Text('SIZES', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
+          child: Row(children: [
+            const Text('Post size', style: TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+            const Spacer(),
+            _rpChip('S', appSettings.rpPostSize == 'S', () => appSettings.setRpPostSize('S')),
+            const SizedBox(width: 6),
+            _rpChip('M', appSettings.rpPostSize == 'M', () => appSettings.setRpPostSize('M')),
+            const SizedBox(width: 6),
+            _rpChip('L', appSettings.rpPostSize == 'L', () => appSettings.setRpPostSize('L')),
+          ]),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
+          child: Row(children: [
+            const Text('Editor size', style: TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+            const Spacer(),
+            _rpChip('S', appSettings.rpEditorSize == 'S', () => appSettings.setRpEditorSize('S')),
+            const SizedBox(width: 6),
+            _rpChip('M', appSettings.rpEditorSize == 'M', () => appSettings.setRpEditorSize('M')),
+            const SizedBox(width: 6),
+            _rpChip('L', appSettings.rpEditorSize == 'L', () => appSettings.setRpEditorSize('L')),
+          ]),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(14, 10, 14, 6),
+          child: Text('PANELS', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+        ),
+        _settingToggle('Session Log sidebar', appSettings.rpShowLogSidebar, (v) => appSettings.setRpShowLogSidebar(v)),
+        _settingToggle('Tools sidebar', appSettings.rpShowToolsSidebar, (v) => appSettings.setRpShowToolsSidebar(v)),
+        _settingToggle('OOC panel', appSettings.rpShowOoc, (v) => appSettings.setRpShowOoc(v)),
+        _settingToggle('OOC unread badge', appSettings.rpOocBadgeOn, (v) => appSettings.setRpOocBadgeOn(v)),
+      ],
+    );
+  }
+  Widget _rpChip(String label, bool active, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(border: Border.all(color: active ? cGold : cAsh), color: active ? cGold.withValues(alpha: 0.08) : Colors.transparent),
+        child: Text(label, style: TextStyle(fontFamily: 'monospace', fontSize: 9, letterSpacing: 1, color: active ? cGold : cSmoke)),
+      ),
+    );
+  }
+  Widget _rpColorRow(String label, Color current, ValueChanged<Color> onPicked) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 2, 14, 8),
+      child: Row(children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+        const Spacer(),
+        LoreTap(
+          onTap: () => LoreColourPicker.show(context, current: current, onPicked: onPicked),
+          child: Container(width: 28, height: 28, decoration: BoxDecoration(color: current, shape: BoxShape.circle, border: Border.all(color: Colors.white24))),
+        ),
+      ]),
+    );
+  }
   Widget _modeBtn(RPDisplayMode mode, IconData icon, String label) {
     final active = _displayMode == mode;
     return Expanded(
