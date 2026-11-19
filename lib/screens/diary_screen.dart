@@ -6,6 +6,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../theme.dart';
+import '../widgets/colour_picker.dart';
 import '../settings.dart';
 import '../models/world.dart';
 import 'sandbox_screen.dart';
@@ -428,6 +429,107 @@ class _DiaryScreenState extends State<DiaryScreen> {
     }
   }
 
+  Widget _dChip(String label, bool active, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(border: Border.all(color: active ? cGold : cAsh), color: active ? cGold.withValues(alpha: 0.08) : Colors.transparent),
+        child: Text(label, style: TextStyle(fontFamily: 'monospace', fontSize: 9, letterSpacing: 1, color: active ? cGold : cSmoke)),
+      ),
+    );
+  }
+  Widget _dColorRow(String label, Color current, ValueChanged<Color> onPicked) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 2, 14, 8),
+      child: Row(children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+        const Spacer(),
+        GestureDetector(
+          onTap: () => LoreColourPicker.show(context, current: current, onPicked: onPicked),
+          child: Container(width: 28, height: 28, decoration: BoxDecoration(color: current, shape: BoxShape.circle, border: Border.all(color: Colors.white24))),
+        ),
+      ]),
+    );
+  }
+  Widget _dToggle(String label, bool value, ValueChanged<bool> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+        const Spacer(),
+        GestureDetector(
+          onTap: () => onChanged(!value),
+          child: AnimatedContainer(duration: const Duration(milliseconds: 200), width: 36, height: 20, decoration: BoxDecoration(color: value ? cGold : cAsh, borderRadius: BorderRadius.circular(10)), child: Align(alignment: value ? Alignment.centerRight : Alignment.centerLeft, child: Container(width: 16, height: 16, margin: const EdgeInsets.all(2), decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)))),
+        ),
+      ]),
+    );
+  }
+  Widget _dSizeRow(String label, String current, ValueChanged<String> onPick) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
+      child: Row(children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+        const Spacer(),
+        _dChip('S', current == 'S', () => onPick('S')),
+        const SizedBox(width: 6),
+        _dChip('M', current == 'M', () => onPick('M')),
+        const SizedBox(width: 6),
+        _dChip('L', current == 'L', () => onPick('L')),
+      ]),
+    );
+  }
+  void _showDiaryCustomize() {
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cInk,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          void refresh() { setSheetState(() {}); }
+          return Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Center(child: Container(width: 32, height: 3, decoration: BoxDecoration(color: cAsh, borderRadius: BorderRadius.circular(2)))),
+                const SizedBox(height: 20),
+                const Text('DIARY CUSTOMIZE', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 4)),
+                const SizedBox(height: 12),
+                const Text('HEADER', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+                _dToggle('Show header', appSettings.diaryHeaderShow, (v) { appSettings.setDiaryHeaderShow(v); refresh(); }),
+                if (appSettings.diaryHeaderShow) _dSizeRow('Header size', appSettings.diaryHeaderSize, (v) { appSettings.setDiaryHeaderSize(v); refresh(); }),
+                const Text('BACKGROUND', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+                Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 6), child: Wrap(spacing: 6, children: [ _dChip('Global', appSettings.diaryBgMode == 'global', () { appSettings.setDiaryBgMode('global'); refresh(); }), _dChip('Fixed', appSettings.diaryBgMode == 'fixed', () { appSettings.setDiaryBgMode('fixed'); refresh(); }), ])),
+                if (appSettings.diaryBgMode == 'fixed') _dColorRow('Background colour', appSettings.diaryBgColor, (c) { appSettings.setDiaryBgColor(c); refresh(); }),
+                const Text('BOOKSHELF', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+                _dToggle('Show reminder bar', appSettings.diaryShowReminder, (v) { appSettings.setDiaryShowReminder(v); refresh(); }),
+                _dToggle('Show streak', appSettings.diaryShowStreak, (v) { appSettings.setDiaryShowStreak(v); refresh(); }),
+                _dSizeRow('Card size', appSettings.diaryCardSize, (v) { appSettings.setDiaryCardSize(v); refresh(); }),
+                _dToggle('Show author on cards', appSettings.diaryShowAuthor, (v) { appSettings.setDiaryShowAuthor(v); refresh(); }),
+                _dToggle('Show stats on cards', appSettings.diaryShowStats, (v) { appSettings.setDiaryShowStats(v); refresh(); }),
+                _dToggle('Show character avatars', appSettings.diaryShowAvatars, (v) { appSettings.setDiaryShowAvatars(v); refresh(); }),
+                const Text('INSIDE A BOOK', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+                _dToggle('Show entry header', appSettings.diaryEntryHeaderShow, (v) { appSettings.setDiaryEntryHeaderShow(v); refresh(); }),
+                if (appSettings.diaryEntryHeaderShow) _dSizeRow('Entry header size', appSettings.diaryEntryHeaderSize, (v) { appSettings.setDiaryEntryHeaderSize(v); refresh(); }),
+                _dToggle('Show genre + stats bar', appSettings.diaryShowGenreBar, (v) { appSettings.setDiaryShowGenreBar(v); refresh(); }),
+                _dSizeRow('Chapter card size', appSettings.diaryChapterSize, (v) { appSettings.setDiaryChapterSize(v); refresh(); }),
+                _dToggle('Show chapter preview', appSettings.diaryShowPreview, (v) { appSettings.setDiaryShowPreview(v); refresh(); }),
+                _dToggle('Show progress bar', appSettings.diaryShowProgress, (v) { appSettings.setDiaryShowProgress(v); refresh(); }),
+                _dSizeRow('Reading size', appSettings.diaryReadingSize, (v) { appSettings.setDiaryReadingSize(v); refresh(); }),
+                Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 6), child: Row(children: [ const Text('Line height', style: TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)), const Spacer(), _dChip('Compact', appSettings.diaryLineHeight == 'compact', () { appSettings.setDiaryLineHeight('compact'); refresh(); }), const SizedBox(width: 6), _dChip('Comfortable', appSettings.diaryLineHeight == 'comfortable', () { appSettings.setDiaryLineHeight('comfortable'); refresh(); }), const SizedBox(width: 6), _dChip('Spacious', appSettings.diaryLineHeight == 'spacious', () { appSettings.setDiaryLineHeight('spacious'); refresh(); }), ])),
+                const Text('EDITOR', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+                _dToggle('Show toolbar', appSettings.diaryShowToolbar, (v) { appSettings.setDiaryShowToolbar(v); refresh(); }),
+                Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 6), child: Row(children: [ const Text('Editor padding', style: TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)), const Spacer(), _dChip('Compact', appSettings.diaryEditorPadding == 'compact', () { appSettings.setDiaryEditorPadding('compact'); refresh(); }), const SizedBox(width: 6), _dChip('Comfortable', appSettings.diaryEditorPadding == 'comfortable', () { appSettings.setDiaryEditorPadding('comfortable'); refresh(); }), ])),
+              ]),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   void _deleteEntry(String id) {
     if (!mounted) return;
     setState(() => _entries.removeWhere((e) => e.id == id));
@@ -560,6 +662,8 @@ class _DiaryScreenState extends State<DiaryScreen> {
                 color: cEmber, letterSpacing: 1)),
             const SizedBox(width: 12),
           ]),
+          GestureDetector(onTap: _showDiaryCustomize, child: const Padding(padding: EdgeInsets.all(6), child: Icon(Icons.tune, size: 18, color: cSmoke))),
+          const SizedBox(width: 6),
           const Text('L o r e', style: TextStyle(fontSize: 11,
               color: cGold, letterSpacing: 5, fontWeight: FontWeight.w300)),
         ]),
