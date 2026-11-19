@@ -1,3 +1,4 @@
+import '../services/firestore_service.dart';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -90,6 +91,13 @@ class LogEntry {
 class SessionLog extends ChangeNotifier {
   SessionLog._(this._storageKey);
   final String _storageKey;
+
+  // Session ID is encoded in the storage key: 'lore_log_<sessionId>'
+  String get sessionId {
+    const prefix = 'lore_log_';
+    if (_storageKey.startsWith(prefix)) return _storageKey.substring(prefix.length);
+    return _storageKey;
+  }
 
   static final Map<String, SessionLog> _cache = {};
 
@@ -256,6 +264,39 @@ class SessionLog extends ChangeNotifier {
   Future<void> remove(String id) async {
     _entries.removeWhere((e) => e.id == id);
     await _save();
+  }
+
+  Future<void> addRestoredEntry(LogEntry entry) async {
+    if (_entries.any((e) => e.id == entry.id)) return;
+    _entries.add(entry);
+    _entries.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    await _save();
+    notifyListeners();
+  }
+
+  // Pull shared log from Firestore into THIS log only.
+  // Never touches _importedCharacters, Sandbox, or bottom write-as.
+  Future<void> syncFromCloud() async {
+    try {
+      final cloud = await FirestoreService().logEntries(sessionId).first;
+      await load();
+      for (final json in cloud) {
+        final id = json['id'] as String?;
+        if (id == null) continue;
+        if (_entries.any((e) => e.id == id)) continue;
+        try { await addRestoredEntry(LogEntry.fromJson(json)); } catch (_) {}
+      }
+    } catch (e) {
+      print('Failed to merge shared log: $e');
+    }
+  }
+
+  Future<void> pushToCloud(LogEntry e) async {
+    try { await FirestoreService().upsertLogEntry(sessionId: sessionId, entryJson: e.toJson()); } catch (err) { print('push log failed: $err'); }
+  }
+
+  Future<void> deleteFromCloud(String id) async {
+    try { await FirestoreService().deleteLogEntry(sessionId: sessionId, entryId: id); } catch (err) { print('delete log cloud failed: $err'); }
   }
 
   Future<void> update(LogEntry e) async {

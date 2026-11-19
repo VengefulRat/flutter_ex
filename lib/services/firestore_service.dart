@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' show Color;
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -102,6 +103,58 @@ class FirestoreService {
     }
     return key;
   }
+
+
+  // SHARED SESSION LOG - sessions/{id}/log/{entryId}
+  // Encrypted with per-session key. Allowlist only.
+  // NEVER writes imported IDs, Sandbox, or the bottom write-as switcher.
+  Map<String, dynamic> _sanitizeLogMap(Map<String, dynamic> input) {
+    final out = <String, dynamic>{};
+    for (final e in input.entries) {
+      final k = e.key.toLowerCase();
+      if (k.contains('key') || k.contains('token') || k.contains('code') || k.contains('password') || k.contains('secret') || k.contains('private')) continue;
+      final v = e.value;
+      if (v is Map<String, dynamic>) out[e.key] = _sanitizeLogMap(v);
+      else if (v is List) out[e.key] = v.map((x) => x is Map<String, dynamic> ? _sanitizeLogMap(x) : x).toList();
+      else out[e.key] = v;
+    }
+    return out;
+  }
+
+  Future<void> upsertLogEntry({required String sessionId, required Map<String, dynamic> entryJson}) async {
+    final sessionKey = await _requireSessionKey(sessionId);
+    const allowed = {'id', 'type', 'title', 'body', 'createdAt', 'role', 'customTag', 'characterData', 'worldData'};
+    final safe = <String, dynamic>{};
+    for (final k in allowed) { if (entryJson.containsKey(k)) safe[k] = entryJson[k]; }
+    final enc = await _crypto.encryptContent(jsonEncode(_sanitizeLogMap(safe)), sessionKey);
+    await _db.collection('sessions').doc(sessionId).collection('log').doc(entryJson['id'] as String).set({
+      'content': enc['cipher']!, 'contentIv': enc['iv'], 'encrypted': true, 'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> deleteLogEntry({required String sessionId, required String entryId}) async {
+    await _db.collection('sessions').doc(sessionId).collection('log').doc(entryId).delete();
+  }
+
+  Stream<List<Map<String, dynamic>>> logEntries(String sessionId) {
+    return _db.collection('sessions').doc(sessionId).collection('log').snapshots().asyncMap((snap) async {
+      final sessionKey = await _sessionKey(sessionId);
+      final out = <Map<String, dynamic>>[];
+      for (final d in snap.docs) {
+        final data = Map<String, dynamic>.from(d.data());
+        if (data['encrypted'] == true && sessionKey != null) {
+          final cipher = data['content'] as String?;
+          final iv = data['contentIv'] as String?;
+          if (cipher == null || iv == null) continue;
+          final plain = await _crypto.decryptContent(cipherB64: cipher, ivB64: iv, sessionKey: sessionKey);
+          if (plain != null) { try { out.add(Map<String, dynamic>.from(jsonDecode(plain))); } catch (_) {} }
+        }
+      }
+      out.sort((a, b) => (a['createdAt'] as int? ?? 0).compareTo(b['createdAt'] as int? ?? 0));
+      return out;
+    });
+  }
+
 
   // ════════════════════════════════════════
   // USER PROFILE
