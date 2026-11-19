@@ -543,7 +543,7 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: appSettings.bgColor,
+      backgroundColor: appSettings.preludeBgMode == 'fixed' ? appSettings.preludeBgColor : appSettings.bgColor,
       body: SafeArea(
         child: Column(children: [
           _buildTopBar(),
