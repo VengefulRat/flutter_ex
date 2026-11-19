@@ -188,22 +188,18 @@ class SessionLog extends ChangeNotifier {
   Future<void> addCharacterEntry(CharacterEntry c) async {
     await load();
     if (_entries.any((e) => e.characterData?.id == c.id)) return;
-
-    _entries.insert(
-      0,
-      LogEntry(
-        id: '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
-        type: LogEntryType.character,
-        title: c.name,
-        body: c.personality.isNotEmpty ? c.personality : c.backstory,
-        createdAt: DateTime.now(),
-        role: c.type == CharacterType.playerCharacter
-            ? CharacterRole.main
-            : CharacterRole.side,
-        characterData: c,
-      ),
+    final entry = LogEntry(
+      id: '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
+      type: LogEntryType.character,
+      title: c.name,
+      body: c.personality.isNotEmpty ? c.personality : c.backstory,
+      createdAt: DateTime.now(),
+      role: c.type == CharacterType.playerCharacter ? CharacterRole.main : CharacterRole.side,
+      characterData: c,
     );
+    _entries.insert(0, entry);
     await _save();
+    await pushToCloud(entry);
   }
 
   Future<void> addWorldEntry(WorldEntry w) async {
@@ -223,21 +219,21 @@ class SessionLog extends ChangeNotifier {
       );
       await _save();
       notifyListeners();
+      await pushToCloud(_entries[existing]);
       return;
     }
 
-    _entries.insert(
-      0,
-      LogEntry(
-        id: '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
-        type: LogEntryType.location,
-        title: w.name,
-        body: w.overview,
-        createdAt: DateTime.now(),
-        worldData: w,
-      ),
+    final entry = LogEntry(
+      id: '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
+      type: LogEntryType.location,
+      title: w.name,
+      body: w.overview,
+      createdAt: DateTime.now(),
+      worldData: w,
     );
+    _entries.insert(0, entry);
     await _save();
+    await pushToCloud(entry);
   }
 
     Future<void> setCustomTag(LogEntry e, String? tag) async {
@@ -333,6 +329,7 @@ class SessionLogSheet {
   static Future<void> show(BuildContext context, String sessionId) async {
     final log = SessionLog.forSession(sessionId);
     await log.load();
+    await log.syncFromCloud();
     if (!context.mounted) return;
     showModalBottomSheet(
       context: context,
@@ -352,6 +349,7 @@ class SessionLogSheet {
   }) async {
     final log = SessionLog.forSession(sessionId);
     await log.load();
+    await log.syncFromCloud();
     if (!context.mounted) return;
     await showDialog(
       context: context,
@@ -584,7 +582,10 @@ class _SessionLogViewState extends State<SessionLogView> {
         ),
       ),
     );
-    if (confirm == true) await widget.log.remove(e.id);
+    if (confirm == true) {
+      await widget.log.remove(e.id);
+      await widget.log.deleteFromCloud(e.id);
+    }
   }
 
   @override
