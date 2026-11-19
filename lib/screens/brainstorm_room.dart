@@ -189,7 +189,7 @@ class _ChoiceCardState extends State<_ChoiceCard> {
       onTapCancel: () => setState(() => _pressed = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(appSettings.preludeChoiceSize == 'S' ? 14 : appSettings.preludeChoiceSize == 'L' ? 26 : 20),
         decoration: BoxDecoration(
           color: _pressed
               ? widget.accentColor.withValues(alpha: 0.08)
@@ -202,12 +202,12 @@ class _ChoiceCardState extends State<_ChoiceCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(widget.icon, color: widget.accentColor, size: 28),
+            Icon(widget.icon, color: widget.accentColor, size: appSettings.preludeChoiceSize == 'S' ? 22 : appSettings.preludeChoiceSize == 'L' ? 34 : 28),
             const SizedBox(height: 14),
             Text(
               widget.title,
               style: TextStyle(
-                fontSize: 17, fontWeight: FontWeight.w300,
+                fontSize: appSettings.preludeChoiceSize == 'S' ? 15 : appSettings.preludeChoiceSize == 'L' ? 19 : 17, fontWeight: FontWeight.w300,
                 fontStyle: FontStyle.italic, color: widget.accentColor,
               ),
             ),
@@ -599,13 +599,14 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
                 fontStyle: FontStyle.italic, height: 1.8)),
       ));
     }
+    final shown = _messages.where((m) => appSettings.preludePinFilter == 'all' ? true : appSettings.preludePinFilter == 'pins' ? m.type != _BSType.chat : m.type == _BSType.chat).toList();
     return ScrollConfiguration(
       behavior: NoGlowBehavior(),
       child: ListView.builder(
         controller: _scrollCtrl,
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        itemCount: _messages.length,
-        itemBuilder: (_, i) => _buildMessage(_messages[i]),
+        itemCount: shown.length,
+        itemBuilder: (_, i) => _buildMessage(shown[i]),
       ),
     );
   }
@@ -707,6 +708,7 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
   }
 
   Widget _buildInputBar() {
+    final inputSize = appSettings.preludeInputSize == 'S' ? 12.0 : appSettings.preludeInputSize == 'L' ? 16.0 : 14.0;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       decoration: BoxDecoration(
@@ -717,13 +719,13 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
         // Input
         Expanded(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: EdgeInsets.symmetric(horizontal: 14, vertical: appSettings.preludeInputSize == 'S' ? 7 : appSettings.preludeInputSize == 'L' ? 13 : 10),
             decoration: BoxDecoration(border: Border.all(color: cAsh)),
             child: TextField(
               controller: _msgCtrl,
               maxLines: null,
-              style: const TextStyle(
-                fontSize: 14, color: cParchment,
+              style: TextStyle(
+                fontSize: inputSize, color: cParchment,
                 fontStyle: FontStyle.italic,
               ),
               decoration: const InputDecoration(
@@ -1225,10 +1227,10 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
   _NoteConfig _noteConfig(_BSType type) {
     switch (type) {
       case _BSType.chat:      return _NoteConfig(Icons.chat_bubble_outline, 'Chat', cSmoke);
-      case _BSType.worldPin:  return _NoteConfig(Icons.public, 'World', cIce);
-      case _BSType.plotPoint: return _NoteConfig(Icons.timeline, 'Plot', cGold);
-      case _BSType.rule:      return _NoteConfig(Icons.gavel_outlined, 'Rule', cEmber);
-      case _BSType.character: return _NoteConfig(Icons.person_outline, 'Character', cMagic);
+      case _BSType.worldPin:  return _NoteConfig(Icons.public, 'World', appSettings.preludePinWorld);
+      case _BSType.plotPoint: return _NoteConfig(Icons.timeline, 'Plot', appSettings.preludePinPlot);
+      case _BSType.rule:      return _NoteConfig(Icons.gavel_outlined, 'Rule', appSettings.preludePinRule);
+      case _BSType.character: return _NoteConfig(Icons.person_outline, 'Character', appSettings.preludePinCharacter);
     }
   }
 
