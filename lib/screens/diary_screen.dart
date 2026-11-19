@@ -1211,7 +1211,7 @@ class _NewEntrySetupState extends State<_NewEntrySetup> {
     const SizedBox(height: 8),
     TextField(
       controller: _titleCtrl,
-      style: TextStyle(fontSize: appSettings.baseFontSize, color: cParchment,
+      style: TextStyle(fontSize: appSettings.diaryReadingSize == 'S' ? appSettings.baseFontSize - 2 : appSettings.diaryReadingSize == 'L' ? appSettings.baseFontSize + 2 : appSettings.baseFontSize, color: cParchment,
           fontStyle: FontStyle.italic),
       decoration: const InputDecoration(
           hintText: 'Leave blank to auto-title from content...',
@@ -1829,8 +1829,8 @@ class _EntryScreenState extends State<_EntryScreen> {
           ),
           const SizedBox(width: 12),
           
-                    Expanded(child: Text(_entry.displayTitle, style: TextStyle(
-              fontSize: _dSize(18), fontWeight: FontWeight.w300,
+                    if (appSettings.diaryEntryHeaderShow) Expanded(child: Text(_entry.displayTitle, style: TextStyle(
+              fontSize: _dSize(appSettings.diaryEntryHeaderSize == 'S' ? 15 : appSettings.diaryEntryHeaderSize == 'L' ? 21 : 18), fontWeight: FontWeight.w300,
               fontStyle: FontStyle.italic, color: cParchment),
               overflow: TextOverflow.ellipsis)),
 
@@ -1888,7 +1888,7 @@ class _EntryScreenState extends State<_EntryScreen> {
       ),
 
       // Genre + stats bar
-      if (_entry.genre.isNotEmpty)
+      if (_entry.genre.isNotEmpty && appSettings.diaryShowGenreBar)
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: const BoxDecoration(
@@ -1925,7 +1925,7 @@ class _EntryScreenState extends State<_EntryScreen> {
             onTap: () => _openChapter(i),
             child: Container(
               margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(appSettings.diaryChapterSize == 'S' ? 10 : appSettings.diaryChapterSize == 'L' ? 22 : 16),
               decoration: BoxDecoration(
                   color: cInk, border: Border.all(color: cAsh)),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start,
@@ -1933,14 +1933,14 @@ class _EntryScreenState extends State<_EntryScreen> {
                 Row(children: [
                   Expanded(child: Text(
                       ch.title.isNotEmpty ? ch.title : 'Chapter ${i + 1}',
-                      style: const TextStyle(fontSize: 15, color: cParchment,
+                      style: TextStyle(fontSize: appSettings.diaryChapterSize == 'S' ? 13 : appSettings.diaryChapterSize == 'L' ? 17 : 15, color: cParchment,
                           fontWeight: FontWeight.w300,
                           fontStyle: FontStyle.italic))),
                   Text('${ch.wordCount} / ${_entry.wordsPerChapter} w',
                       style: const TextStyle(fontFamily: 'monospace',
                           fontSize: 9, color: cSmoke)),
                 ]),
-                if (ch.plainText.isNotEmpty) ...[
+                if (ch.plainText.isNotEmpty && appSettings.diaryShowPreview) ...[
                   const SizedBox(height: 8),
                   Text(ch.plainText.length > 80
                       ? '${ch.plainText.substring(0, 80)}...'
@@ -1948,8 +1948,8 @@ class _EntryScreenState extends State<_EntryScreen> {
                       style: TextStyle(fontSize: _dSize(12), color: cMist,
                           fontStyle: FontStyle.italic, height: 1.5)),
                 ],
-                const SizedBox(height: 10),
-                ClipRRect(
+                if (appSettings.diaryShowProgress) const SizedBox(height: 10),
+                if (appSettings.diaryShowProgress) ClipRRect(
                   borderRadius: BorderRadius.circular(1),
                   child: LinearProgressIndicator(
                     value: progress,
@@ -2000,8 +2000,8 @@ class _EntryScreenState extends State<_EntryScreen> {
                         fontSize: 10, color: cGold, letterSpacing: 3)),
                 const SizedBox(height: 12),
                 Text(ch.plainText.isEmpty ? '(empty)' : ch.plainText,
-                    style: TextStyle(fontSize: appSettings.baseFontSize,
-                        color: cParchment, height: 1.8,
+                    style: TextStyle(fontSize: appSettings.diaryReadingSize == 'S' ? appSettings.baseFontSize - 2 : appSettings.diaryReadingSize == 'L' ? appSettings.baseFontSize + 2 : appSettings.baseFontSize,
+                        color: cParchment, height: appSettings.diaryLineHeight == 'compact' ? 1.4 : appSettings.diaryLineHeight == 'spacious' ? 2.2 : 1.8,
                         fontStyle: FontStyle.italic)),
                 const SizedBox(height: 32),
                 const Divider(color: cAsh),
@@ -2031,8 +2031,8 @@ class _EntryScreenState extends State<_EntryScreen> {
                   behavior: NoGlowBehavior(),
                   child: SingleChildScrollView(
                     child: Text(ch.plainText.isEmpty ? '(empty — tap to write)' : ch.plainText,
-                        style: TextStyle(fontSize: appSettings.baseFontSize,
-                            color: cParchment, height: 1.8,
+                        style: TextStyle(fontSize: appSettings.diaryReadingSize == 'S' ? appSettings.baseFontSize - 2 : appSettings.diaryReadingSize == 'L' ? appSettings.baseFontSize + 2 : appSettings.baseFontSize,
+                            color: cParchment, height: appSettings.diaryLineHeight == 'compact' ? 1.4 : appSettings.diaryLineHeight == 'spacious' ? 2.2 : 1.8,
                             fontStyle: FontStyle.italic)),
                   ),
                 )),
@@ -2188,8 +2188,8 @@ class _ChapterEditorState extends State<_ChapterEditor> {
         ]),
       ),
 
-            // Quill toolbar (Always visible)
-      Container(
+            // Quill toolbar
+      if (appSettings.diaryShowToolbar) Container(
         decoration: const BoxDecoration(
             border: Border(bottom: BorderSide(color: cAsh))),
         child: SingleChildScrollView(
@@ -2237,16 +2237,16 @@ class _ChapterEditorState extends State<_ChapterEditor> {
             scrollController: _editorScroll,
             config: QuillEditorConfig(
               scrollable: true,
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(appSettings.diaryEditorPadding == 'compact' ? 10 : 20),
               autoFocus: widget.chapter.deltaJson.isEmpty,
               placeholder: 'Begin writing...',
               customStyles: DefaultStyles(
                 paragraph: DefaultTextBlockStyle(
                   TextStyle(
-                    fontSize: appSettings.baseFontSize,
+                    fontSize: appSettings.diaryReadingSize == 'S' ? appSettings.baseFontSize - 2 : appSettings.diaryReadingSize == 'L' ? appSettings.baseFontSize + 2 : appSettings.baseFontSize,
                     color: cParchment,
                     fontStyle: FontStyle.italic,
-                    height: 1.8,
+                    height: appSettings.diaryLineHeight == 'compact' ? 1.4 : appSettings.diaryLineHeight == 'spacious' ? 2.2 : 1.8,
                   ),
                   const HorizontalSpacing(0, 0),
                   const VerticalSpacing(0, 0),
