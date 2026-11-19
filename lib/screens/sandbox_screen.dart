@@ -941,6 +941,122 @@ class _SandboxScreenState extends State<SandboxScreen>
     ),
   );
 
+  Widget _sbChip(String label, bool active, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(border: Border.all(color: active ? cGold : cAsh), color: active ? cGold.withValues(alpha: 0.08) : Colors.transparent),
+        child: Text(label, style: TextStyle(fontFamily: 'monospace', fontSize: 9, letterSpacing: 1, color: active ? cGold : cSmoke)),
+      ),
+    );
+  }
+  Widget _sbToggle(String label, bool value, ValueChanged<bool> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+        const Spacer(),
+        GestureDetector(
+          onTap: () => onChanged(!value),
+          child: AnimatedContainer(duration: const Duration(milliseconds: 200), width: 36, height: 20, decoration: BoxDecoration(color: value ? cGold : cAsh, borderRadius: BorderRadius.circular(10)), child: Align(alignment: value ? Alignment.centerRight : Alignment.centerLeft, child: Container(width: 16, height: 16, margin: const EdgeInsets.all(2), decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)))),
+        ),
+      ]),
+    );
+  }
+  Widget _sbSizeRow(String label, String current, ValueChanged<String> onPick) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
+      child: Row(children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+        const Spacer(),
+        _sbChip('S', current == 'S', () => onPick('S')),
+        const SizedBox(width: 6),
+        _sbChip('M', current == 'M', () => onPick('M')),
+        const SizedBox(width: 6),
+        _sbChip('L', current == 'L', () => onPick('L')),
+      ]),
+    );
+  }
+  Widget _sbChoiceRow(String label, String current, List<String> options, ValueChanged<String> onPick) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
+      child: Row(children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+        const Spacer(),
+        for (int i = 0; i < options.length; i++) ...[
+          if (i > 0) const SizedBox(width: 6),
+          _sbChip(options[i][0].toUpperCase() + options[i].substring(1), current == options[i], () => onPick(options[i])),
+        ],
+      ]),
+    );
+  }
+  void _showSandboxCustomize() {
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cInk,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          void refresh() { setSheetState(() {}); }
+          return Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Center(child: Container(width: 32, height: 3, decoration: BoxDecoration(color: cAsh, borderRadius: BorderRadius.circular(2)))),
+                const SizedBox(height: 20),
+                const Text('SANDBOX CUSTOMIZE', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 4)),
+                const SizedBox(height: 12),
+                const Text('HEADER', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+                _sbToggle('Show header', appSettings.sandboxHeaderShow, (v) { appSettings.setSandboxHeaderShow(v); refresh(); }),
+                if (appSettings.sandboxHeaderShow) _sbSizeRow('Header size', appSettings.sandboxHeaderSize, (v) { appSettings.setSandboxHeaderSize(v); refresh(); }),
+                _sbToggle('Show SPARK button', appSettings.sandboxShowSpark, (v) { appSettings.setSandboxShowSpark(v); refresh(); }),
+                _sbSizeRow('Tab size', appSettings.sandboxTabSize, (v) { appSettings.setSandboxTabSize(v); refresh(); }),
+                _sbToggle('Show + button', appSettings.sandboxShowFab, (v) { appSettings.setSandboxShowFab(v); refresh(); }),
+                _sbToggle('Show DEORUM pill', appSettings.sandboxShowDeorum, (v) { appSettings.setSandboxShowDeorum(v); refresh(); }),
+                _sbToggle('Show decode button', appSettings.sandboxShowDecode, (v) { appSettings.setSandboxShowDecode(v); refresh(); }),
+                const Text('WORLDS', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+                _sbSizeRow('World card size', appSettings.sandboxWorldCardSize, (v) { appSettings.setSandboxWorldCardSize(v); refresh(); }),
+                _sbToggle('Show genre', appSettings.sandboxShowWorldGenre, (v) { appSettings.setSandboxShowWorldGenre(v); refresh(); }),
+                _sbToggle('Show overview', appSettings.sandboxShowWorldOverview, (v) { appSettings.setSandboxShowWorldOverview(v); refresh(); }),
+                _sbToggle('Show map pill', appSettings.sandboxShowWorldMapPill, (v) { appSettings.setSandboxShowWorldMapPill(v); refresh(); }),
+                _sbToggle('Show location / faction counts', appSettings.sandboxShowWorldCounts, (v) { appSettings.setSandboxShowWorldCounts(v); refresh(); }),
+                _sbToggle('Show DRAFT badge', appSettings.sandboxShowWorldDraft, (v) { appSettings.setSandboxShowWorldDraft(v); refresh(); }),
+                const Text('CHARACTERS', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+                _sbSizeRow('Character card size', appSettings.sandboxCharCardSize, (v) { appSettings.setSandboxCharCardSize(v); refresh(); }),
+                _sbToggle('Show pronouns + age', appSettings.sandboxShowCharPronouns, (v) { appSettings.setSandboxShowCharPronouns(v); refresh(); }),
+                _sbToggle('Show personality preview', appSettings.sandboxShowCharPersonality, (v) { appSettings.setSandboxShowCharPersonality(v); refresh(); }),
+                _sbToggle('Show linked world', appSettings.sandboxShowCharWorld, (v) { appSettings.setSandboxShowCharWorld(v); refresh(); }),
+                _sbToggle('Show PC / NPC badge', appSettings.sandboxShowCharTypeBadge, (v) { appSettings.setSandboxShowCharTypeBadge(v); refresh(); }),
+                _sbToggle('Show card frame', appSettings.sandboxShowCharFrame, (v) { appSettings.setSandboxShowCharFrame(v); refresh(); }),
+                const Text('EDITORS', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+                _sbChoiceRow('Editor padding', appSettings.sandboxEditorPadding, ['compact', 'comfortable'], (v) { appSettings.setSandboxEditorPadding(v); refresh(); }),
+                _sbToggle('Show world map upload', appSettings.sandboxShowWorldMapUpload, (v) { appSettings.setSandboxShowWorldMapUpload(v); refresh(); }),
+                _sbToggle('Show world genre field', appSettings.sandboxShowWorldGenreField, (v) { appSettings.setSandboxShowWorldGenreField(v); refresh(); }),
+                _sbToggle('Show world tone field', appSettings.sandboxShowWorldToneField, (v) { appSettings.setSandboxShowWorldToneField(v); refresh(); }),
+                _sbSizeRow('Location / faction card size', appSettings.sandboxListCardSize, (v) { appSettings.setSandboxListCardSize(v); refresh(); }),
+                _sbToggle('Show character avatar', appSettings.sandboxShowCharAvatar, (v) { appSettings.setSandboxShowCharAvatar(v); refresh(); }),
+                _sbToggle('Show accent dot', appSettings.sandboxShowCharAccent, (v) { appSettings.setSandboxShowCharAccent(v); refresh(); }),
+                _sbToggle('Show PC / NPC toggle', appSettings.sandboxShowCharTypeToggle, (v) { appSettings.setSandboxShowCharTypeToggle(v); refresh(); }),
+                _sbToggle('Show world chips row', appSettings.sandboxShowCharWorldRow, (v) { appSettings.setSandboxShowCharWorldRow(v); refresh(); }),
+                _sbToggle('Show appearance field', appSettings.sandboxShowCharAppearance, (v) { appSettings.setSandboxShowCharAppearance(v); refresh(); }),
+                _sbToggle('Show personality field', appSettings.sandboxShowCharPersonalityField, (v) { appSettings.setSandboxShowCharPersonalityField(v); refresh(); }),
+                _sbToggle('Show backstory field', appSettings.sandboxShowCharBackstory, (v) { appSettings.setSandboxShowCharBackstory(v); refresh(); }),
+                _sbToggle('Show relationships field', appSettings.sandboxShowCharRelationships, (v) { appSettings.setSandboxShowCharRelationships(v); refresh(); }),
+                _sbToggle('Show notes field', appSettings.sandboxShowCharNotes, (v) { appSettings.setSandboxShowCharNotes(v); refresh(); }),
+                const Text('SPARK', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+                _sbSizeRow('SPARK text size', appSettings.sandboxSparkTextSize, (v) { appSettings.setSandboxSparkTextSize(v); refresh(); }),
+                _sbToggle('Show SPARK section labels', appSettings.sandboxShowSparkLabels, (v) { appSettings.setSandboxShowSparkLabels(v); refresh(); }),
+                _sbChoiceRow('SPARK padding', appSettings.sandboxSparkPadding, ['compact', 'comfortable'], (v) { appSettings.setSandboxSparkPadding(v); refresh(); }),
+              ]),
+            ),
+          );
+        },
+      ),
+    );
+  }
   Widget _buildTopBar() => Container(
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     decoration: const BoxDecoration(
@@ -987,6 +1103,15 @@ class _SandboxScreenState extends State<SandboxScreen>
                 ),
               ],
             ),
+          ),
+        ),
+        GestureDetector(
+          onTap: _showSandboxCustomize,
+          child: Container(
+            margin: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(border: Border.all(color: cAsh)),
+            child: const Icon(Icons.tune, color: cSmoke, size: 14),
           ),
         ),
         const Text(

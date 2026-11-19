@@ -150,6 +150,42 @@ class AppSettings extends ChangeNotifier {
   static const _kDiaryLineHeight = 'as_diary_line_height';
   static const _kDiaryShowToolbar = 'as_diary_show_toolbar';
   static const _kDiaryEditorPadding = 'as_diary_editor_padding';
+  static const _kSandboxHeaderShow = 'as_sandbox_header_show';
+  static const _kSandboxHeaderSize = 'as_sandbox_header_size';
+  static const _kSandboxShowSpark = 'as_sandbox_show_spark';
+  static const _kSandboxTabSize = 'as_sandbox_tab_size';
+  static const _kSandboxShowFab = 'as_sandbox_show_fab';
+  static const _kSandboxShowDeorum = 'as_sandbox_show_deorum';
+  static const _kSandboxShowDecode = 'as_sandbox_show_decode';
+  static const _kSandboxWorldCardSize = 'as_sandbox_world_card_size';
+  static const _kSandboxShowWorldGenre = 'as_sandbox_show_world_genre';
+  static const _kSandboxShowWorldOverview = 'as_sandbox_show_world_overview';
+  static const _kSandboxShowWorldMapPill = 'as_sandbox_show_world_map_pill';
+  static const _kSandboxShowWorldCounts = 'as_sandbox_show_world_counts';
+  static const _kSandboxShowWorldDraft = 'as_sandbox_show_world_draft';
+  static const _kSandboxCharCardSize = 'as_sandbox_char_card_size';
+  static const _kSandboxShowCharPronouns = 'as_sandbox_show_char_pronouns';
+  static const _kSandboxShowCharPersonality = 'as_sandbox_show_char_personality';
+  static const _kSandboxShowCharWorld = 'as_sandbox_show_char_world';
+  static const _kSandboxShowCharTypeBadge = 'as_sandbox_show_char_type_badge';
+  static const _kSandboxShowCharFrame = 'as_sandbox_show_char_frame';
+  static const _kSandboxEditorPadding = 'as_sandbox_editor_padding';
+  static const _kSandboxShowWorldMapUpload = 'as_sandbox_show_world_map_upload';
+  static const _kSandboxShowWorldGenreField = 'as_sandbox_show_world_genre_field';
+  static const _kSandboxShowWorldToneField = 'as_sandbox_show_world_tone_field';
+  static const _kSandboxListCardSize = 'as_sandbox_list_card_size';
+  static const _kSandboxShowCharAvatar = 'as_sandbox_show_char_avatar';
+  static const _kSandboxShowCharAccent = 'as_sandbox_show_char_accent';
+  static const _kSandboxShowCharTypeToggle = 'as_sandbox_show_char_type_toggle';
+  static const _kSandboxShowCharWorldRow = 'as_sandbox_show_char_world_row';
+  static const _kSandboxShowCharAppearance = 'as_sandbox_show_char_appearance';
+  static const _kSandboxShowCharPersonalityField = 'as_sandbox_show_char_personality_field';
+  static const _kSandboxShowCharBackstory = 'as_sandbox_show_char_backstory';
+  static const _kSandboxShowCharRelationships = 'as_sandbox_show_char_relationships';
+  static const _kSandboxShowCharNotes = 'as_sandbox_show_char_notes';
+  static const _kSandboxSparkTextSize = 'as_sandbox_spark_text_size';
+  static const _kSandboxShowSparkLabels = 'as_sandbox_show_spark_labels';
+  static const _kSandboxSparkPadding = 'as_sandbox_spark_padding';
   static const _kProfileGlowEnabled = 'as_profile_glow_enabled';
   static const _kAiMood = 'as_ai_mood';
   static const _kNotifPost = 'as_notif_post';
@@ -382,6 +418,42 @@ class AppSettings extends ChangeNotifier {
   String _diaryLineHeight = 'comfortable';
   bool _diaryShowToolbar = true;
   String _diaryEditorPadding = 'comfortable';
+  bool _sandboxHeaderShow = true;
+  String _sandboxHeaderSize = 'M';
+  bool _sandboxShowSpark = true;
+  String _sandboxTabSize = 'M';
+  bool _sandboxShowFab = true;
+  bool _sandboxShowDeorum = true;
+  bool _sandboxShowDecode = true;
+  String _sandboxWorldCardSize = 'M';
+  bool _sandboxShowWorldGenre = true;
+  bool _sandboxShowWorldOverview = true;
+  bool _sandboxShowWorldMapPill = true;
+  bool _sandboxShowWorldCounts = true;
+  bool _sandboxShowWorldDraft = true;
+  String _sandboxCharCardSize = 'M';
+  bool _sandboxShowCharPronouns = true;
+  bool _sandboxShowCharPersonality = true;
+  bool _sandboxShowCharWorld = true;
+  bool _sandboxShowCharTypeBadge = true;
+  bool _sandboxShowCharFrame = true;
+  String _sandboxEditorPadding = 'comfortable';
+  bool _sandboxShowWorldMapUpload = true;
+  bool _sandboxShowWorldGenreField = true;
+  bool _sandboxShowWorldToneField = true;
+  String _sandboxListCardSize = 'M';
+  bool _sandboxShowCharAvatar = true;
+  bool _sandboxShowCharAccent = true;
+  bool _sandboxShowCharTypeToggle = true;
+  bool _sandboxShowCharWorldRow = true;
+  bool _sandboxShowCharAppearance = true;
+  bool _sandboxShowCharPersonalityField = true;
+  bool _sandboxShowCharBackstory = true;
+  bool _sandboxShowCharRelationships = true;
+  bool _sandboxShowCharNotes = true;
+  String _sandboxSparkTextSize = 'M';
+  bool _sandboxShowSparkLabels = true;
+  String _sandboxSparkPadding = 'comfortable';
   bool _aiMood = true;
   bool _notifNewPost = true;
   bool _notifRpPost = true;
@@ -479,6 +551,42 @@ class AppSettings extends ChangeNotifier {
     _diaryLineHeight = p.getString(_kDiaryLineHeight) ?? 'comfortable';
     _diaryShowToolbar = p.getBool(_kDiaryShowToolbar) ?? true;
     _diaryEditorPadding = p.getString(_kDiaryEditorPadding) ?? 'comfortable';
+    _sandboxHeaderShow = p.getBool(_kSandboxHeaderShow) ?? true;
+    _sandboxHeaderSize = p.getString(_kSandboxHeaderSize) ?? 'M';
+    _sandboxShowSpark = p.getBool(_kSandboxShowSpark) ?? true;
+    _sandboxTabSize = p.getString(_kSandboxTabSize) ?? 'M';
+    _sandboxShowFab = p.getBool(_kSandboxShowFab) ?? true;
+    _sandboxShowDeorum = p.getBool(_kSandboxShowDeorum) ?? true;
+    _sandboxShowDecode = p.getBool(_kSandboxShowDecode) ?? true;
+    _sandboxWorldCardSize = p.getString(_kSandboxWorldCardSize) ?? 'M';
+    _sandboxShowWorldGenre = p.getBool(_kSandboxShowWorldGenre) ?? true;
+    _sandboxShowWorldOverview = p.getBool(_kSandboxShowWorldOverview) ?? true;
+    _sandboxShowWorldMapPill = p.getBool(_kSandboxShowWorldMapPill) ?? true;
+    _sandboxShowWorldCounts = p.getBool(_kSandboxShowWorldCounts) ?? true;
+    _sandboxShowWorldDraft = p.getBool(_kSandboxShowWorldDraft) ?? true;
+    _sandboxCharCardSize = p.getString(_kSandboxCharCardSize) ?? 'M';
+    _sandboxShowCharPronouns = p.getBool(_kSandboxShowCharPronouns) ?? true;
+    _sandboxShowCharPersonality = p.getBool(_kSandboxShowCharPersonality) ?? true;
+    _sandboxShowCharWorld = p.getBool(_kSandboxShowCharWorld) ?? true;
+    _sandboxShowCharTypeBadge = p.getBool(_kSandboxShowCharTypeBadge) ?? true;
+    _sandboxShowCharFrame = p.getBool(_kSandboxShowCharFrame) ?? true;
+    _sandboxEditorPadding = p.getString(_kSandboxEditorPadding) ?? 'comfortable';
+    _sandboxShowWorldMapUpload = p.getBool(_kSandboxShowWorldMapUpload) ?? true;
+    _sandboxShowWorldGenreField = p.getBool(_kSandboxShowWorldGenreField) ?? true;
+    _sandboxShowWorldToneField = p.getBool(_kSandboxShowWorldToneField) ?? true;
+    _sandboxListCardSize = p.getString(_kSandboxListCardSize) ?? 'M';
+    _sandboxShowCharAvatar = p.getBool(_kSandboxShowCharAvatar) ?? true;
+    _sandboxShowCharAccent = p.getBool(_kSandboxShowCharAccent) ?? true;
+    _sandboxShowCharTypeToggle = p.getBool(_kSandboxShowCharTypeToggle) ?? true;
+    _sandboxShowCharWorldRow = p.getBool(_kSandboxShowCharWorldRow) ?? true;
+    _sandboxShowCharAppearance = p.getBool(_kSandboxShowCharAppearance) ?? true;
+    _sandboxShowCharPersonalityField = p.getBool(_kSandboxShowCharPersonalityField) ?? true;
+    _sandboxShowCharBackstory = p.getBool(_kSandboxShowCharBackstory) ?? true;
+    _sandboxShowCharRelationships = p.getBool(_kSandboxShowCharRelationships) ?? true;
+    _sandboxShowCharNotes = p.getBool(_kSandboxShowCharNotes) ?? true;
+    _sandboxSparkTextSize = p.getString(_kSandboxSparkTextSize) ?? 'M';
+    _sandboxShowSparkLabels = p.getBool(_kSandboxShowSparkLabels) ?? true;
+    _sandboxSparkPadding = p.getString(_kSandboxSparkPadding) ?? 'comfortable';
     _notifNewPost = p.getBool(_kNotifPost) ?? true;
     _notifRpPost = p.getBool('as_notif_rp_post') ?? true;
     _notifOoc = p.getBool('as_notif_ooc') ?? true;
@@ -739,6 +847,42 @@ class AppSettings extends ChangeNotifier {
     'diaryLineHeight': _diaryLineHeight,
     'diaryShowToolbar': _diaryShowToolbar,
     'diaryEditorPadding': _diaryEditorPadding,
+    'sandboxHeaderShow': _sandboxHeaderShow,
+    'sandboxHeaderSize': _sandboxHeaderSize,
+    'sandboxShowSpark': _sandboxShowSpark,
+    'sandboxTabSize': _sandboxTabSize,
+    'sandboxShowFab': _sandboxShowFab,
+    'sandboxShowDeorum': _sandboxShowDeorum,
+    'sandboxShowDecode': _sandboxShowDecode,
+    'sandboxWorldCardSize': _sandboxWorldCardSize,
+    'sandboxShowWorldGenre': _sandboxShowWorldGenre,
+    'sandboxShowWorldOverview': _sandboxShowWorldOverview,
+    'sandboxShowWorldMapPill': _sandboxShowWorldMapPill,
+    'sandboxShowWorldCounts': _sandboxShowWorldCounts,
+    'sandboxShowWorldDraft': _sandboxShowWorldDraft,
+    'sandboxCharCardSize': _sandboxCharCardSize,
+    'sandboxShowCharPronouns': _sandboxShowCharPronouns,
+    'sandboxShowCharPersonality': _sandboxShowCharPersonality,
+    'sandboxShowCharWorld': _sandboxShowCharWorld,
+    'sandboxShowCharTypeBadge': _sandboxShowCharTypeBadge,
+    'sandboxShowCharFrame': _sandboxShowCharFrame,
+    'sandboxEditorPadding': _sandboxEditorPadding,
+    'sandboxShowWorldMapUpload': _sandboxShowWorldMapUpload,
+    'sandboxShowWorldGenreField': _sandboxShowWorldGenreField,
+    'sandboxShowWorldToneField': _sandboxShowWorldToneField,
+    'sandboxListCardSize': _sandboxListCardSize,
+    'sandboxShowCharAvatar': _sandboxShowCharAvatar,
+    'sandboxShowCharAccent': _sandboxShowCharAccent,
+    'sandboxShowCharTypeToggle': _sandboxShowCharTypeToggle,
+    'sandboxShowCharWorldRow': _sandboxShowCharWorldRow,
+    'sandboxShowCharAppearance': _sandboxShowCharAppearance,
+    'sandboxShowCharPersonalityField': _sandboxShowCharPersonalityField,
+    'sandboxShowCharBackstory': _sandboxShowCharBackstory,
+    'sandboxShowCharRelationships': _sandboxShowCharRelationships,
+    'sandboxShowCharNotes': _sandboxShowCharNotes,
+    'sandboxSparkTextSize': _sandboxSparkTextSize,
+    'sandboxShowSparkLabels': _sandboxShowSparkLabels,
+    'sandboxSparkPadding': _sandboxSparkPadding,
     'animatedBorderThickness': _animatedBorderThickness,
     'animatedBorderWaviness': _animatedBorderWaviness,
     'animatedBorderSpeed': _animatedBorderSpeed,
@@ -836,6 +980,42 @@ class AppSettings extends ChangeNotifier {
     _diaryLineHeight = j['diaryLineHeight'] as String? ?? _diaryLineHeight;
     _diaryShowToolbar = j['diaryShowToolbar'] as bool? ?? _diaryShowToolbar;
     _diaryEditorPadding = j['diaryEditorPadding'] as String? ?? _diaryEditorPadding;
+    _sandboxHeaderShow = j['sandboxHeaderShow'] as bool? ?? _sandboxHeaderShow;
+    _sandboxHeaderSize = j['sandboxHeaderSize'] as String? ?? _sandboxHeaderSize;
+    _sandboxShowSpark = j['sandboxShowSpark'] as bool? ?? _sandboxShowSpark;
+    _sandboxTabSize = j['sandboxTabSize'] as String? ?? _sandboxTabSize;
+    _sandboxShowFab = j['sandboxShowFab'] as bool? ?? _sandboxShowFab;
+    _sandboxShowDeorum = j['sandboxShowDeorum'] as bool? ?? _sandboxShowDeorum;
+    _sandboxShowDecode = j['sandboxShowDecode'] as bool? ?? _sandboxShowDecode;
+    _sandboxWorldCardSize = j['sandboxWorldCardSize'] as String? ?? _sandboxWorldCardSize;
+    _sandboxShowWorldGenre = j['sandboxShowWorldGenre'] as bool? ?? _sandboxShowWorldGenre;
+    _sandboxShowWorldOverview = j['sandboxShowWorldOverview'] as bool? ?? _sandboxShowWorldOverview;
+    _sandboxShowWorldMapPill = j['sandboxShowWorldMapPill'] as bool? ?? _sandboxShowWorldMapPill;
+    _sandboxShowWorldCounts = j['sandboxShowWorldCounts'] as bool? ?? _sandboxShowWorldCounts;
+    _sandboxShowWorldDraft = j['sandboxShowWorldDraft'] as bool? ?? _sandboxShowWorldDraft;
+    _sandboxCharCardSize = j['sandboxCharCardSize'] as String? ?? _sandboxCharCardSize;
+    _sandboxShowCharPronouns = j['sandboxShowCharPronouns'] as bool? ?? _sandboxShowCharPronouns;
+    _sandboxShowCharPersonality = j['sandboxShowCharPersonality'] as bool? ?? _sandboxShowCharPersonality;
+    _sandboxShowCharWorld = j['sandboxShowCharWorld'] as bool? ?? _sandboxShowCharWorld;
+    _sandboxShowCharTypeBadge = j['sandboxShowCharTypeBadge'] as bool? ?? _sandboxShowCharTypeBadge;
+    _sandboxShowCharFrame = j['sandboxShowCharFrame'] as bool? ?? _sandboxShowCharFrame;
+    _sandboxEditorPadding = j['sandboxEditorPadding'] as String? ?? _sandboxEditorPadding;
+    _sandboxShowWorldMapUpload = j['sandboxShowWorldMapUpload'] as bool? ?? _sandboxShowWorldMapUpload;
+    _sandboxShowWorldGenreField = j['sandboxShowWorldGenreField'] as bool? ?? _sandboxShowWorldGenreField;
+    _sandboxShowWorldToneField = j['sandboxShowWorldToneField'] as bool? ?? _sandboxShowWorldToneField;
+    _sandboxListCardSize = j['sandboxListCardSize'] as String? ?? _sandboxListCardSize;
+    _sandboxShowCharAvatar = j['sandboxShowCharAvatar'] as bool? ?? _sandboxShowCharAvatar;
+    _sandboxShowCharAccent = j['sandboxShowCharAccent'] as bool? ?? _sandboxShowCharAccent;
+    _sandboxShowCharTypeToggle = j['sandboxShowCharTypeToggle'] as bool? ?? _sandboxShowCharTypeToggle;
+    _sandboxShowCharWorldRow = j['sandboxShowCharWorldRow'] as bool? ?? _sandboxShowCharWorldRow;
+    _sandboxShowCharAppearance = j['sandboxShowCharAppearance'] as bool? ?? _sandboxShowCharAppearance;
+    _sandboxShowCharPersonalityField = j['sandboxShowCharPersonalityField'] as bool? ?? _sandboxShowCharPersonalityField;
+    _sandboxShowCharBackstory = j['sandboxShowCharBackstory'] as bool? ?? _sandboxShowCharBackstory;
+    _sandboxShowCharRelationships = j['sandboxShowCharRelationships'] as bool? ?? _sandboxShowCharRelationships;
+    _sandboxShowCharNotes = j['sandboxShowCharNotes'] as bool? ?? _sandboxShowCharNotes;
+    _sandboxSparkTextSize = j['sandboxSparkTextSize'] as String? ?? _sandboxSparkTextSize;
+    _sandboxShowSparkLabels = j['sandboxShowSparkLabels'] as bool? ?? _sandboxShowSparkLabels;
+    _sandboxSparkPadding = j['sandboxSparkPadding'] as String? ?? _sandboxSparkPadding;
     }
     if (j['profileGlowColor'] is int) {
       _profileGlowColor = Color(j['profileGlowColor'] as int);
@@ -1226,6 +1406,42 @@ class AppSettings extends ChangeNotifier {
   String get diaryLineHeight => _diaryLineHeight;
   bool get diaryShowToolbar => _diaryShowToolbar;
   String get diaryEditorPadding => _diaryEditorPadding;
+  bool get sandboxHeaderShow => _sandboxHeaderShow;
+  String get sandboxHeaderSize => _sandboxHeaderSize;
+  bool get sandboxShowSpark => _sandboxShowSpark;
+  String get sandboxTabSize => _sandboxTabSize;
+  bool get sandboxShowFab => _sandboxShowFab;
+  bool get sandboxShowDeorum => _sandboxShowDeorum;
+  bool get sandboxShowDecode => _sandboxShowDecode;
+  String get sandboxWorldCardSize => _sandboxWorldCardSize;
+  bool get sandboxShowWorldGenre => _sandboxShowWorldGenre;
+  bool get sandboxShowWorldOverview => _sandboxShowWorldOverview;
+  bool get sandboxShowWorldMapPill => _sandboxShowWorldMapPill;
+  bool get sandboxShowWorldCounts => _sandboxShowWorldCounts;
+  bool get sandboxShowWorldDraft => _sandboxShowWorldDraft;
+  String get sandboxCharCardSize => _sandboxCharCardSize;
+  bool get sandboxShowCharPronouns => _sandboxShowCharPronouns;
+  bool get sandboxShowCharPersonality => _sandboxShowCharPersonality;
+  bool get sandboxShowCharWorld => _sandboxShowCharWorld;
+  bool get sandboxShowCharTypeBadge => _sandboxShowCharTypeBadge;
+  bool get sandboxShowCharFrame => _sandboxShowCharFrame;
+  String get sandboxEditorPadding => _sandboxEditorPadding;
+  bool get sandboxShowWorldMapUpload => _sandboxShowWorldMapUpload;
+  bool get sandboxShowWorldGenreField => _sandboxShowWorldGenreField;
+  bool get sandboxShowWorldToneField => _sandboxShowWorldToneField;
+  String get sandboxListCardSize => _sandboxListCardSize;
+  bool get sandboxShowCharAvatar => _sandboxShowCharAvatar;
+  bool get sandboxShowCharAccent => _sandboxShowCharAccent;
+  bool get sandboxShowCharTypeToggle => _sandboxShowCharTypeToggle;
+  bool get sandboxShowCharWorldRow => _sandboxShowCharWorldRow;
+  bool get sandboxShowCharAppearance => _sandboxShowCharAppearance;
+  bool get sandboxShowCharPersonalityField => _sandboxShowCharPersonalityField;
+  bool get sandboxShowCharBackstory => _sandboxShowCharBackstory;
+  bool get sandboxShowCharRelationships => _sandboxShowCharRelationships;
+  bool get sandboxShowCharNotes => _sandboxShowCharNotes;
+  String get sandboxSparkTextSize => _sandboxSparkTextSize;
+  bool get sandboxShowSparkLabels => _sandboxShowSparkLabels;
+  String get sandboxSparkPadding => _sandboxSparkPadding;
   bool isBlockHidden(String id) => _hiddenBlocks.contains(id);
 
   Future<void> setShowLogo(bool v) async {
@@ -1332,6 +1548,42 @@ class AppSettings extends ChangeNotifier {
   Future<void> setDiaryLineHeight(String v) async { _diaryLineHeight = v; (await SharedPreferences.getInstance()).setString(_kDiaryLineHeight, v); _touch(); notifyListeners(); }
   Future<void> setDiaryShowToolbar(bool v) async { _diaryShowToolbar = v; (await SharedPreferences.getInstance()).setBool(_kDiaryShowToolbar, v); _touch(); notifyListeners(); }
   Future<void> setDiaryEditorPadding(String v) async { _diaryEditorPadding = v; (await SharedPreferences.getInstance()).setString(_kDiaryEditorPadding, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxHeaderShow(bool v) async { _sandboxHeaderShow = v; (await SharedPreferences.getInstance()).setBool(_kSandboxHeaderShow, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxHeaderSize(String v) async { _sandboxHeaderSize = v; (await SharedPreferences.getInstance()).setString(_kSandboxHeaderSize, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowSpark(bool v) async { _sandboxShowSpark = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowSpark, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxTabSize(String v) async { _sandboxTabSize = v; (await SharedPreferences.getInstance()).setString(_kSandboxTabSize, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowFab(bool v) async { _sandboxShowFab = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowFab, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowDeorum(bool v) async { _sandboxShowDeorum = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowDeorum, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowDecode(bool v) async { _sandboxShowDecode = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowDecode, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxWorldCardSize(String v) async { _sandboxWorldCardSize = v; (await SharedPreferences.getInstance()).setString(_kSandboxWorldCardSize, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowWorldGenre(bool v) async { _sandboxShowWorldGenre = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowWorldGenre, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowWorldOverview(bool v) async { _sandboxShowWorldOverview = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowWorldOverview, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowWorldMapPill(bool v) async { _sandboxShowWorldMapPill = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowWorldMapPill, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowWorldCounts(bool v) async { _sandboxShowWorldCounts = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowWorldCounts, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowWorldDraft(bool v) async { _sandboxShowWorldDraft = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowWorldDraft, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxCharCardSize(String v) async { _sandboxCharCardSize = v; (await SharedPreferences.getInstance()).setString(_kSandboxCharCardSize, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowCharPronouns(bool v) async { _sandboxShowCharPronouns = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowCharPronouns, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowCharPersonality(bool v) async { _sandboxShowCharPersonality = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowCharPersonality, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowCharWorld(bool v) async { _sandboxShowCharWorld = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowCharWorld, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowCharTypeBadge(bool v) async { _sandboxShowCharTypeBadge = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowCharTypeBadge, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowCharFrame(bool v) async { _sandboxShowCharFrame = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowCharFrame, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxEditorPadding(String v) async { _sandboxEditorPadding = v; (await SharedPreferences.getInstance()).setString(_kSandboxEditorPadding, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowWorldMapUpload(bool v) async { _sandboxShowWorldMapUpload = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowWorldMapUpload, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowWorldGenreField(bool v) async { _sandboxShowWorldGenreField = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowWorldGenreField, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowWorldToneField(bool v) async { _sandboxShowWorldToneField = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowWorldToneField, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxListCardSize(String v) async { _sandboxListCardSize = v; (await SharedPreferences.getInstance()).setString(_kSandboxListCardSize, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowCharAvatar(bool v) async { _sandboxShowCharAvatar = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowCharAvatar, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowCharAccent(bool v) async { _sandboxShowCharAccent = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowCharAccent, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowCharTypeToggle(bool v) async { _sandboxShowCharTypeToggle = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowCharTypeToggle, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowCharWorldRow(bool v) async { _sandboxShowCharWorldRow = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowCharWorldRow, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowCharAppearance(bool v) async { _sandboxShowCharAppearance = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowCharAppearance, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowCharPersonalityField(bool v) async { _sandboxShowCharPersonalityField = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowCharPersonalityField, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowCharBackstory(bool v) async { _sandboxShowCharBackstory = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowCharBackstory, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowCharRelationships(bool v) async { _sandboxShowCharRelationships = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowCharRelationships, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowCharNotes(bool v) async { _sandboxShowCharNotes = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowCharNotes, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxSparkTextSize(String v) async { _sandboxSparkTextSize = v; (await SharedPreferences.getInstance()).setString(_kSandboxSparkTextSize, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxShowSparkLabels(bool v) async { _sandboxShowSparkLabels = v; (await SharedPreferences.getInstance()).setBool(_kSandboxShowSparkLabels, v); _touch(); notifyListeners(); }
+  Future<void> setSandboxSparkPadding(String v) async { _sandboxSparkPadding = v; (await SharedPreferences.getInstance()).setString(_kSandboxSparkPadding, v); _touch(); notifyListeners(); }
 
   Future<void> setAnimatedBorderThickness(double v) async {
     _animatedBorderThickness = v;
@@ -1726,6 +1978,42 @@ class AppSettings extends ChangeNotifier {
     await p.remove(_kDiaryLineHeight);
     await p.remove(_kDiaryShowToolbar);
     await p.remove(_kDiaryEditorPadding);
+    await p.remove(_kSandboxHeaderShow);
+    await p.remove(_kSandboxHeaderSize);
+    await p.remove(_kSandboxShowSpark);
+    await p.remove(_kSandboxTabSize);
+    await p.remove(_kSandboxShowFab);
+    await p.remove(_kSandboxShowDeorum);
+    await p.remove(_kSandboxShowDecode);
+    await p.remove(_kSandboxWorldCardSize);
+    await p.remove(_kSandboxShowWorldGenre);
+    await p.remove(_kSandboxShowWorldOverview);
+    await p.remove(_kSandboxShowWorldMapPill);
+    await p.remove(_kSandboxShowWorldCounts);
+    await p.remove(_kSandboxShowWorldDraft);
+    await p.remove(_kSandboxCharCardSize);
+    await p.remove(_kSandboxShowCharPronouns);
+    await p.remove(_kSandboxShowCharPersonality);
+    await p.remove(_kSandboxShowCharWorld);
+    await p.remove(_kSandboxShowCharTypeBadge);
+    await p.remove(_kSandboxShowCharFrame);
+    await p.remove(_kSandboxEditorPadding);
+    await p.remove(_kSandboxShowWorldMapUpload);
+    await p.remove(_kSandboxShowWorldGenreField);
+    await p.remove(_kSandboxShowWorldToneField);
+    await p.remove(_kSandboxListCardSize);
+    await p.remove(_kSandboxShowCharAvatar);
+    await p.remove(_kSandboxShowCharAccent);
+    await p.remove(_kSandboxShowCharTypeToggle);
+    await p.remove(_kSandboxShowCharWorldRow);
+    await p.remove(_kSandboxShowCharAppearance);
+    await p.remove(_kSandboxShowCharPersonalityField);
+    await p.remove(_kSandboxShowCharBackstory);
+    await p.remove(_kSandboxShowCharRelationships);
+    await p.remove(_kSandboxShowCharNotes);
+    await p.remove(_kSandboxSparkTextSize);
+    await p.remove(_kSandboxShowSparkLabels);
+    await p.remove(_kSandboxSparkPadding);
     await p.remove(_kNotifPost);
     await p.remove(_kNotifInterest);
     await p.remove(_kNotifBrain);
