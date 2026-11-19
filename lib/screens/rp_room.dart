@@ -4130,8 +4130,10 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     return Positioned(
       right: 0,
       top: 60,
+      bottom: 16,
       child: Container(
         width: 270,
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height - 76),
         decoration: BoxDecoration(
           color: cInk,
           border: Border.all(color: cAsh),
