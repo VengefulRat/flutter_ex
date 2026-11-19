@@ -12,6 +12,7 @@ import '../theme.dart';
 import '../widgets/shared.dart';
 import '../widgets/rp_tools.dart';
 import '../widgets/session_log.dart';
+import '../widgets/colour_picker.dart';
 import '../models/world.dart';
 import '../settings.dart';
 import '../services/firestore_service.dart';
@@ -500,6 +501,9 @@ Widget _selectablePostText({
 // ─────────────────────────────────────────
 // SCREEN
 // ─────────────────────────────────────────
+double _rpPostScale() => appSettings.rpPostSize == 'S' ? 0.85 : appSettings.rpPostSize == 'L' ? 1.18 : 1.0;
+double _rpEditorScale() => appSettings.rpEditorSize == 'S' ? 0.85 : appSettings.rpEditorSize == 'L' ? 1.18 : 1.0;
+
 class RPRoomScreen extends StatefulWidget {
   final String partnerName;
   final String partnerCode;
@@ -809,6 +813,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   bool _desktopOOCExpanded = false;
   bool _oocOpen = false;
+  int _oocUnread = 0;
+  int _oocTotalNonUser = 0;
+
   final _oocCtrl = TextEditingController();
   final _oocScrollCtrl = ScrollController();
 
@@ -985,11 +992,14 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         );
       }).toList();
       if (mounted) {
-        setState(
-          () => _oocMessages
-            ..clear()
-            ..addAll(msgs),
-        );
+        setState(() {
+          final newNonUser = msgs.where((m) => !m.isUser).length;
+          final isFirstLoad = _oocMessages.isEmpty && _oocTotalNonUser == 0;
+          final oocVisible = _oocOpen || _desktopOOCExpanded;
+          if (!isFirstLoad && !oocVisible && newNonUser > _oocTotalNonUser) _oocUnread += newNonUser - _oocTotalNonUser;
+          _oocTotalNonUser = newNonUser;
+          _oocMessages..clear()..addAll(msgs);
+        });
       }
     }, onError: _handleStreamError);
   }
@@ -1085,7 +1095,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   void _onSettingsChanged() {
     if (!mounted) return;
-    setState(() => _aiMoodEnabled = appSettings.aiMood);
+    setState(() { _aiMoodEnabled = appSettings.aiMood; _initParticles(); });
   }
 
   String get _draftKey =>
@@ -1183,6 +1193,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   void _initParticles() {
     _particles.clear();
+    if (!appSettings.rpParticlesOn) return;
     final base = switch (_currentMood) {
       StoryMood.rain => 45,
       StoryMood.snow => 28,
@@ -1395,7 +1406,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             ),
             quotedAuthor: quotedPost?.characterName ?? quotedPost?.author,
             textColor: postColor,
-            fontSize: _fontSize,
+            fontSize: _fontSize * _rpEditorScale(),
             bold: _bold,
             italic: _italic,
             characterName: _activeCharacter?.name,
@@ -1733,11 +1744,17 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     return _buildMobileLayout();
   }
 
+  Color _effectiveBg(Color moodColor) {
+    if (appSettings.rpMoodOverride == 'fixed') return appSettings.rpBgColor;
+    if (appSettings.rpMoodOverride == 'tint') return Color.lerp(moodColor, appSettings.rpBgColor, 0.5) ?? moodColor;
+    return moodColor;
+  }
+
   Widget _buildDesktopLayout() {
     return AnimatedBuilder(
       animation: _moodCtrl,
       builder: (_, child) {
-        final bg = _bgAnim.value ?? cVoid;
+        final bg = _effectiveBg(_bgAnim.value ?? cVoid);
         return Scaffold(
           backgroundColor: bg,
           body: Stack(
@@ -1772,7 +1789,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // Left Sidebar (Session Log)
-                          SizedBox(
+                          if (appSettings.rpShowLogSidebar) SizedBox(
                             width: 300,
                             child: Container(
                               decoration: const BoxDecoration(
@@ -1801,7 +1818,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                           ),
 
                           // Right Sidebar (Tools + OOC)
-                          SizedBox(
+                          if (appSettings.rpShowToolsSidebar) SizedBox(
                             width: 320,
                             child: Container(
                               decoration: const BoxDecoration(
@@ -1918,7 +1935,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                     ),
                                   ),
                                   const Divider(color: cAsh, height: 1),
-                                  AnimatedContainer(
+                                  if (appSettings.rpShowOoc) AnimatedContainer(
                                     duration: const Duration(milliseconds: 250),
                                     curve: Curves.easeInOut,
                                     height: _desktopOOCExpanded ? 300 : 50,
@@ -1932,8 +1949,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                                 () => _desktopOOCExpanded =
                                                     !_desktopOOCExpanded,
                                               );
-                                              if (_desktopOOCExpanded)
-                                                _scrollOocToBottom();
+                                              if (_desktopOOCExpanded) { _oocUnread = 0; _scrollOocToBottom(); }
                                             },
                                             child: Container(
                                               height: 50,
@@ -1962,6 +1978,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                                       letterSpacing: 4,
                                                     ),
                                                   ),
+                                                  if (_oocUnread > 0) _OocBadge(count: _oocUnread),
                                                   Icon(
                                                     _desktopOOCExpanded
                                                         ? Icons
@@ -2025,7 +2042,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     return AnimatedBuilder(
       animation: _moodCtrl,
       builder: (_, child) {
-        final moodColor = MoodEngine.bgColor(_currentMood);
+        final moodColor = _effectiveBg(MoodEngine.bgColor(_currentMood));
         return Scaffold(
           backgroundColor: cVoid,
           body: Stack(
@@ -2089,16 +2106,19 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               ),
 
               // ── OVERLAYS (OOC, Settings, Selection) ──
-              if (!_oocOpen)
+              if (!_oocOpen && appSettings.rpShowOoc)
                 Positioned(
                   right: 16,
                   bottom: _editorExpanded ? 320 : 90,
                   child: GestureDetector(
                     onTap: () {
-                      setState(() => _oocOpen = true);
+                      setState(() { _oocOpen = true; _oocUnread = 0; });
                       _scrollOocToBottom();
                     },
-                    child: Container(
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
@@ -2111,6 +2131,10 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                         color: cSmoke,
                         size: 20,
                       ),
+                        ),
+                        if (_oocUnread > 0)
+                          Positioned(top: -4, right: -4, child: _OocBadge(count: _oocUnread)),
+                      ],
                     ),
                   ),
                 ),
@@ -2134,6 +2158,19 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   Widget _buildTopBar() {
+    if (!appSettings.rpHeaderShow) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(children: [
+          LoreTap(onTap: () => Navigator.of(context).pop(), child: const Icon(Icons.arrow_back_ios, color: cSmoke, size: 16)),
+          const Spacer(),
+          LoreTap(onTap: () => setState(() => _settingsOpen = !_settingsOpen), child: const Icon(Icons.tune, color: cSmoke, size: 18)),
+        ]),
+      );
+    }
+    final titleSize = appSettings.rpHeaderSize == 'S' ? 13.0 : appSettings.rpHeaderSize == 'L' ? 20.0 : 16.0;
+    final subSize = appSettings.rpHeaderSize == 'S' ? 8.0 : appSettings.rpHeaderSize == 'L' ? 10.0 : 9.0;
+    final vPad = appSettings.rpHeaderSize == 'S' ? 8.0 : appSettings.rpHeaderSize == 'L' ? 16.0 : 12.0;
     return ClipRect(
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(
@@ -2141,11 +2178,11 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           sigmaY: 8,
         ), // <-- The frosted glass blur
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: vPad),
           decoration: BoxDecoration(
             color: cInk.withValues(alpha: 0.65), // More transparent
-            border: const Border(
-              bottom: BorderSide(color: Color.fromARGB(255, 209, 212, 30)),
+            border: Border(
+              bottom: BorderSide(color: appSettings.rpHeaderAccent),
             ),
           ),
           child: Row(
@@ -2171,8 +2208,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                           _sessionTitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
+                          style: TextStyle(
+                            fontSize: titleSize,
                             fontWeight: FontWeight.w300,
                             fontStyle: FontStyle.italic,
                             color: cParchment,
@@ -2183,8 +2220,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                           widget.partnerName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
+                          style: TextStyle(
+                            fontSize: titleSize,
                             fontWeight: FontWeight.w300,
                             fontStyle: FontStyle.italic,
                             color: cParchment,
@@ -2196,9 +2233,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                             : widget.genre,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'monospace',
-                          fontSize: 9,
+                          fontSize: subSize,
                           color: cSmoke,
                           letterSpacing: 2,
                         ),
@@ -2530,7 +2567,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                             child: _selectablePostText(
                               text: post.content,
                               style: TextStyle(
-                                fontSize: post.fontSize,
+                                fontSize: post.fontSize * _rpPostScale(),
                                 color:
                                     appSettings.textColourFor('post_content') ??
                                     post.textColor,
@@ -2678,7 +2715,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   _selectablePostText(
                     text: post.content,
                     style: TextStyle(
-                      fontSize: post.fontSize,
+                      fontSize: post.fontSize * _rpPostScale(),
                       color:
                           appSettings.textColourFor('post_content') ??
                           post.textColor,
@@ -3536,7 +3573,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                       maxLines: null,
                       autofocus: true,
                       style: TextStyle(
-                        fontSize: _fontSize,
+                        fontSize: _fontSize * _rpEditorScale(),
                         color: _activeCharacter != null
                             ? charColor
                             : _fontColor,
@@ -3887,6 +3924,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                       letterSpacing: 4,
                     ),
                   ),
+                  if (_oocUnread > 0) Padding(padding: const EdgeInsets.only(left: 8), child: _OocBadge(count: _oocUnread)),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => setState(() => _oocOpen = false),
@@ -4311,6 +4349,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                     ),
                   ),
               ],
+              _buildRpCustomizeSection(),
               const Divider(color: cAsh, height: 1),
               Padding(
                 padding: const EdgeInsets.all(14),
@@ -4349,6 +4388,107 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     );
   }
 
+  Widget _buildRpCustomizeSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(color: cAsh, height: 1),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(14, 12, 14, 6),
+          child: Text('RP ROOM CUSTOMIZE', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+        ),
+        _settingToggle('Show header', appSettings.rpHeaderShow, (v) => appSettings.setRpHeaderShow(v)),
+        if (appSettings.rpHeaderShow) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
+            child: Row(children: [
+              const Text('Header size', style: TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+              const Spacer(),
+              _rpChip('S', appSettings.rpHeaderSize == 'S', () => appSettings.setRpHeaderSize('S')),
+              const SizedBox(width: 6),
+              _rpChip('M', appSettings.rpHeaderSize == 'M', () => appSettings.setRpHeaderSize('M')),
+              const SizedBox(width: 6),
+              _rpChip('L', appSettings.rpHeaderSize == 'L', () => appSettings.setRpHeaderSize('L')),
+            ]),
+          ),
+          _rpColorRow('Header accent', appSettings.rpHeaderAccent, (c) => appSettings.setRpHeaderAccent(c)),
+        ],
+        const Padding(
+          padding: EdgeInsets.fromLTRB(14, 10, 14, 6),
+          child: Text('BACKGROUND', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
+          child: Wrap(spacing: 6, children: [
+            _rpChip('Mood', appSettings.rpMoodOverride == 'off', () => appSettings.setRpMoodOverride('off')),
+            _rpChip('Tint', appSettings.rpMoodOverride == 'tint', () => appSettings.setRpMoodOverride('tint')),
+            _rpChip('Fixed', appSettings.rpMoodOverride == 'fixed', () => appSettings.setRpMoodOverride('fixed')),
+          ]),
+        ),
+        if (appSettings.rpMoodOverride != 'off') _rpColorRow('Background colour', appSettings.rpBgColor, (c) => appSettings.setRpBgColor(c)),
+        _settingToggle('Particles', appSettings.rpParticlesOn, (v) => appSettings.setRpParticlesOn(v)),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(14, 10, 14, 6),
+          child: Text('SIZES', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
+          child: Row(children: [
+            const Text('Post size', style: TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+            const Spacer(),
+            _rpChip('S', appSettings.rpPostSize == 'S', () => appSettings.setRpPostSize('S')),
+            const SizedBox(width: 6),
+            _rpChip('M', appSettings.rpPostSize == 'M', () => appSettings.setRpPostSize('M')),
+            const SizedBox(width: 6),
+            _rpChip('L', appSettings.rpPostSize == 'L', () => appSettings.setRpPostSize('L')),
+          ]),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
+          child: Row(children: [
+            const Text('Editor size', style: TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+            const Spacer(),
+            _rpChip('S', appSettings.rpEditorSize == 'S', () => appSettings.setRpEditorSize('S')),
+            const SizedBox(width: 6),
+            _rpChip('M', appSettings.rpEditorSize == 'M', () => appSettings.setRpEditorSize('M')),
+            const SizedBox(width: 6),
+            _rpChip('L', appSettings.rpEditorSize == 'L', () => appSettings.setRpEditorSize('L')),
+          ]),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(14, 10, 14, 6),
+          child: Text('PANELS', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+        ),
+        _settingToggle('Session Log sidebar', appSettings.rpShowLogSidebar, (v) => appSettings.setRpShowLogSidebar(v)),
+        _settingToggle('Tools sidebar', appSettings.rpShowToolsSidebar, (v) => appSettings.setRpShowToolsSidebar(v)),
+        _settingToggle('OOC panel', appSettings.rpShowOoc, (v) => appSettings.setRpShowOoc(v)),
+        _settingToggle('OOC unread badge', appSettings.rpOocBadgeOn, (v) => appSettings.setRpOocBadgeOn(v)),
+      ],
+    );
+  }
+  Widget _rpChip(String label, bool active, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(border: Border.all(color: active ? cGold : cAsh), color: active ? cGold.withValues(alpha: 0.08) : Colors.transparent),
+        child: Text(label, style: TextStyle(fontFamily: 'monospace', fontSize: 9, letterSpacing: 1, color: active ? cGold : cSmoke)),
+      ),
+    );
+  }
+  Widget _rpColorRow(String label, Color current, ValueChanged<Color> onPicked) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 2, 14, 8),
+      child: Row(children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+        const Spacer(),
+        LoreTap(
+          onTap: () => LoreColourPicker.show(context, current: current, onPicked: onPicked),
+          child: Container(width: 28, height: 28, decoration: BoxDecoration(color: current, shape: BoxShape.circle, border: Border.all(color: Colors.white24))),
+        ),
+      ]),
+    );
+  }
   Widget _modeBtn(RPDisplayMode mode, IconData icon, String label) {
     final active = _displayMode == mode;
     return Expanded(
@@ -5004,6 +5144,34 @@ class _OocMediaPreviewState extends State<_OocMediaPreview> {
   }
 }
 
+class _OocBadge extends StatefulWidget {
+  final int count;
+  const _OocBadge({required this.count});
+  @override
+  State<_OocBadge> createState() => _OocBadgeState();
+}
+
+class _OocBadgeState extends State<_OocBadge> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, child) => Transform.scale(
+        scale: 1.0 + _c.value * 0.15,
+        child: child,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(color: cGold, borderRadius: BorderRadius.circular(10), border: Border.all(color: cInk)),
+        child: Text('', style: const TextStyle(fontFamily: 'monospace', fontSize: 10, color: cInk, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+}
+
 class _PostCard extends StatefulWidget {
   final RPPost post;
   final bool isExpanded;
@@ -5168,7 +5336,7 @@ class _PostCardState extends State<_PostCard>
               child: _selectablePostText(
                 text: preview,
                 style: TextStyle(
-                  fontSize: post.fontSize,
+                  fontSize: post.fontSize * _rpPostScale(),
                   color: post.textColor.withValues(alpha: 0.7),
                   fontStyle: post.italic ? FontStyle.italic : FontStyle.normal,
                   fontWeight: post.bold ? FontWeight.bold : FontWeight.w300,
@@ -5191,7 +5359,7 @@ class _PostCardState extends State<_PostCard>
                     _selectablePostText(
                       text: post.content,
                       style: TextStyle(
-                        fontSize: post.fontSize,
+                        fontSize: post.fontSize * _rpPostScale(),
                         color: post.textColor,
                         fontStyle: post.italic
                             ? FontStyle.italic
@@ -5258,3 +5426,4 @@ class _MoodShaderPainter extends CustomPainter {
       old.moodColor != moodColor ||
       old.intensity != intensity;
 }
+
