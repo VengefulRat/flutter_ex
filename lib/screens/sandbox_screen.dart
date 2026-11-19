@@ -2274,8 +2274,8 @@ class _CharactersTab extends StatelessWidget {
       behavior: NoGlowBehavior(),
       child: GridView.builder(
         padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 200,
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: appSettings.sandboxCharCardSize == 'S' ? 160 : appSettings.sandboxCharCardSize == 'L' ? 260 : 200,
           childAspectRatio: 0.7,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
@@ -2382,7 +2382,7 @@ class _SandboxCharacterCard extends StatelessWidget {
               spec: CardFrameSpec(
                 seed: seed,
                 accent: accent,
-                ornate: true,
+                ornate: appSettings.sandboxShowCharFrame,
                 glow: false,
               ),
               child: ClipRRect(
@@ -2424,7 +2424,7 @@ class _SandboxCharacterCard extends StatelessWidget {
                                   character.name,
                                   style: TextStyle(
                                     fontFamily: 'serif',
-                                    fontSize: 16,
+                                    fontSize: appSettings.sandboxCharCardSize == 'S' ? 14 : appSettings.sandboxCharCardSize == 'L' ? 19 : 16,
                                     fontWeight: FontWeight.w300,
                                     fontStyle: FontStyle.italic,
                                     color: cParchment,
@@ -2434,7 +2434,7 @@ class _SandboxCharacterCard extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              Container(
+                              if (appSettings.sandboxShowCharTypeBadge) Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 4,
                                   vertical: 2,
@@ -2467,7 +2467,7 @@ class _SandboxCharacterCard extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 2),
-                          Text(
+                          if (appSettings.sandboxShowCharPronouns) Text(
                             [
                               if (character.pronouns.isNotEmpty)
                                 character.pronouns,
@@ -2480,7 +2480,7 @@ class _SandboxCharacterCard extends StatelessWidget {
                             ),
                           ),
                           const Spacer(),
-                          if (character.personality.isNotEmpty)
+                          if (character.personality.isNotEmpty && appSettings.sandboxShowCharPersonality)
                             Text(
                               character.personality,
                               maxLines: 4,
@@ -2494,7 +2494,7 @@ class _SandboxCharacterCard extends StatelessWidget {
                               ),
                             ),
                           const Spacer(),
-                          if (linkedWorld != null) ...[
+                          if (linkedWorld != null && appSettings.sandboxShowCharWorld) ...[
                             Container(
                               padding: const EdgeInsets.only(top: 4),
                               decoration: BoxDecoration(
