@@ -19,6 +19,7 @@ class LogEntry {
   final String body;
   final DateTime createdAt;
   final CharacterRole? role;
+  final String? customTag; // e.g. Merchant, Villain, Ally — set by long-press
   final String? source;
   final Map<String, dynamic>? meta;
   final CharacterEntry? characterData; // NEW
@@ -31,6 +32,7 @@ class LogEntry {
     required this.body,
     required this.createdAt,
     this.role,
+    this.customTag,
     this.source,
     this.meta,
     this.characterData,
@@ -44,6 +46,7 @@ class LogEntry {
     'body': body,
     'createdAt': createdAt.millisecondsSinceEpoch,
     if (role != null) 'role': role!.name,
+    if (customTag != null && customTag!.isNotEmpty) 'customTag': customTag,
     if (source != null) 'source': source,
     if (meta != null) 'meta': meta,
     if (characterData != null) 'characterData': characterData!.toJson(),
@@ -59,6 +62,7 @@ class LogEntry {
     title: j['title'] as String? ?? '',
     body: j['body'] as String? ?? '',
     createdAt: DateTime.fromMillisecondsSinceEpoch(j['createdAt'] as int),
+    customTag: j['customTag'] as String?,
     role: j['role'] != null
         ? CharacterRole.values.firstWhere(
             (r) => r.name == j['role'],
@@ -196,7 +200,23 @@ class SessionLog extends ChangeNotifier {
 
   Future<void> addWorldEntry(WorldEntry w) async {
     await load();
-    if (_entries.any((e) => e.worldData?.id == w.id)) return;
+    final existing = _entries.indexWhere((e) => e.worldData?.id == w.id);
+    if (existing != -1) {
+      // World edited in Sandbox + re-imported: refresh the stored copy
+      // instead of keeping the stale one.
+      final old = _entries[existing];
+      _entries[existing] = LogEntry(
+        id: old.id,
+        type: old.type,
+        title: w.name,
+        body: w.overview,
+        createdAt: old.createdAt,
+        worldData: w,
+      );
+      await _save();
+      notifyListeners();
+      return;
+    }
 
     _entries.insert(
       0,
@@ -208,6 +228,27 @@ class SessionLog extends ChangeNotifier {
         createdAt: DateTime.now(),
         worldData: w,
       ),
+    );
+    await _save();
+  }
+
+    Future<void> setCustomTag(LogEntry e, String? tag) async {
+    await load();
+    final i = _entries.indexWhere((x) => x.id == e.id);
+    if (i == -1) return;
+    final old = _entries[i];
+    _entries[i] = LogEntry(
+      id: old.id,
+      type: old.type,
+      title: old.title,
+      body: old.body,
+      createdAt: old.createdAt,
+      role: old.role,
+      customTag: (tag ?? '').trim().isEmpty ? null : tag!.trim(),
+      source: old.source,
+      meta: old.meta,
+      characterData: old.characterData,
+      worldData: old.worldData,
     );
     await _save();
   }
@@ -338,7 +379,7 @@ class _SessionLogViewState extends State<SessionLogView> {
           break;
       }
       if (_query.isEmpty) return true;
-      final hay = '${e.title} ${e.body} ${e.source ?? ''}'.toLowerCase();
+      final hay = '${e.title} ${e.body} ${e.source ?? ''} ${e.customTag ?? ''}'.toLowerCase();
       return hay.contains(_query);
     }).toList();
   }
@@ -410,6 +451,7 @@ class _SessionLogViewState extends State<SessionLogView> {
         body: result.body,
         createdAt: e.createdAt,
         role: result.role,
+        customTag: e.customTag,
         source: e.source,
         meta: e.meta,
         characterData: e.characterData,
@@ -668,6 +710,111 @@ class _SessionLogViewState extends State<SessionLogView> {
     );
   }
 
+    Future<void> _showTagPicker(LogEntry e) async {
+    const presets = [
+      'Main', 'Side', 'NPC',
+      'Merchant', 'Villain', 'Ally', 'Family',
+      'Royalty', 'Mentor', 'Rival', 'Deceased',
+    ];
+    final ctrl = TextEditingController(text: e.customTag ?? '');
+    final picked = await showModalBottomSheet<String?>(
+      context: context,
+      backgroundColor: cInk,
+      shape: const RoundedRectangleBorder(),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 20, right: 20, top: 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'TAG — ${e.title.toUpperCase()}',
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 10,
+                color: cGold,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8, runSpacing: 8,
+              children: presets.map((p) {
+                final active =
+                    (e.customTag ?? '').toLowerCase() == p.toLowerCase();
+                return GestureDetector(
+                  onTap: () => Navigator.pop(ctx, p),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: active
+                          ? cGold.withValues(alpha: 0.2)
+                          : Colors.transparent,
+                      border: Border.all(
+                          color: active ? cGold : cAsh),
+                    ),
+                    child: Text(p,
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: active ? cGold : cMist)),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: ctrl,
+              cursorColor: cGold,
+              style: const TextStyle(color: cParchment),
+              decoration: const InputDecoration(
+                hintText: 'Or write your own tag… e.g. Tavern Keeper',
+                hintStyle: TextStyle(color: cSmoke),
+                enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: cAsh)),
+                focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: cGold)),
+              ),
+              onSubmitted: (v) => Navigator.pop(ctx, v),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, ''),
+                  child: const Text(
+                    'CLEAR TAG',
+                    style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 10, color: cEmber),
+                  ),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => Navigator.pop(ctx, ctrl.text),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                    color: cParchment,
+                    child: const Text('SAVE TAG',
+                        style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 10, color: cVoid)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null) return;
+    await widget.log.setCustomTag(e, picked.isEmpty ? null : picked);
+  }
+
   Widget _buildEmpty() {
     final label = _query.isEmpty
         ? 'Nothing in this section yet.'
@@ -693,6 +840,9 @@ class _SessionLogViewState extends State<SessionLogView> {
     final (label, color) = _labelAndColor(e);
     return GestureDetector(
       onTap: () => setState(() => _expandedId = expanded ? null : e.id),
+      onLongPress: e.type == LogEntryType.character
+          ? () => _showTagPicker(e)
+          : null,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
@@ -887,7 +1037,7 @@ class _SessionLogViewState extends State<SessionLogView> {
     );
   }
 
-  Widget _buildRichWorld(WorldEntry w) {
+    Widget _buildRichWorld(WorldEntry w) {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
       padding: const EdgeInsets.all(10),
@@ -909,44 +1059,57 @@ class _SessionLogViewState extends State<SessionLogView> {
             ),
             const SizedBox(height: 8),
           ],
-          if (w.tone.isNotEmpty) ...[
-            const Text(
-              'TONE',
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 8,
-                color: cGold,
-                letterSpacing: 2,
-              ),
+          if (w.tone.isNotEmpty) _richSection('TONE', w.tone),
+          if (w.history.isNotEmpty) _richSection('HISTORY', w.history),
+          if (w.rules.isNotEmpty) _richSection('RULES', w.rules),
+          if (w.notes.isNotEmpty) _richSection('NOTES', w.notes),
+          if (w.factions.isNotEmpty)
+            _richSection(
+              'FACTIONS',
+              w.factions
+                  .map((f) => f.description.isEmpty
+                      ? '• ${f.name}'
+                      : '• ${f.name} — ${f.description}')
+                  .join('\n'),
             ),
-            const SizedBox(height: 4),
-            Text(
-              w.tone,
-              style: const TextStyle(fontSize: 13, color: cMist, height: 1.5),
+          if (w.locations.isNotEmpty)
+            _richSection(
+              'PLACES',
+              w.locations
+                  .map((l) => l.description.isEmpty
+                      ? '• ${l.name}'
+                      : '• ${l.name} — ${l.description}')
+                  .join('\n'),
             ),
-            const SizedBox(height: 8),
-          ],
-          if (w.history.isNotEmpty) ...[
-            const Text(
-              'HISTORY',
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 8,
-                color: cGold,
-                letterSpacing: 2,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              w.history,
-              style: const TextStyle(fontSize: 13, color: cMist, height: 1.5),
-            ),
-          ],
         ],
       ),
     );
   }
 
+  Widget _richSection(String label, String body) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 8,
+              color: cGold,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            body,
+            style: const TextStyle(fontSize: 13, color: cMist, height: 1.5),
+          ),
+        ],
+      ),
+    );
+  }
   String _preview(String s) {
     if (s.length <= 120) return s;
     return '${s.substring(0, 120)}…';
@@ -957,6 +1120,9 @@ class _SessionLogViewState extends State<SessionLogView> {
       case LogEntryType.rule:
         return ('RULE', cGold);
       case LogEntryType.character:
+        if ((e.customTag ?? '').trim().isNotEmpty) {
+          return (e.customTag!.trim().toUpperCase(), cGold);
+        }
         switch (e.role ?? CharacterRole.side) {
           case CharacterRole.main:
             return ('MAIN CHARACTER', cEmber);
