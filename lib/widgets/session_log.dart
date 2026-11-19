@@ -835,14 +835,57 @@ class _SessionLogViewState extends State<SessionLogView> {
     );
   }
 
+
+  // Long-press menu for ANY log entry: Tag (characters only) + Delete.
+  // Delete reuses the existing _deleteEntry — same confirm, same remove().
+  Future<void> _showEntryActions(LogEntry e) async {
+    final isCharacter = e.type == LogEntryType.character;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isCharacter)
+              ListTile(
+                leading: const Icon(Icons.label_outline),
+                title: const Text('Edit tag'),
+                onTap: () => Navigator.pop(ctx, 'tag'),
+              ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: const Text('Delete', style: TextStyle(color: Colors.red)),
+              subtitle: Text(
+                isCharacter
+                    ? 'Removes from CAST. Does not delete your Sandbox character.'
+                    : e.worldData != null
+                        ? 'Removes world from this session. Does not delete your Sandbox world.'
+                        : 'Removes from this session log.',
+              ),
+              onTap: () => Navigator.pop(ctx, 'delete'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.close),
+              title: const Text('Cancel'),
+              onTap: () => Navigator.pop(ctx, 'cancel'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (action == 'tag') {
+      await _showTagPicker(e);
+    } else if (action == 'delete') {
+      await _deleteEntry(e);
+    }
+  }
+
   Widget _buildEntryCard(LogEntry e) {
     final expanded = _expandedId == e.id;
     final (label, color) = _labelAndColor(e);
     return GestureDetector(
       onTap: () => setState(() => _expandedId = expanded ? null : e.id),
-      onLongPress: e.type == LogEntryType.character
-          ? () => _showTagPicker(e)
-          : null,
+      onLongPress: () => _showEntryActions(e),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
