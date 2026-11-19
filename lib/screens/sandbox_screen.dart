@@ -2077,7 +2077,7 @@ class _WorldCard extends StatelessWidget {
     onLongPress: () => _showActions(context),
     child: Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(appSettings.sandboxWorldCardSize == 'S' ? 12 : appSettings.sandboxWorldCardSize == 'L' ? 20 : 16),
       decoration: BoxDecoration(
         color: cInk,
         border: Border.all(
@@ -2092,15 +2092,15 @@ class _WorldCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   world.name,
-                  style: const TextStyle(
-                    fontSize: 18,
+                  style: TextStyle(
+                    fontSize: appSettings.sandboxWorldCardSize == 'S' ? 15 : appSettings.sandboxWorldCardSize == 'L' ? 21 : 18,
                     fontWeight: FontWeight.w300,
                     fontStyle: FontStyle.italic,
                     color: cParchment,
                   ),
                 ),
               ),
-              if (world.isDraft)
+              if (world.isDraft && appSettings.sandboxShowWorldDraft)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -2119,7 +2119,7 @@ class _WorldCard extends StatelessWidget {
                 ),
             ],
           ),
-          if (world.genre.isNotEmpty) ...[
+          if (world.genre.isNotEmpty && appSettings.sandboxShowWorldGenre) ...[
             const SizedBox(height: 4),
             Text(
               world.genre,
@@ -2131,7 +2131,7 @@ class _WorldCard extends StatelessWidget {
               ),
             ),
           ],
-          if (world.overview.isNotEmpty) ...[
+          if (world.overview.isNotEmpty && appSettings.sandboxShowWorldOverview) ...[
             const SizedBox(height: 10),
             Text(
               world.overview.length > 120
@@ -2148,7 +2148,7 @@ class _WorldCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              if (world.mapUrl != null)
+              if (world.mapUrl != null && appSettings.sandboxShowWorldMapPill)
                 GestureDetector(
                   onTap: () => showDialog(
                     context: context,
