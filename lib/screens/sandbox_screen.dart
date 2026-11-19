@@ -1557,7 +1557,7 @@ class _SandboxScreenState extends State<SandboxScreen>
             constraints: BoxConstraints(
               maxHeight: MediaQuery.of(ctx).size.height * 0.85,
             ),
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(appSettings.sandboxSparkPadding == 'compact' ? 12 : 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1603,7 +1603,7 @@ class _SandboxScreenState extends State<SandboxScreen>
                   child: SingleChildScrollView(
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(appSettings.sandboxSparkPadding == 'compact' ? 10 : 16),
                       decoration: BoxDecoration(
                         color: cVoid,
                         border: Border.all(color: cAsh),
@@ -1772,8 +1772,8 @@ class _SandboxScreenState extends State<SandboxScreen>
         const SizedBox(height: 16),
         Text(
           world['setting']!,
-          style: const TextStyle(
-            fontSize: 15,
+          style: TextStyle(
+            fontSize: appSettings.sandboxSparkTextSize == 'S' ? 13 : appSettings.sandboxSparkTextSize == 'L' ? 17 : 15,
             color: cParchment,
             fontWeight: FontWeight.w300,
             fontStyle: FontStyle.italic,
@@ -1816,8 +1816,8 @@ class _SandboxScreenState extends State<SandboxScreen>
         const SizedBox(height: 16),
         Text(
           char['appearance']!,
-          style: const TextStyle(
-            fontSize: 15,
+          style: TextStyle(
+            fontSize: appSettings.sandboxSparkTextSize == 'S' ? 13 : appSettings.sandboxSparkTextSize == 'L' ? 17 : 15,
             color: cParchment,
             fontWeight: FontWeight.w300,
             fontStyle: FontStyle.italic,
@@ -1857,8 +1857,8 @@ class _SandboxScreenState extends State<SandboxScreen>
         const SizedBox(height: 16),
         Text(
           plot,
-          style: const TextStyle(
-            fontSize: 15,
+          style: TextStyle(
+            fontSize: appSettings.sandboxSparkTextSize == 'S' ? 13 : appSettings.sandboxSparkTextSize == 'L' ? 17 : 15,
             color: cParchment,
             height: 1.7,
             fontStyle: FontStyle.italic,
@@ -1967,7 +1967,7 @@ class _SandboxScreenState extends State<SandboxScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          if (appSettings.sandboxShowSparkLabels) Text(
             label,
             style: const TextStyle(
               fontFamily: 'monospace',
@@ -1976,10 +1976,10 @@ class _SandboxScreenState extends State<SandboxScreen>
               letterSpacing: 2,
             ),
           ),
-          const SizedBox(height: 4),
+          if (appSettings.sandboxShowSparkLabels) const SizedBox(height: 4),
           Text(
             text,
-            style: const TextStyle(fontSize: 13, color: cMist, height: 1.5),
+            style: TextStyle(fontSize: appSettings.sandboxSparkTextSize == 'S' ? 11 : appSettings.sandboxSparkTextSize == 'L' ? 15 : 13, color: cMist, height: 1.5),
           ),
         ],
       ),
