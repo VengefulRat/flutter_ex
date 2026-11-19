@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import '../theme.dart';
 import '../settings.dart';
 import '../models/world.dart';
+import '../spark_content.dart';
 import '../services/firestore_service.dart';
 import '../services/sandbox_sync.dart';
 import '../widgets/colour_picker.dart';
@@ -18,6 +19,98 @@ import 'package:url_launcher/url_launcher.dart';
 
 class IdeaGenerator {
   static final _rnd = Random();
+
+  // ── SHUFFLE-BAG + MEMORY ──
+  // _draw() deals each list like a deck: no entry repeats until every
+  // other entry in that list has been dealt. That alone kills the
+  // "same world over and over" feeling — uniform Random() has no memory.
+  static final Map<String, List<int>> _decks = {};
+  static final Set<String> _seenWorlds = {};
+
+  static const Map<String, List<String>> _extraPools = {
+    'worldName': SparkExtra.worldNames,
+    'genre': SparkExtra.genres,
+    'tone': SparkExtra.tones,
+    'setting': SparkExtra.settings,
+    'hook': SparkExtra.hooks,
+    'rule': SparkExtra.rules,
+    'history': SparkExtra.histories,
+    'conflict': SparkExtra.conflicts,
+    'artifact': SparkExtra.artifacts,
+    'faction': SparkExtra.factions,
+    'location': SparkExtra.locations,
+    'firstName': SparkExtra.firstNames,
+    'lastName': SparkExtra.lastNames,
+    'occupation': SparkExtra.occupations,
+    'appearance': SparkExtra.appearances,
+    'personality': SparkExtra.personalities,
+    'quirk': SparkExtra.quirks,
+    'motivation': SparkExtra.motivations,
+    'secret': SparkExtra.secrets,
+    'flaw': SparkExtra.flaws,
+    'ability': SparkExtra.abilities,
+    'backstory': SparkExtra.backstories,
+    'relationship': SparkExtra.relationships,
+  };
+
+  static T _draw<T>(String key, List<T> pool) {
+    // Merge base + extra content for this key, so the deck is huge.
+    var full = pool;
+    if (T == String && _extraPools.containsKey(key)) {
+      full = [...pool, ...(_extraPools[key]! as List<T>)];
+    }
+    var deck = _decks[key];
+    if (deck == null || deck.isEmpty) {
+      deck = List<int>.generate(full.length, (i) => i)..shuffle(_rnd);
+      _decks[key] = deck;
+    }
+    return full[deck.removeLast()];
+  }
+
+  // Composite twists — multiply the smallest pools without hand-writing
+  // hundreds of new entries. 5 conflicts x 12 twists = 60 conflicts.
+  static const _conflictTwists = [
+    'And nobody believes it is happening.',
+    'And the people profiting from it will kill to keep it going.',
+    'But it only affects the poor — so far.',
+    'And it is accelerating.',
+    'And the last person who tried to fix it vanished.',
+    'But fixing it would break something worse.',
+    'And both sides think they are the heroes.',
+    'And the truth is being rewritten as it happens.',
+    'But the deadline is measured in days, not years.',
+    'And it started as an accident.',
+    'And it is contagious.',
+    'But the cure is forbidden.',
+  ];
+  static const _artifactOrigins = [
+    'It was stolen from a god.',
+    'It was built by accident.',
+    'It was buried to hide it forever.',
+    'It chose its last owner — and ruined them.',
+    'It only works for someone who has lost everything.',
+    'It was split in two, and the other half is hunting it.',
+    'It remembers every hand that held it.',
+    'It was made as a joke. It stopped being funny.',
+    'It only wakes up when it is needed most.',
+    'It is slowly eating its owner.',
+    'It was forged from the thing it was meant to destroy.',
+    'Nobody knows who made it. Everybody wants it.',
+  ];
+  static const _historyAftermaths = [
+    'The survivors still do not talk about it.',
+    'The official story is a lie.',
+    'Its ruins are now sacred ground.',
+    'Someone is trying to make it happen again.',
+    'The children of the losers still carry the debt.',
+    'It left a scar you can see from orbit.',
+    'The winners wrote the songs. The losers wrote the maps.',
+    'Nobody knows why it stopped — only that it did.',
+    'It is still happening, just slower.',
+    'The monuments lie about who started it.',
+    'Its ghosts still vote in the old capital.',
+    'The peace that followed was worse than the war.',
+  ];
 
   // ── WORLD LISTS ──
   static const _worldNames = [
@@ -634,60 +727,66 @@ class IdeaGenerator {
   ];
 
   // ── GETTERS ──
-  static String get randomWorldName =>
-      _worldNames[_rnd.nextInt(_worldNames.length)];
-  static String get randomGenre => _genres[_rnd.nextInt(_genres.length)];
-  static String get randomTone => _tones[_rnd.nextInt(_tones.length)];
-  static String get randomSetting =>
-      _worldSettings[_rnd.nextInt(_worldSettings.length)];
-  static String get randomHook => _worldHooks[_rnd.nextInt(_worldHooks.length)];
-  static String get randomRule => _worldRules[_rnd.nextInt(_worldRules.length)];
+  static String get randomWorldName => _draw('worldName', _worldNames);
+  static String get randomGenre => _draw('genre', _genres);
+  static String get randomTone => _draw('tone', _tones);
+  static String get randomSetting => _draw('setting', _worldSettings);
+  static String get randomHook => _draw('hook', _worldHooks);
+  static String get randomRule => _draw('rule', _worldRules);
   static String get randomHistory =>
-      _worldHistory[_rnd.nextInt(_worldHistory.length)];
+      '${_draw('history', _worldHistory)} ${_draw('historyAfter', _historyAftermaths)}';
   static String get randomConflict =>
-      _conflicts[_rnd.nextInt(_conflicts.length)];
+      '${_draw('conflict', _conflicts)} ${_draw('conflictTwist', _conflictTwists)}';
   static String get randomArtifact =>
-      _artifacts[_rnd.nextInt(_artifacts.length)];
-  static String get randomFaction => _factions[_rnd.nextInt(_factions.length)];
-  static String get randomLocation =>
-      _locations[_rnd.nextInt(_locations.length)];
+      '${_draw('artifact', _artifacts)} — ${_draw('artifactOrigin', _artifactOrigins)}';
+  static String get randomFaction => _draw('faction', _factions);
+  static String get randomLocation => _draw('location', _locations);
 
   static String get randomCharName =>
-      '${_firstNames[_rnd.nextInt(_firstNames.length)]} ${_lastNames[_rnd.nextInt(_lastNames.length)]}';
-  static String get randomOccupation =>
-      _occupations[_rnd.nextInt(_occupations.length)];
-  static String get randomPronouns => _pronouns[_rnd.nextInt(_pronouns.length)];
-  static String get randomAge => _ages[_rnd.nextInt(_ages.length)];
-  static String get randomAppearance =>
-      _appearances[_rnd.nextInt(_appearances.length)];
-  static String get randomPersonality =>
-      _personalities[_rnd.nextInt(_personalities.length)];
-  static String get randomQuirk => _quirks[_rnd.nextInt(_quirks.length)];
-  static String get randomMotivation =>
-      _motivations[_rnd.nextInt(_motivations.length)];
-  static String get randomSecret => _secrets[_rnd.nextInt(_secrets.length)];
-  static String get randomFlaw => _flaws[_rnd.nextInt(_flaws.length)];
-  static String get randomAbility =>
-      _abilities[_rnd.nextInt(_abilities.length)];
-  static String get randomBackstory =>
-      _backstories[_rnd.nextInt(_backstories.length)];
+      '${_draw('firstName', _firstNames)} ${_draw('lastName', _lastNames)}';
+  static String get randomOccupation => _draw('occupation', _occupations);
+  static String get randomPronouns => _draw('pronouns', _pronouns);
+  static String get randomAge => _draw('age', _ages);
+  static String get randomAppearance => _draw('appearance', _appearances);
+  static String get randomPersonality => _draw('personality', _personalities);
+  static String get randomQuirk => _draw('quirk', _quirks);
+  static String get randomMotivation => _draw('motivation', _motivations);
+  static String get randomSecret => _draw('secret', _secrets);
+  static String get randomFlaw => _draw('flaw', _flaws);
+  static String get randomAbility => _draw('ability', _abilities);
+  static String get randomBackstory => _draw('backstory', _backstories);
   static String get randomRelationship =>
-      _relationships[_rnd.nextInt(_relationships.length)];
+      _draw('relationship', _relationships);
 
   // ── COMPOSITE GENERATORS ──
-  static Map<String, String> generateWorld() => {
-    'name': randomWorldName,
-    'genre': randomGenre,
-    'tone': randomTone,
-    'setting': randomSetting,
-    'hook': randomHook,
-    'rule': randomRule,
-    'history': randomHistory,
-    'conflict': randomConflict,
-    'artifact': randomArtifact,
-    'faction': randomFaction,
-    'location': randomLocation,
-  };
+  static Map<String, String> generateWorld() {
+    Map<String, String> world = {};
+    String fingerprint = '';
+    // Re-deal if this exact world was already generated. Cap the retries
+    // so a tiny pool can never hang the UI — after 30 tries we accept it.
+    for (var attempt = 0; attempt < 30; attempt++) {
+      world = {
+        'name': randomWorldName,
+        'genre': randomGenre,
+        'tone': randomTone,
+        'setting': randomSetting,
+        'hook': randomHook,
+        'rule': randomRule,
+        'history': randomHistory,
+        'conflict': randomConflict,
+        'artifact': randomArtifact,
+        'faction': randomFaction,
+        'location': randomLocation,
+      };
+      fingerprint = world.values.join('|');
+      if (!_seenWorlds.contains(fingerprint)) break;
+    }
+    _seenWorlds.add(fingerprint);
+    if (_seenWorlds.length > 50) {
+      _seenWorlds.remove(_seenWorlds.first);
+    }
+    return world;
+  }
 
   static Map<String, String> generateCharacter() => {
     'name': randomCharName,
