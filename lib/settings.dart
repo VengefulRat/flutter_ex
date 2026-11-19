@@ -106,6 +106,7 @@ class AppSettings extends ChangeNotifier {
   static const _kRpBgColor = 'as_rp_bg_color';
   static const _kRpParticlesOn = 'as_rp_particles_on';
   static const _kRpPostSize = 'as_rp_post_size';
+  static const _kRpDisplayMode = 'as_rp_display_mode';
   static const _kRpEditorSize = 'as_rp_editor_size';
   static const _kRpShowLogSidebar = 'as_rp_show_log_sidebar';
   static const _kRpShowToolsSidebar = 'as_rp_show_tools_sidebar';
@@ -299,6 +300,7 @@ class AppSettings extends ChangeNotifier {
   Color _rpBgColor = const Color(0xFF050810);
   bool _rpParticlesOn = true;
   String _rpPostSize = 'M';
+  String _rpDisplayMode = 'cards';
   String _rpEditorSize = 'M';
   bool _rpShowLogSidebar = true;
   bool _rpShowToolsSidebar = true;
@@ -357,6 +359,7 @@ class AppSettings extends ChangeNotifier {
     final rpBg = p.getInt(_kRpBgColor); if (rpBg != null) _rpBgColor = Color(rpBg);
     _rpParticlesOn = p.getBool(_kRpParticlesOn) ?? true;
     _rpPostSize = p.getString(_kRpPostSize) ?? 'M';
+    _rpDisplayMode = p.getString(_kRpDisplayMode) ?? 'cards';
     _rpEditorSize = p.getString(_kRpEditorSize) ?? 'M';
     _rpShowLogSidebar = p.getBool(_kRpShowLogSidebar) ?? true;
     _rpShowToolsSidebar = p.getBool(_kRpShowToolsSidebar) ?? true;
@@ -578,6 +581,7 @@ class AppSettings extends ChangeNotifier {
     'rpBgColor': _rpBgColor.toARGB32(),
     'rpParticlesOn': _rpParticlesOn,
     'rpPostSize': _rpPostSize,
+    'rpDisplayMode': _rpDisplayMode,
     'rpEditorSize': _rpEditorSize,
     'rpShowLogSidebar': _rpShowLogSidebar,
     'rpShowToolsSidebar': _rpShowToolsSidebar,
@@ -636,6 +640,7 @@ class AppSettings extends ChangeNotifier {
     if (j['rpBgColor'] is int) _rpBgColor = Color(j['rpBgColor'] as int);
     _rpParticlesOn = j['rpParticlesOn'] as bool? ?? _rpParticlesOn;
     _rpPostSize = j['rpPostSize'] as String? ?? _rpPostSize;
+    _rpDisplayMode = j['rpDisplayMode'] as String? ?? _rpDisplayMode;
     _rpEditorSize = j['rpEditorSize'] as String? ?? _rpEditorSize;
     _rpShowLogSidebar = j['rpShowLogSidebar'] as bool? ?? _rpShowLogSidebar;
     _rpShowToolsSidebar = j['rpShowToolsSidebar'] as bool? ?? _rpShowToolsSidebar;
@@ -987,6 +992,7 @@ class AppSettings extends ChangeNotifier {
   Color get rpBgColor => _rpBgColor;
   bool get rpParticlesOn => _rpParticlesOn;
   String get rpPostSize => _rpPostSize;
+  String get rpDisplayMode => _rpDisplayMode;
   String get rpEditorSize => _rpEditorSize;
   bool get rpShowLogSidebar => _rpShowLogSidebar;
   bool get rpShowToolsSidebar => _rpShowToolsSidebar;
@@ -1054,6 +1060,7 @@ class AppSettings extends ChangeNotifier {
   Future<void> setRpBgColor(Color v) async { _rpBgColor = v; (await SharedPreferences.getInstance()).setInt(_kRpBgColor, v.toARGB32()); _touch(); notifyListeners(); }
   Future<void> setRpParticlesOn(bool v) async { _rpParticlesOn = v; (await SharedPreferences.getInstance()).setBool(_kRpParticlesOn, v); _touch(); notifyListeners(); }
   Future<void> setRpPostSize(String v) async { _rpPostSize = v; (await SharedPreferences.getInstance()).setString(_kRpPostSize, v); _touch(); notifyListeners(); }
+  Future<void> setRpDisplayMode(String v) async { _rpDisplayMode = v; (await SharedPreferences.getInstance()).setString(_kRpDisplayMode, v); _touch(); notifyListeners(); }
   Future<void> setRpEditorSize(String v) async { _rpEditorSize = v; (await SharedPreferences.getInstance()).setString(_kRpEditorSize, v); _touch(); notifyListeners(); }
   Future<void> setRpShowLogSidebar(bool v) async { _rpShowLogSidebar = v; (await SharedPreferences.getInstance()).setBool(_kRpShowLogSidebar, v); _touch(); notifyListeners(); }
   Future<void> setRpShowToolsSidebar(bool v) async { _rpShowToolsSidebar = v; (await SharedPreferences.getInstance()).setBool(_kRpShowToolsSidebar, v); _touch(); notifyListeners(); }
@@ -1303,6 +1310,7 @@ class AppSettings extends ChangeNotifier {
     _rpBgColor = const Color(0xFF050810);
     _rpParticlesOn = true;
     _rpPostSize = 'M';
+    _rpDisplayMode = 'cards';
     _rpEditorSize = 'M';
     _rpShowLogSidebar = true;
     _rpShowToolsSidebar = true;
@@ -1370,6 +1378,7 @@ class AppSettings extends ChangeNotifier {
     await p.remove(_kRpBgColor);
     await p.remove(_kRpParticlesOn);
     await p.remove(_kRpPostSize);
+    await p.remove(_kRpDisplayMode);
     await p.remove(_kRpEditorSize);
     await p.remove(_kRpShowLogSidebar);
     await p.remove(_kRpShowToolsSidebar);

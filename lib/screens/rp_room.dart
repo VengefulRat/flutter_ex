@@ -865,6 +865,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     super.initState();
     _sessionTitle = widget.title;
     _aiMoodEnabled = appSettings.aiMood;
+    _displayMode = RPDisplayMode.values.firstWhere((m) => m.name == appSettings.rpDisplayMode, orElse: () => RPDisplayMode.cards);
     appSettings.addListener(_onSettingsChanged);
     if (widget.sessionId.isNotEmpty && _sessionTitle.isEmpty) {
       _loadSessionTitle();
@@ -1095,7 +1096,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   void _onSettingsChanged() {
     if (!mounted) return;
-    setState(() { _aiMoodEnabled = appSettings.aiMood; _initParticles(); });
+    setState(() { _aiMoodEnabled = appSettings.aiMood;
+    _displayMode = RPDisplayMode.values.firstWhere((m) => m.name == appSettings.rpDisplayMode, orElse: () => RPDisplayMode.cards); _initParticles(); });
   }
 
   String get _draftKey =>
@@ -4493,10 +4495,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     final active = _displayMode == mode;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() {
-          _displayMode = mode;
-          _settingsOpen = false;
-        }),
+        onTap: () { appSettings.setRpDisplayMode(mode.name); setState(() { _displayMode = mode; _settingsOpen = false; }); },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
