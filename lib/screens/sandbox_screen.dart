@@ -3378,7 +3378,7 @@ class _CharacterEditorScreenState extends State<CharacterEditorScreen> {
                 ),
                 const SizedBox(width: 12),
 
-                GestureDetector(
+                if (appSettings.sandboxShowCharAvatar) GestureDetector(
                   onTap: _uploading ? null : _pickImage,
                   child: Container(
                     width: 36,
@@ -3412,7 +3412,7 @@ class _CharacterEditorScreenState extends State<CharacterEditorScreen> {
                   ),
                 ),
 
-                GestureDetector(
+                if (appSettings.sandboxShowCharAccent) GestureDetector(
                   onTap: _pickAccentColor,
                   child: Container(
                     width: 20,
@@ -3476,7 +3476,7 @@ class _CharacterEditorScreenState extends State<CharacterEditorScreen> {
             ),
             child: Row(
               children: [
-                GestureDetector(
+                if (appSettings.sandboxShowCharTypeToggle) GestureDetector(
                   onTap: () => setState(
                     () => _working.type =
                         _working.type == CharacterType.playerCharacter
@@ -3542,7 +3542,7 @@ class _CharacterEditorScreenState extends State<CharacterEditorScreen> {
               ],
             ),
           ),
-          if (widget.worlds.isNotEmpty)
+          if (widget.worlds.isNotEmpty && appSettings.sandboxShowCharWorldRow)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: const BoxDecoration(
@@ -3583,14 +3583,14 @@ class _CharacterEditorScreenState extends State<CharacterEditorScreen> {
             child: ScrollConfiguration(
               behavior: NoGlowBehavior(),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.all(appSettings.sandboxEditorPadding == 'compact' ? 12 : 20),
                 child: Column(
                   children: [
-                    _field('Appearance', _appearanceCtrl, maxLines: 4),
-                    _field('Personality', _personalityCtrl, maxLines: 4),
-                    _field('Backstory', _backstoryCtrl, maxLines: 6),
-                    _field('Relationships', _relationshipsCtrl, maxLines: 4),
-                    _field('Notes', _notesCtrl, maxLines: 4),
+                    if (appSettings.sandboxShowCharAppearance) _field('Appearance', _appearanceCtrl, maxLines: 4),
+                    if (appSettings.sandboxShowCharPersonalityField) _field('Personality', _personalityCtrl, maxLines: 4),
+                    if (appSettings.sandboxShowCharBackstory) _field('Backstory', _backstoryCtrl, maxLines: 6),
+                    if (appSettings.sandboxShowCharRelationships) _field('Relationships', _relationshipsCtrl, maxLines: 4),
+                    if (appSettings.sandboxShowCharNotes) _field('Notes', _notesCtrl, maxLines: 4),
                   ],
                 ),
               ),
