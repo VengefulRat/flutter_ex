@@ -618,15 +618,19 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
     final accent = isPinned
         ? config.color
         : (msg.isUser ? cGold : cSmoke);
+    final msgSize = appSettings.preludeMsgSize == 'S' ? 12.0 : appSettings.preludeMsgSize == 'L' ? 16.0 : 14.0;
+    final compact = appSettings.preludeDensity == 'compact';
+    final style = appSettings.preludeMsgStyle;
 
     return GestureDetector(
       onLongPress: () => _showPinMenu(msg),
       behavior: HitTestBehavior.opaque,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: EdgeInsets.only(bottom: compact ? 4 : 10),
         decoration: BoxDecoration(
-          color: const Color(0xFF08080A).withValues(alpha: 0.82),
-          border: Border(
+          color: style == 'compact' ? Colors.transparent : const Color(0xFF08080A).withValues(alpha: 0.82),
+          borderRadius: style == 'bubbles' ? BorderRadius.circular(14) : null,
+          border: style == 'compact' ? null : Border(
             left: BorderSide(color: accent, width: isPinned ? 2 : 1),
             top: const BorderSide(color: cAsh),
             right: const BorderSide(color: cAsh),
@@ -637,10 +641,10 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+              padding: EdgeInsets.fromLTRB(12, compact ? 6 : 10, 12, 6),
               child: Row(
                 children: [
-                  if (isPinned) ...[
+                  if (isPinned && appSettings.preludeShowPinLabel) ...[
                     Icon(config.icon, size: 12, color: config.color),
                     const SizedBox(width: 6),
                     Text(
@@ -656,7 +660,7 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
                   ],
                   Expanded(
                     child: Text(
-                      msg.author,
+                      appSettings.preludeShowAuthor ? msg.author : '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -673,7 +677,7 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
                     ),
                   ),
                   Text(
-                    _timeLabel(msg.timestamp),
+                    appSettings.preludeShowTimestamp ? _timeLabel(msg.timestamp) : '',
                     style: TextStyle(
                       fontFamily: 'monospace',
                       fontSize: 9,
@@ -685,11 +689,11 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              padding: EdgeInsets.fromLTRB(12, 0, 12, compact ? 6 : 12),
               child: Text(
                 msg.content,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: msgSize,
                   color: appSettings.textColourFor('prelude') ?? cParchment,
                   height: 1.6,
                   fontStyle: FontStyle.italic,
