@@ -851,7 +851,7 @@ class _SandboxScreenState extends State<SandboxScreen>
         return Stack(
           children: [
             // Left Button (Decode JSON)
-            if (_tab.index == 1)
+            if (_tab.index == 1 && appSettings.sandboxShowDecode)
               Positioned(
                 left: 16,
                 bottom: 16,
@@ -865,7 +865,7 @@ class _SandboxScreenState extends State<SandboxScreen>
               ),
 
             // Middle Button (Visit Deorum)
-            if (_tab.index == 1)
+            if (_tab.index == 1 && appSettings.sandboxShowDeorum)
               Positioned(
                 left: 0,
                 right: 0,
@@ -918,7 +918,7 @@ class _SandboxScreenState extends State<SandboxScreen>
               ),
 
             // Right Button (+)
-            Positioned(
+            if (appSettings.sandboxShowFab) Positioned(
               right: 16,
               bottom: 16,
               child: GestureDetector(
@@ -1069,17 +1069,17 @@ class _SandboxScreenState extends State<SandboxScreen>
           child: const Icon(Icons.arrow_back_ios, color: cSmoke, size: 16),
         ),
         const SizedBox(width: 12),
-        const Text(
+        if (appSettings.sandboxHeaderShow) Text(
           'Sandbox',
           style: TextStyle(
-            fontSize: 20,
+            fontSize: appSettings.sandboxHeaderSize == 'S' ? 17 : appSettings.sandboxHeaderSize == 'L' ? 23 : 20,
             fontWeight: FontWeight.w300,
             fontStyle: FontStyle.italic,
             color: cParchment,
           ),
         ),
         const Spacer(),
-        GestureDetector(
+        if (appSettings.sandboxShowSpark) GestureDetector(
           onTap: _showIdeaGenerator,
           child: Container(
             margin: const EdgeInsets.only(right: 16),
@@ -1114,7 +1114,7 @@ class _SandboxScreenState extends State<SandboxScreen>
             child: const Icon(Icons.tune, color: cSmoke, size: 14),
           ),
         ),
-        const Text(
+        if (appSettings.sandboxHeaderShow) const Text(
           'L o r e',
           style: TextStyle(
             fontSize: 11,
@@ -1137,9 +1137,9 @@ class _SandboxScreenState extends State<SandboxScreen>
       indicatorWeight: 1,
       labelColor: cGold,
       unselectedLabelColor: cSmoke,
-      labelStyle: const TextStyle(
+      labelStyle: TextStyle(
         fontFamily: 'monospace',
-        fontSize: 10,
+        fontSize: appSettings.sandboxTabSize == 'S' ? 8 : appSettings.sandboxTabSize == 'L' ? 12 : 10,
         letterSpacing: 3,
       ),
       tabs: const [
