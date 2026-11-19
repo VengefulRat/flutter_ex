@@ -555,70 +555,32 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
   }
 
   Widget _buildTopBar() {
+    final size = appSettings.preludeHeaderSize;
+    final nameSize = size == 'S' ? 13.0 : size == 'L' ? 19.0 : 16.0;
+    final padV = size == 'S' ? 8.0 : size == 'L' ? 16.0 : 12.0;
+    final accent = appSettings.preludeHeaderAccent;
+    final backBtn = GestureDetector(onTap: () => Navigator.of(context).pop(), child: const Icon(Icons.arrow_back_ios, color: cSmoke, size: 16));
+    final beginBtn = GestureDetector(onTap: () => _confirmLaunchRP(), child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), color: cParchment, child: const Text('Begin RP →', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cVoid, letterSpacing: 1))));
+    final menuBtn = GestureDetector(onTap: _showPreludeMenu, child: const Padding(padding: EdgeInsets.all(6), child: Icon(Icons.more_horiz, size: 18, color: cSmoke)));
+    if (!appSettings.preludeHeaderShow) {
+      return Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: cAsh))), child: Row(children: [backBtn, const Spacer(), beginBtn, const SizedBox(width: 8), menuBtn]));
+    }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: cAsh)),
-      ),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: padV),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: cAsh))),
       child: Row(children: [
-        GestureDetector(
-          onTap: () => Navigator.of(context).pop(),
-          child: const Icon(Icons.arrow_back_ios, color: cSmoke, size: 16),
-        ),
+        backBtn,
         const SizedBox(width: 12),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(
-            widget.partnerName,
-            style: const TextStyle(
-              fontSize: 16, fontWeight: FontWeight.w300,
-              fontStyle: FontStyle.italic, color: cParchment,
-            ),
-          ),
-          Text(
-            widget.genre,
-            style: const TextStyle(
-              fontFamily: 'monospace', fontSize: 9,
-              color: cSmoke, letterSpacing: 2,
-            ),
-          ),
+          Text(widget.partnerName, style: TextStyle(fontSize: nameSize, fontWeight: FontWeight.w300, fontStyle: FontStyle.italic, color: cParchment)),
+          Text(widget.genre, style: const TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 2)),
         ]),
         const Spacer(),
-        // Brainstorm label
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(border: Border.all(color: cIce.withValues(alpha: 0.4))),
-          child: const Text(
-            'PRELUDE',
-            style: TextStyle(
-              fontFamily: 'monospace', fontSize: 8,
-              color: cIce, letterSpacing: 3,
-            ),
-          ),
-        ),
+        Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(border: Border.all(color: accent.withValues(alpha: 0.4))), child: Text('PRELUDE', style: TextStyle(fontFamily: 'monospace', fontSize: 8, color: accent, letterSpacing: 3))),
         const SizedBox(width: 12),
-        // Launch RP button
-        GestureDetector(
-          onTap: () => _confirmLaunchRP(),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            color: cParchment,
-            child: const Text(
-              'Begin RP →',
-              style: TextStyle(
-                fontFamily: 'monospace', fontSize: 9,
-                color: cVoid, letterSpacing: 1,
-              ),
-            ),
-          ),
-        ),
+        beginBtn,
         const SizedBox(width: 8),
-        GestureDetector(
-          onTap: _showPreludeMenu,
-          child: const Padding(
-            padding: EdgeInsets.all(6),
-            child: Icon(Icons.more_horiz, size: 18, color: cSmoke),
-          ),
-        ),
+        menuBtn,
       ]),
     );
   }
