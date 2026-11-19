@@ -130,6 +130,26 @@ class AppSettings extends ChangeNotifier {
   static const _kPreludePinFilter = 'as_prelude_pin_filter';
   static const _kPreludeInputSize = 'as_prelude_input_size';
   static const _kPreludeChoiceSize = 'as_prelude_choice_size';
+  static const _kDiaryHeaderShow = 'as_diary_header_show';
+  static const _kDiaryHeaderSize = 'as_diary_header_size';
+  static const _kDiaryBgMode = 'as_diary_bg_mode';
+  static const _kDiaryBgColor = 'as_diary_bg_color';
+  static const _kDiaryShowReminder = 'as_diary_show_reminder';
+  static const _kDiaryShowStreak = 'as_diary_show_streak';
+  static const _kDiaryCardSize = 'as_diary_card_size';
+  static const _kDiaryShowAuthor = 'as_diary_show_author';
+  static const _kDiaryShowStats = 'as_diary_show_stats';
+  static const _kDiaryShowAvatars = 'as_diary_show_avatars';
+  static const _kDiaryEntryHeaderShow = 'as_diary_entry_header_show';
+  static const _kDiaryEntryHeaderSize = 'as_diary_entry_header_size';
+  static const _kDiaryShowGenreBar = 'as_diary_show_genre_bar';
+  static const _kDiaryChapterSize = 'as_diary_chapter_size';
+  static const _kDiaryShowPreview = 'as_diary_show_preview';
+  static const _kDiaryShowProgress = 'as_diary_show_progress';
+  static const _kDiaryReadingSize = 'as_diary_reading_size';
+  static const _kDiaryLineHeight = 'as_diary_line_height';
+  static const _kDiaryShowToolbar = 'as_diary_show_toolbar';
+  static const _kDiaryEditorPadding = 'as_diary_editor_padding';
   static const _kProfileGlowEnabled = 'as_profile_glow_enabled';
   static const _kAiMood = 'as_ai_mood';
   static const _kNotifPost = 'as_notif_post';
@@ -342,6 +362,26 @@ class AppSettings extends ChangeNotifier {
   String _preludePinFilter = 'all';
   String _preludeInputSize = 'M';
   String _preludeChoiceSize = 'M';
+  bool _diaryHeaderShow = true;
+  String _diaryHeaderSize = 'M';
+  String _diaryBgMode = 'global';
+  Color _diaryBgColor = const Color(0xFF050810);
+  bool _diaryShowReminder = true;
+  bool _diaryShowStreak = true;
+  String _diaryCardSize = 'M';
+  bool _diaryShowAuthor = true;
+  bool _diaryShowStats = true;
+  bool _diaryShowAvatars = true;
+  bool _diaryEntryHeaderShow = true;
+  String _diaryEntryHeaderSize = 'M';
+  bool _diaryShowGenreBar = true;
+  String _diaryChapterSize = 'M';
+  bool _diaryShowPreview = true;
+  bool _diaryShowProgress = true;
+  String _diaryReadingSize = 'M';
+  String _diaryLineHeight = 'comfortable';
+  bool _diaryShowToolbar = true;
+  String _diaryEditorPadding = 'comfortable';
   bool _aiMood = true;
   bool _notifNewPost = true;
   bool _notifRpPost = true;
@@ -419,6 +459,26 @@ class AppSettings extends ChangeNotifier {
     _preludePinFilter = p.getString(_kPreludePinFilter) ?? 'all';
     _preludeInputSize = p.getString(_kPreludeInputSize) ?? 'M';
     _preludeChoiceSize = p.getString(_kPreludeChoiceSize) ?? 'M';
+    _diaryHeaderShow = p.getBool(_kDiaryHeaderShow) ?? true;
+    _diaryHeaderSize = p.getString(_kDiaryHeaderSize) ?? 'M';
+    _diaryBgMode = p.getString(_kDiaryBgMode) ?? 'global';
+    final dBg = p.getInt(_kDiaryBgColor); if (dBg != null) _diaryBgColor = Color(dBg);
+    _diaryShowReminder = p.getBool(_kDiaryShowReminder) ?? true;
+    _diaryShowStreak = p.getBool(_kDiaryShowStreak) ?? true;
+    _diaryCardSize = p.getString(_kDiaryCardSize) ?? 'M';
+    _diaryShowAuthor = p.getBool(_kDiaryShowAuthor) ?? true;
+    _diaryShowStats = p.getBool(_kDiaryShowStats) ?? true;
+    _diaryShowAvatars = p.getBool(_kDiaryShowAvatars) ?? true;
+    _diaryEntryHeaderShow = p.getBool(_kDiaryEntryHeaderShow) ?? true;
+    _diaryEntryHeaderSize = p.getString(_kDiaryEntryHeaderSize) ?? 'M';
+    _diaryShowGenreBar = p.getBool(_kDiaryShowGenreBar) ?? true;
+    _diaryChapterSize = p.getString(_kDiaryChapterSize) ?? 'M';
+    _diaryShowPreview = p.getBool(_kDiaryShowPreview) ?? true;
+    _diaryShowProgress = p.getBool(_kDiaryShowProgress) ?? true;
+    _diaryReadingSize = p.getString(_kDiaryReadingSize) ?? 'M';
+    _diaryLineHeight = p.getString(_kDiaryLineHeight) ?? 'comfortable';
+    _diaryShowToolbar = p.getBool(_kDiaryShowToolbar) ?? true;
+    _diaryEditorPadding = p.getString(_kDiaryEditorPadding) ?? 'comfortable';
     _notifNewPost = p.getBool(_kNotifPost) ?? true;
     _notifRpPost = p.getBool('as_notif_rp_post') ?? true;
     _notifOoc = p.getBool('as_notif_ooc') ?? true;
@@ -659,6 +719,26 @@ class AppSettings extends ChangeNotifier {
     'preludePinFilter': _preludePinFilter,
     'preludeInputSize': _preludeInputSize,
     'preludeChoiceSize': _preludeChoiceSize,
+    'diaryHeaderShow': _diaryHeaderShow,
+    'diaryHeaderSize': _diaryHeaderSize,
+    'diaryBgMode': _diaryBgMode,
+    'diaryBgColor': _diaryBgColor.toARGB32(),
+    'diaryShowReminder': _diaryShowReminder,
+    'diaryShowStreak': _diaryShowStreak,
+    'diaryCardSize': _diaryCardSize,
+    'diaryShowAuthor': _diaryShowAuthor,
+    'diaryShowStats': _diaryShowStats,
+    'diaryShowAvatars': _diaryShowAvatars,
+    'diaryEntryHeaderShow': _diaryEntryHeaderShow,
+    'diaryEntryHeaderSize': _diaryEntryHeaderSize,
+    'diaryShowGenreBar': _diaryShowGenreBar,
+    'diaryChapterSize': _diaryChapterSize,
+    'diaryShowPreview': _diaryShowPreview,
+    'diaryShowProgress': _diaryShowProgress,
+    'diaryReadingSize': _diaryReadingSize,
+    'diaryLineHeight': _diaryLineHeight,
+    'diaryShowToolbar': _diaryShowToolbar,
+    'diaryEditorPadding': _diaryEditorPadding,
     'animatedBorderThickness': _animatedBorderThickness,
     'animatedBorderWaviness': _animatedBorderWaviness,
     'animatedBorderSpeed': _animatedBorderSpeed,
@@ -736,6 +816,26 @@ class AppSettings extends ChangeNotifier {
     _preludePinFilter = j['preludePinFilter'] as String? ?? _preludePinFilter;
     _preludeInputSize = j['preludeInputSize'] as String? ?? _preludeInputSize;
     _preludeChoiceSize = j['preludeChoiceSize'] as String? ?? _preludeChoiceSize;
+    _diaryHeaderShow = j['diaryHeaderShow'] as bool? ?? _diaryHeaderShow;
+    _diaryHeaderSize = j['diaryHeaderSize'] as String? ?? _diaryHeaderSize;
+    _diaryBgMode = j['diaryBgMode'] as String? ?? _diaryBgMode;
+    if (j['diaryBgColor'] is int) _diaryBgColor = Color(j['diaryBgColor'] as int);
+    _diaryShowReminder = j['diaryShowReminder'] as bool? ?? _diaryShowReminder;
+    _diaryShowStreak = j['diaryShowStreak'] as bool? ?? _diaryShowStreak;
+    _diaryCardSize = j['diaryCardSize'] as String? ?? _diaryCardSize;
+    _diaryShowAuthor = j['diaryShowAuthor'] as bool? ?? _diaryShowAuthor;
+    _diaryShowStats = j['diaryShowStats'] as bool? ?? _diaryShowStats;
+    _diaryShowAvatars = j['diaryShowAvatars'] as bool? ?? _diaryShowAvatars;
+    _diaryEntryHeaderShow = j['diaryEntryHeaderShow'] as bool? ?? _diaryEntryHeaderShow;
+    _diaryEntryHeaderSize = j['diaryEntryHeaderSize'] as String? ?? _diaryEntryHeaderSize;
+    _diaryShowGenreBar = j['diaryShowGenreBar'] as bool? ?? _diaryShowGenreBar;
+    _diaryChapterSize = j['diaryChapterSize'] as String? ?? _diaryChapterSize;
+    _diaryShowPreview = j['diaryShowPreview'] as bool? ?? _diaryShowPreview;
+    _diaryShowProgress = j['diaryShowProgress'] as bool? ?? _diaryShowProgress;
+    _diaryReadingSize = j['diaryReadingSize'] as String? ?? _diaryReadingSize;
+    _diaryLineHeight = j['diaryLineHeight'] as String? ?? _diaryLineHeight;
+    _diaryShowToolbar = j['diaryShowToolbar'] as bool? ?? _diaryShowToolbar;
+    _diaryEditorPadding = j['diaryEditorPadding'] as String? ?? _diaryEditorPadding;
     }
     if (j['profileGlowColor'] is int) {
       _profileGlowColor = Color(j['profileGlowColor'] as int);
@@ -1106,6 +1206,26 @@ class AppSettings extends ChangeNotifier {
   String get preludePinFilter => _preludePinFilter;
   String get preludeInputSize => _preludeInputSize;
   String get preludeChoiceSize => _preludeChoiceSize;
+  bool get diaryHeaderShow => _diaryHeaderShow;
+  String get diaryHeaderSize => _diaryHeaderSize;
+  String get diaryBgMode => _diaryBgMode;
+  Color get diaryBgColor => _diaryBgColor;
+  bool get diaryShowReminder => _diaryShowReminder;
+  bool get diaryShowStreak => _diaryShowStreak;
+  String get diaryCardSize => _diaryCardSize;
+  bool get diaryShowAuthor => _diaryShowAuthor;
+  bool get diaryShowStats => _diaryShowStats;
+  bool get diaryShowAvatars => _diaryShowAvatars;
+  bool get diaryEntryHeaderShow => _diaryEntryHeaderShow;
+  String get diaryEntryHeaderSize => _diaryEntryHeaderSize;
+  bool get diaryShowGenreBar => _diaryShowGenreBar;
+  String get diaryChapterSize => _diaryChapterSize;
+  bool get diaryShowPreview => _diaryShowPreview;
+  bool get diaryShowProgress => _diaryShowProgress;
+  String get diaryReadingSize => _diaryReadingSize;
+  String get diaryLineHeight => _diaryLineHeight;
+  bool get diaryShowToolbar => _diaryShowToolbar;
+  String get diaryEditorPadding => _diaryEditorPadding;
   bool isBlockHidden(String id) => _hiddenBlocks.contains(id);
 
   Future<void> setShowLogo(bool v) async {
@@ -1192,6 +1312,26 @@ class AppSettings extends ChangeNotifier {
   Future<void> setPreludePinFilter(String v) async { _preludePinFilter = v; (await SharedPreferences.getInstance()).setString(_kPreludePinFilter, v); _touch(); notifyListeners(); }
   Future<void> setPreludeInputSize(String v) async { _preludeInputSize = v; (await SharedPreferences.getInstance()).setString(_kPreludeInputSize, v); _touch(); notifyListeners(); }
   Future<void> setPreludeChoiceSize(String v) async { _preludeChoiceSize = v; (await SharedPreferences.getInstance()).setString(_kPreludeChoiceSize, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryHeaderShow(bool v) async { _diaryHeaderShow = v; (await SharedPreferences.getInstance()).setBool(_kDiaryHeaderShow, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryHeaderSize(String v) async { _diaryHeaderSize = v; (await SharedPreferences.getInstance()).setString(_kDiaryHeaderSize, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryBgMode(String v) async { _diaryBgMode = v; (await SharedPreferences.getInstance()).setString(_kDiaryBgMode, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryBgColor(Color v) async { _diaryBgColor = v; (await SharedPreferences.getInstance()).setInt(_kDiaryBgColor, v.toARGB32()); _touch(); notifyListeners(); }
+  Future<void> setDiaryShowReminder(bool v) async { _diaryShowReminder = v; (await SharedPreferences.getInstance()).setBool(_kDiaryShowReminder, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryShowStreak(bool v) async { _diaryShowStreak = v; (await SharedPreferences.getInstance()).setBool(_kDiaryShowStreak, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryCardSize(String v) async { _diaryCardSize = v; (await SharedPreferences.getInstance()).setString(_kDiaryCardSize, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryShowAuthor(bool v) async { _diaryShowAuthor = v; (await SharedPreferences.getInstance()).setBool(_kDiaryShowAuthor, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryShowStats(bool v) async { _diaryShowStats = v; (await SharedPreferences.getInstance()).setBool(_kDiaryShowStats, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryShowAvatars(bool v) async { _diaryShowAvatars = v; (await SharedPreferences.getInstance()).setBool(_kDiaryShowAvatars, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryEntryHeaderShow(bool v) async { _diaryEntryHeaderShow = v; (await SharedPreferences.getInstance()).setBool(_kDiaryEntryHeaderShow, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryEntryHeaderSize(String v) async { _diaryEntryHeaderSize = v; (await SharedPreferences.getInstance()).setString(_kDiaryEntryHeaderSize, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryShowGenreBar(bool v) async { _diaryShowGenreBar = v; (await SharedPreferences.getInstance()).setBool(_kDiaryShowGenreBar, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryChapterSize(String v) async { _diaryChapterSize = v; (await SharedPreferences.getInstance()).setString(_kDiaryChapterSize, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryShowPreview(bool v) async { _diaryShowPreview = v; (await SharedPreferences.getInstance()).setBool(_kDiaryShowPreview, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryShowProgress(bool v) async { _diaryShowProgress = v; (await SharedPreferences.getInstance()).setBool(_kDiaryShowProgress, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryReadingSize(String v) async { _diaryReadingSize = v; (await SharedPreferences.getInstance()).setString(_kDiaryReadingSize, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryLineHeight(String v) async { _diaryLineHeight = v; (await SharedPreferences.getInstance()).setString(_kDiaryLineHeight, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryShowToolbar(bool v) async { _diaryShowToolbar = v; (await SharedPreferences.getInstance()).setBool(_kDiaryShowToolbar, v); _touch(); notifyListeners(); }
+  Future<void> setDiaryEditorPadding(String v) async { _diaryEditorPadding = v; (await SharedPreferences.getInstance()).setString(_kDiaryEditorPadding, v); _touch(); notifyListeners(); }
 
   Future<void> setAnimatedBorderThickness(double v) async {
     _animatedBorderThickness = v;
@@ -1460,6 +1600,26 @@ class AppSettings extends ChangeNotifier {
     _preludePinFilter = 'all';
     _preludeInputSize = 'M';
     _preludeChoiceSize = 'M';
+    _diaryHeaderShow = true;
+    _diaryHeaderSize = 'M';
+    _diaryBgMode = 'global';
+    _diaryBgColor = const Color(0xFF050810);
+    _diaryShowReminder = true;
+    _diaryShowStreak = true;
+    _diaryCardSize = 'M';
+    _diaryShowAuthor = true;
+    _diaryShowStats = true;
+    _diaryShowAvatars = true;
+    _diaryEntryHeaderShow = true;
+    _diaryEntryHeaderSize = 'M';
+    _diaryShowGenreBar = true;
+    _diaryChapterSize = 'M';
+    _diaryShowPreview = true;
+    _diaryShowProgress = true;
+    _diaryReadingSize = 'M';
+    _diaryLineHeight = 'comfortable';
+    _diaryShowToolbar = true;
+    _diaryEditorPadding = 'comfortable';
     _notifNewPost = true;
     _notifInterest = true;
     _autoScroll = true;
@@ -1546,6 +1706,26 @@ class AppSettings extends ChangeNotifier {
     await p.remove(_kPreludePinFilter);
     await p.remove(_kPreludeInputSize);
     await p.remove(_kPreludeChoiceSize);
+    await p.remove(_kDiaryHeaderShow);
+    await p.remove(_kDiaryHeaderSize);
+    await p.remove(_kDiaryBgMode);
+    await p.remove(_kDiaryBgColor);
+    await p.remove(_kDiaryShowReminder);
+    await p.remove(_kDiaryShowStreak);
+    await p.remove(_kDiaryCardSize);
+    await p.remove(_kDiaryShowAuthor);
+    await p.remove(_kDiaryShowStats);
+    await p.remove(_kDiaryShowAvatars);
+    await p.remove(_kDiaryEntryHeaderShow);
+    await p.remove(_kDiaryEntryHeaderSize);
+    await p.remove(_kDiaryShowGenreBar);
+    await p.remove(_kDiaryChapterSize);
+    await p.remove(_kDiaryShowPreview);
+    await p.remove(_kDiaryShowProgress);
+    await p.remove(_kDiaryReadingSize);
+    await p.remove(_kDiaryLineHeight);
+    await p.remove(_kDiaryShowToolbar);
+    await p.remove(_kDiaryEditorPadding);
     await p.remove(_kNotifPost);
     await p.remove(_kNotifInterest);
     await p.remove(_kNotifBrain);
