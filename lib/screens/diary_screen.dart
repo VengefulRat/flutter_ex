@@ -635,7 +635,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: appSettings.bgColor,
+    backgroundColor: appSettings.diaryBgMode == 'fixed' ? appSettings.diaryBgColor : appSettings.bgColor,
     body: SafeArea(child: Column(children: [
       // Top bar
       Container(
@@ -648,12 +648,12 @@ class _DiaryScreenState extends State<DiaryScreen> {
             child: const Icon(Icons.arrow_back_ios, color: cSmoke, size: 16),
           ),
           const SizedBox(width: 12),
-          const Text('Diary', style: TextStyle(fontSize: 20,
+          if (appSettings.diaryHeaderShow) Text('Diary', style: TextStyle(fontSize: appSettings.diaryHeaderSize == 'S' ? 16 : appSettings.diaryHeaderSize == 'L' ? 24 : 20,
               fontWeight: FontWeight.w300, fontStyle: FontStyle.italic,
               color: cParchment)),
           const Spacer(),
           // Streak
-          if (_streak > 0) Row(children: [
+          if (_streak > 0 && appSettings.diaryShowStreak) Row(children: [
             const Icon(Icons.local_fire_department,
                 size: 14, color: cEmber),
             const SizedBox(width: 4),
@@ -664,13 +664,13 @@ class _DiaryScreenState extends State<DiaryScreen> {
           ]),
           GestureDetector(onTap: _showDiaryCustomize, child: const Padding(padding: EdgeInsets.all(6), child: Icon(Icons.tune, size: 18, color: cSmoke))),
           const SizedBox(width: 6),
-          const Text('L o r e', style: TextStyle(fontSize: 11,
+          if (appSettings.diaryHeaderShow) const Text('L o r e', style: TextStyle(fontSize: 11,
               color: cGold, letterSpacing: 5, fontWeight: FontWeight.w300)),
         ]),
       ),
 
       // Reminder bar
-      Container(
+      if (appSettings.diaryShowReminder) Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: const BoxDecoration(
             border: Border(bottom: BorderSide(color: cAsh))),
@@ -860,7 +860,7 @@ class _DiaryCard extends StatelessWidget {
           seed: seed,
           bgColor: cInk,
           child: Container(
-            width: 200,
+            width: appSettings.diaryCardSize == 'S' ? 160 : appSettings.diaryCardSize == 'L' ? 240 : 200,
             decoration: BoxDecoration(
               color: cInk,
               border: Border.all(color: accent.withValues(alpha: 0.4), width: 1),
@@ -933,7 +933,7 @@ class _DiaryCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Author Name (like a book spine/cover)
-                            Text(
+                            if (appSettings.diaryShowAuthor) Text(
                               authorName.toUpperCase(),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -953,7 +953,7 @@ class _DiaryCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontFamily: 'serif',
-                                fontSize: _dSize(18),
+                                fontSize: _dSize(appSettings.diaryCardSize == 'S' ? 15 : appSettings.diaryCardSize == 'L' ? 21 : 18),
                                 fontWeight: FontWeight.w300,
                                 fontStyle: FontStyle.italic,
                                 color: cParchment,
@@ -964,7 +964,7 @@ class _DiaryCard extends StatelessWidget {
                             const SizedBox(height: 6),
                             
                             // Stats Row (Chapters & Words)
-                            Row(
+                            if (appSettings.diaryShowStats) Row(
                               children: [
                                 if (entry.isFolder)
                                   Text(
@@ -989,7 +989,7 @@ class _DiaryCard extends StatelessWidget {
                             ),
 
                             // Character Avatar Chips
-                            if (linkedChars.isNotEmpty) ...[
+                            if (linkedChars.isNotEmpty && appSettings.diaryShowAvatars) ...[
                               const SizedBox(height: 8),
                               SizedBox(
                                 height: 20,
@@ -1125,7 +1125,7 @@ class _NewEntrySetupState extends State<_NewEntrySetup> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: appSettings.bgColor,
+    backgroundColor: appSettings.diaryBgMode == 'fixed' ? appSettings.diaryBgColor : appSettings.bgColor,
     body: SafeArea(child: Column(children: [
       // Header
       Container(
@@ -1801,7 +1801,7 @@ class _EntryScreenState extends State<_EntryScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: appSettings.bgColor,
+    backgroundColor: appSettings.diaryBgMode == 'fixed' ? appSettings.diaryBgColor : appSettings.bgColor,
     body: SafeArea(child: Column(children: [
       // Header
       Container(
@@ -2127,7 +2127,7 @@ class _ChapterEditorState extends State<_ChapterEditor> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: appSettings.bgColor,
+    backgroundColor: appSettings.diaryBgMode == 'fixed' ? appSettings.diaryBgColor : appSettings.bgColor,
     body: SafeArea(child: Column(children: [
       // Header
       Container(
