@@ -112,6 +112,24 @@ class AppSettings extends ChangeNotifier {
   static const _kRpShowToolsSidebar = 'as_rp_show_tools_sidebar';
   static const _kRpShowOoc = 'as_rp_show_ooc';
   static const _kRpOocBadgeOn = 'as_rp_ooc_badge_on';
+  static const _kPreludeHeaderShow = 'as_prelude_header_show';
+  static const _kPreludeHeaderSize = 'as_prelude_header_size';
+  static const _kPreludeHeaderAccent = 'as_prelude_header_accent';
+  static const _kPreludeBgMode = 'as_prelude_bg_mode';
+  static const _kPreludeBgColor = 'as_prelude_bg_color';
+  static const _kPreludeMsgSize = 'as_prelude_msg_size';
+  static const _kPreludeDensity = 'as_prelude_density';
+  static const _kPreludeMsgStyle = 'as_prelude_msg_style';
+  static const _kPreludeShowTimestamp = 'as_prelude_show_timestamp';
+  static const _kPreludeShowAuthor = 'as_prelude_show_author';
+  static const _kPreludeShowPinLabel = 'as_prelude_show_pin_label';
+  static const _kPreludePinRule = 'as_prelude_pin_rule';
+  static const _kPreludePinCharacter = 'as_prelude_pin_character';
+  static const _kPreludePinWorld = 'as_prelude_pin_world';
+  static const _kPreludePinPlot = 'as_prelude_pin_plot';
+  static const _kPreludePinFilter = 'as_prelude_pin_filter';
+  static const _kPreludeInputSize = 'as_prelude_input_size';
+  static const _kPreludeChoiceSize = 'as_prelude_choice_size';
   static const _kProfileGlowEnabled = 'as_profile_glow_enabled';
   static const _kAiMood = 'as_ai_mood';
   static const _kNotifPost = 'as_notif_post';
@@ -306,6 +324,24 @@ class AppSettings extends ChangeNotifier {
   bool _rpShowToolsSidebar = true;
   bool _rpShowOoc = true;
   bool _rpOocBadgeOn = true;
+  bool _preludeHeaderShow = true;
+  String _preludeHeaderSize = 'M';
+  Color _preludeHeaderAccent = const Color(0xFF7AB8D4);
+  String _preludeBgMode = 'global';
+  Color _preludeBgColor = const Color(0xFF050810);
+  String _preludeMsgSize = 'M';
+  String _preludeDensity = 'comfortable';
+  String _preludeMsgStyle = 'cards';
+  bool _preludeShowTimestamp = true;
+  bool _preludeShowAuthor = true;
+  bool _preludeShowPinLabel = true;
+  Color _preludePinRule = const Color(0xFFD4614A);
+  Color _preludePinCharacter = const Color(0xFF9B6FD4);
+  Color _preludePinWorld = const Color(0xFF7AB8D4);
+  Color _preludePinPlot = const Color(0xFFC9A96E);
+  String _preludePinFilter = 'all';
+  String _preludeInputSize = 'M';
+  String _preludeChoiceSize = 'M';
   bool _aiMood = true;
   bool _notifNewPost = true;
   bool _notifRpPost = true;
@@ -365,6 +401,24 @@ class AppSettings extends ChangeNotifier {
     _rpShowToolsSidebar = p.getBool(_kRpShowToolsSidebar) ?? true;
     _rpShowOoc = p.getBool(_kRpShowOoc) ?? true;
     _rpOocBadgeOn = p.getBool(_kRpOocBadgeOn) ?? true;
+    _preludeHeaderShow = p.getBool(_kPreludeHeaderShow) ?? true;
+    _preludeHeaderSize = p.getString(_kPreludeHeaderSize) ?? 'M';
+    final preHA = p.getInt(_kPreludeHeaderAccent); if (preHA != null) _preludeHeaderAccent = Color(preHA);
+    _preludeBgMode = p.getString(_kPreludeBgMode) ?? 'global';
+    final preBg = p.getInt(_kPreludeBgColor); if (preBg != null) _preludeBgColor = Color(preBg);
+    _preludeMsgSize = p.getString(_kPreludeMsgSize) ?? 'M';
+    _preludeDensity = p.getString(_kPreludeDensity) ?? 'comfortable';
+    _preludeMsgStyle = p.getString(_kPreludeMsgStyle) ?? 'cards';
+    _preludeShowTimestamp = p.getBool(_kPreludeShowTimestamp) ?? true;
+    _preludeShowAuthor = p.getBool(_kPreludeShowAuthor) ?? true;
+    _preludeShowPinLabel = p.getBool(_kPreludeShowPinLabel) ?? true;
+    final preRule = p.getInt(_kPreludePinRule); if (preRule != null) _preludePinRule = Color(preRule);
+    final preChar = p.getInt(_kPreludePinCharacter); if (preChar != null) _preludePinCharacter = Color(preChar);
+    final preWorld = p.getInt(_kPreludePinWorld); if (preWorld != null) _preludePinWorld = Color(preWorld);
+    final prePlot = p.getInt(_kPreludePinPlot); if (prePlot != null) _preludePinPlot = Color(prePlot);
+    _preludePinFilter = p.getString(_kPreludePinFilter) ?? 'all';
+    _preludeInputSize = p.getString(_kPreludeInputSize) ?? 'M';
+    _preludeChoiceSize = p.getString(_kPreludeChoiceSize) ?? 'M';
     _notifNewPost = p.getBool(_kNotifPost) ?? true;
     _notifRpPost = p.getBool('as_notif_rp_post') ?? true;
     _notifOoc = p.getBool('as_notif_ooc') ?? true;
@@ -587,6 +641,24 @@ class AppSettings extends ChangeNotifier {
     'rpShowToolsSidebar': _rpShowToolsSidebar,
     'rpShowOoc': _rpShowOoc,
     'rpOocBadgeOn': _rpOocBadgeOn,
+    'preludeHeaderShow': _preludeHeaderShow,
+    'preludeHeaderSize': _preludeHeaderSize,
+    'preludeHeaderAccent': _preludeHeaderAccent.toARGB32(),
+    'preludeBgMode': _preludeBgMode,
+    'preludeBgColor': _preludeBgColor.toARGB32(),
+    'preludeMsgSize': _preludeMsgSize,
+    'preludeDensity': _preludeDensity,
+    'preludeMsgStyle': _preludeMsgStyle,
+    'preludeShowTimestamp': _preludeShowTimestamp,
+    'preludeShowAuthor': _preludeShowAuthor,
+    'preludeShowPinLabel': _preludeShowPinLabel,
+    'preludePinRule': _preludePinRule.toARGB32(),
+    'preludePinCharacter': _preludePinCharacter.toARGB32(),
+    'preludePinWorld': _preludePinWorld.toARGB32(),
+    'preludePinPlot': _preludePinPlot.toARGB32(),
+    'preludePinFilter': _preludePinFilter,
+    'preludeInputSize': _preludeInputSize,
+    'preludeChoiceSize': _preludeChoiceSize,
     'animatedBorderThickness': _animatedBorderThickness,
     'animatedBorderWaviness': _animatedBorderWaviness,
     'animatedBorderSpeed': _animatedBorderSpeed,
@@ -646,6 +718,24 @@ class AppSettings extends ChangeNotifier {
     _rpShowToolsSidebar = j['rpShowToolsSidebar'] as bool? ?? _rpShowToolsSidebar;
     _rpShowOoc = j['rpShowOoc'] as bool? ?? _rpShowOoc;
     _rpOocBadgeOn = j['rpOocBadgeOn'] as bool? ?? _rpOocBadgeOn;
+    _preludeHeaderShow = j['preludeHeaderShow'] as bool? ?? _preludeHeaderShow;
+    _preludeHeaderSize = j['preludeHeaderSize'] as String? ?? _preludeHeaderSize;
+    if (j['preludeHeaderAccent'] is int) _preludeHeaderAccent = Color(j['preludeHeaderAccent'] as int);
+    _preludeBgMode = j['preludeBgMode'] as String? ?? _preludeBgMode;
+    if (j['preludeBgColor'] is int) _preludeBgColor = Color(j['preludeBgColor'] as int);
+    _preludeMsgSize = j['preludeMsgSize'] as String? ?? _preludeMsgSize;
+    _preludeDensity = j['preludeDensity'] as String? ?? _preludeDensity;
+    _preludeMsgStyle = j['preludeMsgStyle'] as String? ?? _preludeMsgStyle;
+    _preludeShowTimestamp = j['preludeShowTimestamp'] as bool? ?? _preludeShowTimestamp;
+    _preludeShowAuthor = j['preludeShowAuthor'] as bool? ?? _preludeShowAuthor;
+    _preludeShowPinLabel = j['preludeShowPinLabel'] as bool? ?? _preludeShowPinLabel;
+    if (j['preludePinRule'] is int) _preludePinRule = Color(j['preludePinRule'] as int);
+    if (j['preludePinCharacter'] is int) _preludePinCharacter = Color(j['preludePinCharacter'] as int);
+    if (j['preludePinWorld'] is int) _preludePinWorld = Color(j['preludePinWorld'] as int);
+    if (j['preludePinPlot'] is int) _preludePinPlot = Color(j['preludePinPlot'] as int);
+    _preludePinFilter = j['preludePinFilter'] as String? ?? _preludePinFilter;
+    _preludeInputSize = j['preludeInputSize'] as String? ?? _preludeInputSize;
+    _preludeChoiceSize = j['preludeChoiceSize'] as String? ?? _preludeChoiceSize;
     }
     if (j['profileGlowColor'] is int) {
       _profileGlowColor = Color(j['profileGlowColor'] as int);
@@ -998,6 +1088,24 @@ class AppSettings extends ChangeNotifier {
   bool get rpShowToolsSidebar => _rpShowToolsSidebar;
   bool get rpShowOoc => _rpShowOoc;
   bool get rpOocBadgeOn => _rpOocBadgeOn;
+  bool get preludeHeaderShow => _preludeHeaderShow;
+  String get preludeHeaderSize => _preludeHeaderSize;
+  Color get preludeHeaderAccent => _preludeHeaderAccent;
+  String get preludeBgMode => _preludeBgMode;
+  Color get preludeBgColor => _preludeBgColor;
+  String get preludeMsgSize => _preludeMsgSize;
+  String get preludeDensity => _preludeDensity;
+  String get preludeMsgStyle => _preludeMsgStyle;
+  bool get preludeShowTimestamp => _preludeShowTimestamp;
+  bool get preludeShowAuthor => _preludeShowAuthor;
+  bool get preludeShowPinLabel => _preludeShowPinLabel;
+  Color get preludePinRule => _preludePinRule;
+  Color get preludePinCharacter => _preludePinCharacter;
+  Color get preludePinWorld => _preludePinWorld;
+  Color get preludePinPlot => _preludePinPlot;
+  String get preludePinFilter => _preludePinFilter;
+  String get preludeInputSize => _preludeInputSize;
+  String get preludeChoiceSize => _preludeChoiceSize;
   bool isBlockHidden(String id) => _hiddenBlocks.contains(id);
 
   Future<void> setShowLogo(bool v) async {
@@ -1066,6 +1174,24 @@ class AppSettings extends ChangeNotifier {
   Future<void> setRpShowToolsSidebar(bool v) async { _rpShowToolsSidebar = v; (await SharedPreferences.getInstance()).setBool(_kRpShowToolsSidebar, v); _touch(); notifyListeners(); }
   Future<void> setRpShowOoc(bool v) async { _rpShowOoc = v; (await SharedPreferences.getInstance()).setBool(_kRpShowOoc, v); _touch(); notifyListeners(); }
   Future<void> setRpOocBadgeOn(bool v) async { _rpOocBadgeOn = v; (await SharedPreferences.getInstance()).setBool(_kRpOocBadgeOn, v); _touch(); notifyListeners(); }
+  Future<void> setPreludeHeaderShow(bool v) async { _preludeHeaderShow = v; (await SharedPreferences.getInstance()).setBool(_kPreludeHeaderShow, v); _touch(); notifyListeners(); }
+  Future<void> setPreludeHeaderSize(String v) async { _preludeHeaderSize = v; (await SharedPreferences.getInstance()).setString(_kPreludeHeaderSize, v); _touch(); notifyListeners(); }
+  Future<void> setPreludeHeaderAccent(Color v) async { _preludeHeaderAccent = v; (await SharedPreferences.getInstance()).setInt(_kPreludeHeaderAccent, v.toARGB32()); _touch(); notifyListeners(); }
+  Future<void> setPreludeBgMode(String v) async { _preludeBgMode = v; (await SharedPreferences.getInstance()).setString(_kPreludeBgMode, v); _touch(); notifyListeners(); }
+  Future<void> setPreludeBgColor(Color v) async { _preludeBgColor = v; (await SharedPreferences.getInstance()).setInt(_kPreludeBgColor, v.toARGB32()); _touch(); notifyListeners(); }
+  Future<void> setPreludeMsgSize(String v) async { _preludeMsgSize = v; (await SharedPreferences.getInstance()).setString(_kPreludeMsgSize, v); _touch(); notifyListeners(); }
+  Future<void> setPreludeDensity(String v) async { _preludeDensity = v; (await SharedPreferences.getInstance()).setString(_kPreludeDensity, v); _touch(); notifyListeners(); }
+  Future<void> setPreludeMsgStyle(String v) async { _preludeMsgStyle = v; (await SharedPreferences.getInstance()).setString(_kPreludeMsgStyle, v); _touch(); notifyListeners(); }
+  Future<void> setPreludeShowTimestamp(bool v) async { _preludeShowTimestamp = v; (await SharedPreferences.getInstance()).setBool(_kPreludeShowTimestamp, v); _touch(); notifyListeners(); }
+  Future<void> setPreludeShowAuthor(bool v) async { _preludeShowAuthor = v; (await SharedPreferences.getInstance()).setBool(_kPreludeShowAuthor, v); _touch(); notifyListeners(); }
+  Future<void> setPreludeShowPinLabel(bool v) async { _preludeShowPinLabel = v; (await SharedPreferences.getInstance()).setBool(_kPreludeShowPinLabel, v); _touch(); notifyListeners(); }
+  Future<void> setPreludePinRule(Color v) async { _preludePinRule = v; (await SharedPreferences.getInstance()).setInt(_kPreludePinRule, v.toARGB32()); _touch(); notifyListeners(); }
+  Future<void> setPreludePinCharacter(Color v) async { _preludePinCharacter = v; (await SharedPreferences.getInstance()).setInt(_kPreludePinCharacter, v.toARGB32()); _touch(); notifyListeners(); }
+  Future<void> setPreludePinWorld(Color v) async { _preludePinWorld = v; (await SharedPreferences.getInstance()).setInt(_kPreludePinWorld, v.toARGB32()); _touch(); notifyListeners(); }
+  Future<void> setPreludePinPlot(Color v) async { _preludePinPlot = v; (await SharedPreferences.getInstance()).setInt(_kPreludePinPlot, v.toARGB32()); _touch(); notifyListeners(); }
+  Future<void> setPreludePinFilter(String v) async { _preludePinFilter = v; (await SharedPreferences.getInstance()).setString(_kPreludePinFilter, v); _touch(); notifyListeners(); }
+  Future<void> setPreludeInputSize(String v) async { _preludeInputSize = v; (await SharedPreferences.getInstance()).setString(_kPreludeInputSize, v); _touch(); notifyListeners(); }
+  Future<void> setPreludeChoiceSize(String v) async { _preludeChoiceSize = v; (await SharedPreferences.getInstance()).setString(_kPreludeChoiceSize, v); _touch(); notifyListeners(); }
 
   Future<void> setAnimatedBorderThickness(double v) async {
     _animatedBorderThickness = v;
@@ -1316,6 +1442,24 @@ class AppSettings extends ChangeNotifier {
     _rpShowToolsSidebar = true;
     _rpShowOoc = true;
     _rpOocBadgeOn = true;
+    _preludeHeaderShow = true;
+    _preludeHeaderSize = 'M';
+    _preludeHeaderAccent = const Color(0xFF7AB8D4);
+    _preludeBgMode = 'global';
+    _preludeBgColor = const Color(0xFF050810);
+    _preludeMsgSize = 'M';
+    _preludeDensity = 'comfortable';
+    _preludeMsgStyle = 'cards';
+    _preludeShowTimestamp = true;
+    _preludeShowAuthor = true;
+    _preludeShowPinLabel = true;
+    _preludePinRule = const Color(0xFFD4614A);
+    _preludePinCharacter = const Color(0xFF9B6FD4);
+    _preludePinWorld = const Color(0xFF7AB8D4);
+    _preludePinPlot = const Color(0xFFC9A96E);
+    _preludePinFilter = 'all';
+    _preludeInputSize = 'M';
+    _preludeChoiceSize = 'M';
     _notifNewPost = true;
     _notifInterest = true;
     _autoScroll = true;
@@ -1384,6 +1528,24 @@ class AppSettings extends ChangeNotifier {
     await p.remove(_kRpShowToolsSidebar);
     await p.remove(_kRpShowOoc);
     await p.remove(_kRpOocBadgeOn);
+    await p.remove(_kPreludeHeaderShow);
+    await p.remove(_kPreludeHeaderSize);
+    await p.remove(_kPreludeHeaderAccent);
+    await p.remove(_kPreludeBgMode);
+    await p.remove(_kPreludeBgColor);
+    await p.remove(_kPreludeMsgSize);
+    await p.remove(_kPreludeDensity);
+    await p.remove(_kPreludeMsgStyle);
+    await p.remove(_kPreludeShowTimestamp);
+    await p.remove(_kPreludeShowAuthor);
+    await p.remove(_kPreludeShowPinLabel);
+    await p.remove(_kPreludePinRule);
+    await p.remove(_kPreludePinCharacter);
+    await p.remove(_kPreludePinWorld);
+    await p.remove(_kPreludePinPlot);
+    await p.remove(_kPreludePinFilter);
+    await p.remove(_kPreludeInputSize);
+    await p.remove(_kPreludeChoiceSize);
     await p.remove(_kNotifPost);
     await p.remove(_kNotifInterest);
     await p.remove(_kNotifBrain);
