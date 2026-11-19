@@ -2835,7 +2835,7 @@ class _WorldEditorScreenState extends State<WorldEditorScreen>
               controller: _tab,
               children: [
                 _editorScrollable([
-                  const Text(
+                  if (appSettings.sandboxShowWorldMapUpload) ...[ const Text(
                     'WORLD MAP IMAGE',
                     style: TextStyle(
                       fontFamily: 'monospace',
@@ -2889,9 +2889,9 @@ class _WorldEditorScreenState extends State<WorldEditorScreen>
                                 : null),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 24), ],
 
-                  _field(
+                  if (appSettings.sandboxShowWorldGenreField) _field(
                     'Genre',
                     _genreCtrl,
                     hint: 'e.g. Dark Fantasy, Sci-Fi Noir',
@@ -2902,7 +2902,7 @@ class _WorldEditorScreenState extends State<WorldEditorScreen>
                     maxLines: 6,
                     hint: 'The world in a paragraph...',
                   ),
-                  _field(
+                  if (appSettings.sandboxShowWorldToneField) _field(
                     'Tone',
                     _toneCtrl,
                     hint: 'e.g. Dark, morally grey, slow burn',
@@ -2955,7 +2955,7 @@ class _WorldEditorScreenState extends State<WorldEditorScreen>
   Widget _editorScrollable(List<Widget> children) => ScrollConfiguration(
     behavior: NoGlowBehavior(),
     child: SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(appSettings.sandboxEditorPadding == 'compact' ? 12 : 20),
       child: Column(children: children),
     ),
   );
@@ -3057,7 +3057,7 @@ class _ListEditorState<T> extends State<_ListEditor<T>> {
           final descCtrl = TextEditingController(text: widget.descField(item));
           return Container(
             margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
+            padding: EdgeInsets.all(appSettings.sandboxListCardSize == 'S' ? 10 : appSettings.sandboxListCardSize == 'L' ? 18 : 14),
             decoration: BoxDecoration(
               color: cInk,
               border: Border.all(color: editing ? cSmoke : cAsh),
@@ -3068,8 +3068,8 @@ class _ListEditorState<T> extends State<_ListEditor<T>> {
                     children: [
                       TextField(
                         controller: nameCtrl,
-                        style: const TextStyle(
-                          fontSize: 14,
+                        style: TextStyle(
+                          fontSize: appSettings.sandboxListCardSize == 'S' ? 12 : appSettings.sandboxListCardSize == 'L' ? 16 : 14,
                           color: cParchment,
                           fontStyle: FontStyle.italic,
                         ),
