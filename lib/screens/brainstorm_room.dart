@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../widgets/shared.dart';
+import '../widgets/colour_picker.dart';
 import '../settings.dart';
 import '../screens/rp_room.dart';
 import '../widgets/session_log.dart';
@@ -788,6 +789,109 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
     );
   }
 
+  Widget _preChip(String label, bool active, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(border: Border.all(color: active ? cGold : cAsh), color: active ? cGold.withValues(alpha: 0.08) : Colors.transparent),
+        child: Text(label, style: TextStyle(fontFamily: 'monospace', fontSize: 9, letterSpacing: 1, color: active ? cGold : cSmoke)),
+      ),
+    );
+  }
+  Widget _preColorRow(String label, Color current, ValueChanged<Color> onPicked) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 2, 14, 8),
+      child: Row(children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+        const Spacer(),
+        LoreTap(
+          onTap: () => LoreColourPicker.show(context, current: current, onPicked: onPicked),
+          child: Container(width: 28, height: 28, decoration: BoxDecoration(color: current, shape: BoxShape.circle, border: Border.all(color: Colors.white24))),
+        ),
+      ]),
+    );
+  }
+  Widget _preToggle(String label, bool value, ValueChanged<bool> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+        const Spacer(),
+        GestureDetector(
+          onTap: () => onChanged(!value),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 36, height: 20,
+            decoration: BoxDecoration(color: value ? cGold : cAsh, borderRadius: BorderRadius.circular(10)),
+            child: Align(alignment: value ? Alignment.centerRight : Alignment.centerLeft, child: Container(width: 16, height: 16, margin: const EdgeInsets.all(2), decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))),
+          ),
+        ),
+      ]),
+    );
+  }
+  Widget _preSizeRow(String label, String current, ValueChanged<String> onPick) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
+      child: Row(children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
+        const Spacer(),
+        _preChip('S', current == 'S', () => onPick('S')),
+        const SizedBox(width: 6),
+        _preChip('M', current == 'M', () => onPick('M')),
+        const SizedBox(width: 6),
+        _preChip('L', current == 'L', () => onPick('L')),
+      ]),
+    );
+  }
+  void _showPreludeCustomize() {
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cInk,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          void refresh() { setSheetState(() {}); setState(() {}); }
+          return Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Center(child: Container(width: 32, height: 3, decoration: BoxDecoration(color: cAsh, borderRadius: BorderRadius.circular(2)))),
+                const SizedBox(height: 20),
+                const Text('PRELUDE CUSTOMIZE', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 4)),
+                const SizedBox(height: 12),
+                const Text('HEADER', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+                _preToggle('Show header', appSettings.preludeHeaderShow, (v) { appSettings.setPreludeHeaderShow(v); refresh(); }),
+                if (appSettings.preludeHeaderShow) ...[ _preSizeRow('Header size', appSettings.preludeHeaderSize, (v) { appSettings.setPreludeHeaderSize(v); refresh(); }), _preColorRow('Header accent', appSettings.preludeHeaderAccent, (c) { appSettings.setPreludeHeaderAccent(c); refresh(); }), ],
+                const Text('BACKGROUND', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+                Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 6), child: Wrap(spacing: 6, children: [ _preChip('Global', appSettings.preludeBgMode == 'global', () { appSettings.setPreludeBgMode('global'); refresh(); }), _preChip('Fixed', appSettings.preludeBgMode == 'fixed', () { appSettings.setPreludeBgMode('fixed'); refresh(); }), ])),
+                if (appSettings.preludeBgMode == 'fixed') _preColorRow('Background colour', appSettings.preludeBgColor, (c) { appSettings.setPreludeBgColor(c); refresh(); }),
+                const Text('MESSAGES', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+                _preSizeRow('Message size', appSettings.preludeMsgSize, (v) { appSettings.setPreludeMsgSize(v); refresh(); }),
+                Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 6), child: Row(children: [ const Text('Density', style: TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)), const Spacer(), _preChip('Compact', appSettings.preludeDensity == 'compact', () { appSettings.setPreludeDensity('compact'); refresh(); }), const SizedBox(width: 6), _preChip('Comfortable', appSettings.preludeDensity == 'comfortable', () { appSettings.setPreludeDensity('comfortable'); refresh(); }), ])),
+                Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 6), child: Row(children: [ const Text('Style', style: TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)), const Spacer(), _preChip('Cards', appSettings.preludeMsgStyle == 'cards', () { appSettings.setPreludeMsgStyle('cards'); refresh(); }), const SizedBox(width: 6), _preChip('Bubbles', appSettings.preludeMsgStyle == 'bubbles', () { appSettings.setPreludeMsgStyle('bubbles'); refresh(); }), const SizedBox(width: 6), _preChip('Compact', appSettings.preludeMsgStyle == 'compact', () { appSettings.setPreludeMsgStyle('compact'); refresh(); }), ])),
+                _preToggle('Show timestamps', appSettings.preludeShowTimestamp, (v) { appSettings.setPreludeShowTimestamp(v); refresh(); }),
+                _preToggle('Show authors', appSettings.preludeShowAuthor, (v) { appSettings.setPreludeShowAuthor(v); refresh(); }),
+                _preToggle('Show pin labels', appSettings.preludeShowPinLabel, (v) { appSettings.setPreludeShowPinLabel(v); refresh(); }),
+                const Text('PIN COLOURS', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+                _preColorRow('Rule', appSettings.preludePinRule, (c) { appSettings.setPreludePinRule(c); refresh(); }),
+                _preColorRow('Character', appSettings.preludePinCharacter, (c) { appSettings.setPreludePinCharacter(c); refresh(); }),
+                _preColorRow('World', appSettings.preludePinWorld, (c) { appSettings.setPreludePinWorld(c); refresh(); }),
+                _preColorRow('Plot', appSettings.preludePinPlot, (c) { appSettings.setPreludePinPlot(c); refresh(); }),
+                const Text('FILTER + INPUT', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+                Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 6), child: Row(children: [ const Text('Show', style: TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)), const Spacer(), _preChip('All', appSettings.preludePinFilter == 'all', () { appSettings.setPreludePinFilter('all'); refresh(); }), const SizedBox(width: 6), _preChip('Pins', appSettings.preludePinFilter == 'pins', () { appSettings.setPreludePinFilter('pins'); refresh(); }), const SizedBox(width: 6), _preChip('Chat', appSettings.preludePinFilter == 'chat', () { appSettings.setPreludePinFilter('chat'); refresh(); }), ])),
+                _preSizeRow('Input size', appSettings.preludeInputSize, (v) { appSettings.setPreludeInputSize(v); refresh(); }),
+                _preSizeRow('Choice card size', appSettings.preludeChoiceSize, (v) { appSettings.setPreludeChoiceSize(v); refresh(); }),
+              ]),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   void _showPreludeMenu() {
         if (!mounted) return;
     showModalBottomSheet(
@@ -808,6 +912,14 @@ class _BrainstormRoomScreenState extends State<BrainstormRoomScreen> {
               ),
             ),
             const SizedBox(height: 20),
+            _preludeMenuTile(
+              icon: Icons.tune,
+              title: 'Customize Prelude',
+              subtitle: 'Header, background, messages, pins and input.',
+              color: cGold,
+              onTap: () { Navigator.of(ctx).pop(); _showPreludeCustomize(); },
+            ),
+            const SizedBox(height: 8),
             _preludeMenuTile(
               icon: Icons.do_not_disturb_alt,
               title: 'Not a match',
