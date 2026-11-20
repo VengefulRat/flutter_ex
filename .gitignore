@@ -71,4 +71,7 @@ android/app/upload-keystore.jks
 android/key.properties
 lib/firebase_options.dart
 **/google-services.json
-**/GoogleService-Info.plist
+**/GoogleService-Info.plistflutter_ex-releases.apk
+lore-windows.zip
+installer-output/
+build/
