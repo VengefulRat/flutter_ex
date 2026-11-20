@@ -1,10 +1,14 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
-project(lore2 LANGUAGES CXX)
+# CMake 4 removed support for < 3.5. Firebase C++ SDK still declares 3.1.
+# Tell CMake 4 to treat 3.5 as the minimum, so Firebase is allowed to configure.
+# Do NOT edit Firebase's file - it is re-extracted on every clean build.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
+project(lore_ex LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "lore2")
+set(BINARY_NAME "lore_ex")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

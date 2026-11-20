@@ -812,6 +812,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   Size _canvasSize = Size.zero;
 
   bool _desktopOOCExpanded = false;
+  bool _desktopLogCollapsed = false;
+  bool _desktopToolsCollapsed = false;
+  bool get _desktopFocusMode => _desktopLogCollapsed && _desktopToolsCollapsed;
   bool _oocOpen = false;
   int _oocUnread = 0;
   int _oocTotalNonUser = 0;
@@ -953,6 +956,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           quotedAuthor: d['quotedAuthor'] as String?,
           characterName: d['characterName'] as String?,
           locationName: d['locationName'] as String?,
+          textColor: d['textColor'] != null
+              ? Color(d['textColor'] as int)
+              : cParchment,
         );
       }).toList();
 
@@ -1281,9 +1287,13 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     _setMood(dominant);
   }
 
+  bool _sending = false;
+
   Future<void> _submitPost() async {
     final text = _editorCtrl.text.trim();
     if (text.isEmpty) return;
+    if (_sending) return;
+    if (mounted) setState(() => _sending = true);
 
     if (_editingPostId != null) {
       final postId = _editingPostId!;
@@ -1293,6 +1303,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             sessionId: widget.sessionId,
             postId: postId,
             newContent: text,
+            textColor: _activeCharacter?.accentColor ?? _fontColor,
           );
         } catch (e) {
           if (mounted) {
@@ -1306,6 +1317,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               ),
             );
           }
+          if (mounted) setState(() => _sending = false);
           return;
         }
       }
@@ -1332,6 +1344,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         _editorCtrl.text = '';
         _editingPostId = null;
         _editorExpanded = false;
+        _sending = false;
       });
       await _clearDraft();
       return;
@@ -1363,6 +1376,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               : null,
           characterName: _activeCharacter?.name,
           locationName: _activeLocation,
+          textColor: _activeCharacter?.accentColor ?? _fontColor,
         );
       } catch (e) {
         if (mounted) {
@@ -1376,6 +1390,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             ),
           );
         }
+        if (mounted) setState(() => _sending = false);
         return;
       }
       await _clearDraft();
@@ -1385,6 +1400,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           _editorCtrl.text = '';
           _quotingPostId = null;
           _editorExpanded = false;
+          _sending = false;
         });
       }
         } else {
@@ -1418,6 +1434,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         _editorCtrl.text = '';
         _quotingPostId = null;
         _editorExpanded = false;
+        _sending = false;
       });
       _clearDraft();
     }
@@ -1741,7 +1758,19 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.sizeOf(context).width >= 900;
     if (isDesktop) {
-      return _buildDesktopLayout();
+      return Focus(
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyF && !HardwareKeyboard.instance.isControlPressed && !HardwareKeyboard.instance.isMetaPressed && !HardwareKeyboard.instance.isAltPressed) {
+            if (_editorFocus.hasFocus) return KeyEventResult.ignored;
+            setState(() {
+              if (_desktopFocusMode) { _desktopLogCollapsed = false; _desktopToolsCollapsed = false; } else { _desktopLogCollapsed = true; _desktopToolsCollapsed = true; }
+            });
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: _buildDesktopLayout(),
+      );
     }
     return _buildMobileLayout();
   }
@@ -1791,7 +1820,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // Left Sidebar (Session Log)
-                          if (appSettings.rpShowLogSidebar) SizedBox(
+                          if (appSettings.rpShowLogSidebar && !_desktopLogCollapsed) SizedBox(
                             width: 300,
                             child: Container(
                               decoration: const BoxDecoration(
@@ -1807,7 +1836,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                             child: Center(
                               child: ConstrainedBox(
                                 constraints: const BoxConstraints(
-                                  maxWidth: 800,
+                                  maxWidth: 960,
                                 ),
                                 child: Column(
                                   children: [
@@ -1820,7 +1849,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                           ),
 
                           // Right Sidebar (Tools + OOC)
-                          if (appSettings.rpShowToolsSidebar) SizedBox(
+                          if (appSettings.rpShowToolsSidebar && !_desktopToolsCollapsed) SizedBox(
                             width: 320,
                             child: Container(
                               decoration: const BoxDecoration(
@@ -2303,24 +2332,95 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   ),
                 ),
               const SizedBox(width: 8),
-              LoreTap(
-                onTap: _openLog,
-                child: const Icon(
-                  Icons.menu_book_outlined,
-                  color: cSmoke,
-                  size: 18,
+              Tooltip(
+                message: MediaQuery.sizeOf(context).width >= 900 ? 'Log (Ctrl+B)' : 'Log',
+                child: LoreTap(
+                onTap: () {
+                  final isDesktop =
+                      MediaQuery.sizeOf(context).width >= 900;
+                  if (isDesktop) {
+                    setState(
+                      () => _desktopLogCollapsed = !_desktopLogCollapsed,
+                    );
+                  } else {
+                    _openLog();
+                  }
+                },
+                child: Icon(
+                  _desktopLogCollapsed
+                      ? Icons.menu_book_outlined
+                      : Icons.menu_book,
+                  color: _desktopLogCollapsed ? cSmoke : cGold,
+                  size: MediaQuery.sizeOf(context).width >= 900 ? 16 : 18,
                 ),
               ),
-              const SizedBox(width: 12),
-              LoreTap(
-                onTap: _openToolsPanel,
-                child: const Icon(
-                  Icons.construction_outlined,
-                  color: cSmoke,
-                  size: 18,
+              ),
+              SizedBox(width: MediaQuery.sizeOf(context).width >= 900 ? 8 : 12),
+              Tooltip(
+                message: MediaQuery.sizeOf(context).width >= 900 ? 'Tools (Ctrl+T)' : 'Tools',
+                child: LoreTap(
+                onTap: () {
+                  final isDesktop =
+                      MediaQuery.sizeOf(context).width >= 900;
+                  if (isDesktop) {
+                    setState(
+                      () => _desktopToolsCollapsed = !_desktopToolsCollapsed,
+                    );
+                  } else {
+                    _openToolsPanel();
+                  }
+                },
+                child: Icon(
+                  _desktopToolsCollapsed
+                      ? Icons.construction_outlined
+                      : Icons.construction,
+                  color: _desktopToolsCollapsed ? cSmoke : cGold,
+                  size: MediaQuery.sizeOf(context).width >= 900 ? 16 : 18,
                 ),
               ),
-              const SizedBox(width: 12),
+              ),
+              SizedBox(width: MediaQuery.sizeOf(context).width >= 900 ? 8 : 12),
+              // Desktop only: Focus mode - collapse both, tap again to restore.
+              if (MediaQuery.sizeOf(context).width >= 900)
+                Tooltip(
+                  message: 'Focus (F)',
+                  child: LoreTap(
+                  onTap: () => setState(() {
+                    if (_desktopFocusMode) {
+                      _desktopLogCollapsed = false;
+                      _desktopToolsCollapsed = false;
+                    } else {
+                      _desktopLogCollapsed = true;
+                      _desktopToolsCollapsed = true;
+                    }
+                  }),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: _desktopFocusMode ? cGold : cAsh,
+                      ),
+                      color: _desktopFocusMode
+                          ? cGold.withValues(alpha: 0.12)
+                          : Colors.transparent,
+                    ),
+                    child: Text(
+                      _desktopFocusMode ? 'EXIT FOCUS' : 'FOCUS',
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 9,
+                        color: _desktopFocusMode ? cGold : cSmoke,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                ),
+              if (MediaQuery.sizeOf(context).width >= 900)
+                const SizedBox(width: 8),
               LoreTap(
                 onTap: () => setState(() => _settingsOpen = !_settingsOpen),
                 child: const Icon(Icons.tune, color: cSmoke, size: 18),
@@ -2392,7 +2492,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         behavior: NoGlowBehavior(),
         child: ListView.builder(
           controller: _scrollCtrl,
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          padding: EdgeInsets.fromLTRB(MediaQuery.of(context).size.width > 900 ? 8 : 12, MediaQuery.of(context).size.width > 900 ? 8 : 12, MediaQuery.of(context).size.width > 900 ? 8 : 12, 8),
           itemCount: _posts.length,
           itemBuilder: (_, i) => _PostCard(
             post: _posts[i],
@@ -2403,6 +2503,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   : _posts[i].id,
             ),
             onLongPress: () => _showPostActions(_posts[i]),
+            onQuote: () => _quotePost(_posts[i].id),
+            onEdit: _posts[i].isUser ? () => _editPost(_posts[i]) : null,
+            onMore: () => _showPostActions(_posts[i]),
             onAddToLog: _addToLogFromText,
             onSelectionChanged: _onSelectionChanged,
           ),
@@ -2434,13 +2537,13 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         behavior: NoGlowBehavior(),
         child: ListView.builder(
           controller: _scrollCtrl,
-          padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+          padding: EdgeInsets.fromLTRB(12, MediaQuery.of(context).size.width > 900 ? 10 : 16, 12, 8),
           itemCount: _posts.length,
           itemBuilder: (_, i) {
             final post = _posts[i];
             final isUser = post.isUser;
             return Padding(
-              padding: const EdgeInsets.only(bottom: 16),
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).size.width > 900 ? 10 : 16),
               child: Row(
                 mainAxisAlignment: isUser
                     ? MainAxisAlignment.end
@@ -2540,9 +2643,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 12,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: MediaQuery.of(context).size.width > 900 ? 12 : 14,
+                              vertical: MediaQuery.of(context).size.width > 900 ? 8 : 12,
                             ),
                             decoration: BoxDecoration(
                               color: isUser
@@ -2638,12 +2741,12 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         behavior: NoGlowBehavior(),
         child: ListView.builder(
           controller: _scrollCtrl,
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+          padding: EdgeInsets.fromLTRB(MediaQuery.of(context).size.width > 900 ? 16 : 24, MediaQuery.of(context).size.width > 900 ? 16 : 24, MediaQuery.of(context).size.width > 900 ? 16 : 24, 8),
           itemCount: _posts.length,
           itemBuilder: (_, i) {
             final post = _posts[i];
             return Padding(
-              padding: const EdgeInsets.only(bottom: 28),
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).size.width > 900 ? 18 : 28),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -3549,8 +3652,18 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   behavior: NoGlowBehavior(),
                   child: Focus(
                     onKeyEvent: (node, event) {
-                      if (!kIsWeb) return KeyEventResult.ignored;
+                      final isDesktop = MediaQuery.sizeOf(context).width >= 900 || kIsWeb;
+                      if (!isDesktop) return KeyEventResult.ignored;
                       if (event is KeyDownEvent) {
+                        final isCtrl = HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed;
+                        if (isCtrl && event.logicalKey == LogicalKeyboardKey.keyB) {
+                          if (MediaQuery.sizeOf(context).width >= 900) { setState(() => _desktopLogCollapsed = !_desktopLogCollapsed); } else { _openLog(); }
+                          return KeyEventResult.handled;
+                        }
+                        if (isCtrl && event.logicalKey == LogicalKeyboardKey.keyT) {
+                          if (MediaQuery.sizeOf(context).width >= 900) { setState(() => _desktopToolsCollapsed = !_desktopToolsCollapsed); } else { _openToolsPanel(); }
+                          return KeyEventResult.handled;
+                        }
                         final isEnter =
                             event.logicalKey == LogicalKeyboardKey.enter ||
                             event.logicalKey == LogicalKeyboardKey.numpadEnter;
@@ -3659,7 +3772,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                       ),
                     ),
                     LoreTap(
-                      onTap: _submitPost,
+                      onTap: _sending ? null : _submitPost,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -3671,7 +3784,11 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                             ? cIce.withValues(alpha: 0.8)
                             : cParchment,
                         child: Text(
-                          _editingPostId != null ? 'Save' : 'Post',
+                          _sending
+                              ? 'Posting...'
+                              : _editingPostId != null
+                              ? 'Save'
+                              : 'Post',
                           style: TextStyle(
                             fontFamily: 'monospace',
                             fontSize: 10,
@@ -5178,6 +5295,9 @@ class _PostCard extends StatefulWidget {
   final bool isExpanded;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final VoidCallback? onQuote;
+  final VoidCallback? onEdit;
+  final VoidCallback? onMore;
   final void Function(String selectedText)? onAddToLog;
   final void Function(String selectedText)? onSelectionChanged;
 
@@ -5186,6 +5306,9 @@ class _PostCard extends StatefulWidget {
     required this.isExpanded,
     required this.onTap,
     required this.onLongPress,
+    this.onQuote,
+    this.onEdit,
+    this.onMore,
     this.onAddToLog,
     this.onSelectionChanged,
   });
@@ -5196,6 +5319,7 @@ class _PostCard extends StatefulWidget {
 
 class _PostCardState extends State<_PostCard>
     with SingleTickerProviderStateMixin {
+  bool _hovering = false;
   late AnimationController _ctrl;
   late Animation<double> _expand;
 
@@ -5228,6 +5352,19 @@ class _PostCardState extends State<_PostCard>
     super.dispose();
   }
 
+  Widget _hoverIcon(IconData icon, String tip, VoidCallback onTap) {
+    return Tooltip(
+      message: tip,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+          child: Icon(icon, size: 14, color: cMist),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final post = widget.post;
@@ -5238,10 +5375,14 @@ class _PostCardState extends State<_PostCard>
         ? (post.textColor == cParchment ? cGold : post.textColor)
         : cMist;
 
-    return GestureDetector(
+    final isDesktop = MediaQuery.of(context).size.width > 900;
+    return MouseRegion(
+      onEnter: (_) { if (isDesktop) setState(() => _hovering = true); },
+      onExit: (_) { if (isDesktop) setState(() => _hovering = false); },
+      child: GestureDetector(
       onTap: widget.onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: EdgeInsets.only(bottom: isDesktop ? 6 : 10),
         decoration: BoxDecoration(
           color: const Color(0xFF08080A).withValues(alpha: 0.82),
           border: Border(
@@ -5309,6 +5450,12 @@ class _PostCardState extends State<_PostCard>
                       ),
                     ],
                     const Spacer(),
+                    if (_hovering && isDesktop) ...[
+                      if (widget.onQuote != null) _hoverIcon(Icons.format_quote, 'Quote', widget.onQuote!),
+                      if (widget.onEdit != null) _hoverIcon(Icons.edit_outlined, 'Edit', widget.onEdit!),
+                      if (widget.onMore != null) _hoverIcon(Icons.more_horiz, 'More', widget.onMore!),
+                      const SizedBox(width: 4),
+                    ],
                     Text(
                       '${post.wordCount} words',
                       style: const TextStyle(
@@ -5389,6 +5536,7 @@ class _PostCardState extends State<_PostCard>
             ),
           ],
         ),
+      ),
       ),
     );
   }

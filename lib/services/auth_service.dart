@@ -31,6 +31,24 @@ class AuthService {
   static const _mobileSessionKey = 'lore_mobile_session';
   static const _webSessionKey    = 'lore_web_session';
   static const _biometricsKey = 'lore_biometrics_enabled';
+  static const _deviceKey = 'lore_device_id';
+
+  /// Stable per-install device ID. Phone and PC each get their own,
+  /// so they get their own entry in sessionVersions and never kick
+  /// each other. Survives app updates, changes only on reinstall /
+  /// sign-out wipe (which also removes the cloud entry).
+  Future<String> _deviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    var id = prefs.getString(_deviceKey);
+    if (id == null || id.isEmpty) {
+      final rnd = Random.secure();
+      id = List.generate(16, (_) => rnd.nextInt(256))
+          .map((b) => b.toRadixString(16).padLeft(2, '0'))
+          .join();
+      await prefs.setString(_deviceKey, id);
+    }
+    return id;
+  }
 
   // ── PIN policy ──
   static const int pinMinLength = 6;
@@ -178,13 +196,15 @@ class AuthService {
         return LoginResult.deviceLocked();
       }
 
-      // Rotate the mobile session version to kick out other phones
+      // Multi-device: only register THIS device. Never touch other
+      // devices entries, never bump the legacy mobile/web slots.
       final newVersion = DateTime.now().millisecondsSinceEpoch;
+      final deviceId = await _deviceId();
 
       await _db.collection('users').doc(clean).update({
         'lastSeen': FieldValue.serverTimestamp(),
         'deviceLocked': true,
-        'mobileSessionVersion': newVersion,
+        'sessionVersions.$deviceId': newVersion,
       });
 
       final name = data['displayNameOriginal'] as String? ?? '';
@@ -221,11 +241,12 @@ class AuthService {
 
       final name = data['displayNameOriginal'] as String? ?? '';
 
-      // Generate a new web session version (kicks out other web browsers)
+      // Multi-device: only register THIS device.
       final newVersion = DateTime.now().millisecondsSinceEpoch;
+      final deviceId = await _deviceId();
 
       await _db.collection('users').doc(clean).update({
-        'webSessionVersion': newVersion,
+        'sessionVersions.$deviceId': newVersion,
         'lastSeen': FieldValue.serverTimestamp(),
       });
       
@@ -269,25 +290,41 @@ class AuthService {
       final data = doc.data()!;
 
       final prefs = await SharedPreferences.getInstance();
+      final localKey = kIsWeb ? _webSessionKey : _mobileSessionKey;
+      final local = prefs.getInt(localKey);
 
+      // New model: per-device map. If the map exists, it is authoritative.
+      final rawMap = data['sessionVersions'];
+      if (rawMap is Map) {
+        final deviceId = await _deviceId();
+        final cloud = rawMap[deviceId];
+        if (cloud == null) {
+          return false;
+        }
+        if (local == null) {
+          await prefs.setInt(localKey, cloud as int);
+          return true;
+        }
+        return local == cloud;
+      }
+
+      // Legacy fallback: no map yet.
       if (kIsWeb) {
         final cloudWeb = data['webSessionVersion'] as int?;
-        if (cloudWeb == null) return true; // Legacy account fallback
-        final localWeb = prefs.getInt(_webSessionKey);
-        if (localWeb == null) {
-          await prefs.setInt(_webSessionKey, cloudWeb);
+        if (cloudWeb == null) return true;
+        if (local == null) {
+          await prefs.setInt(localKey, cloudWeb);
           return true;
         }
-        return localWeb == cloudWeb;
+        return local == cloudWeb;
       } else {
         final cloudMobile = data['mobileSessionVersion'] as int?;
-        if (cloudMobile == null) return true; // Legacy account fallback
-        final localMobile = prefs.getInt(_mobileSessionKey);
-        if (localMobile == null) {
-          await prefs.setInt(_mobileSessionKey, cloudMobile);
+        if (cloudMobile == null) return true;
+        if (local == null) {
+          await prefs.setInt(localKey, cloudMobile);
           return true;
         }
-        return localMobile == cloudMobile;
+        return local == cloudMobile;
       }
     } catch (_) {
       return true; // Fail open if offline
@@ -302,7 +339,9 @@ class AuthService {
     if (code == null) return;
     final v = DateTime.now().millisecondsSinceEpoch;
     
+    final deviceId = await _deviceId();
     await _db.collection('users').doc(code).update({
+      'sessionVersions': {deviceId: v},
       'mobileSessionVersion': v,
       'webSessionVersion': v,
     });
@@ -365,16 +404,23 @@ class AuthService {
 
         final code = _cachedCode;
     if (code != null) {
-      if (kIsWeb) {
-        // Remove the web session so you can log in on another PC later
-        await _db.collection('users').doc(code).update({
-          'webSessionVersion': FieldValue.delete(),
-        });
-      } else {
-        await _db.collection('users').doc(code).update({
-          'deviceLocked': false,
-          'mobileSessionVersion': FieldValue.delete(),
-        });
+      try {
+        final deviceId = await _deviceId();
+        final doc =
+            await _db.collection('users').doc(code).get();
+        final rawMap = doc.data()?['sessionVersions'];
+        final remaining =
+            rawMap is Map ? rawMap.length - 1 : 0;
+        final update = <String, dynamic>{
+          'sessionVersions.$deviceId': FieldValue.delete(),
+        };
+        if (remaining <= 0) {
+          update['deviceLocked'] = false;
+          update['mobileSessionVersion'] = FieldValue.delete();
+          update['webSessionVersion'] = FieldValue.delete();
+        }
+        await _db.collection('users').doc(code).update(update);
+      } catch (_) {
       }
     }
         _cachedCode = null;
@@ -658,12 +704,14 @@ class AuthService {
       // device signed in to the account — including the one that
       // requested the transfer — that its session is no longer valid.
       final newVersion = DateTime.now().millisecondsSinceEpoch;
+      // Multi-device transfer: ADD this device to the map. Other
+      // devices stay signed in. Only Sign out other devices kicks them.
+      final deviceId = await _deviceId();
       await _db.collection('users').doc(clean).update({
         'deviceLocked': true,
         'transferRequestedAt': FieldValue.delete(),
         'lastSeen': FieldValue.serverTimestamp(),
-        'mobileSessionVersion': newVersion,
-        'webSessionVersion': FieldValue.delete(), // Kicks out any old PC sessions
+        'sessionVersions.$deviceId': newVersion,
       });
 
       final doc = await _db.collection('users').doc(clean).get();

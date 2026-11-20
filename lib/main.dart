@@ -32,6 +32,8 @@ import 'widgets/home_profile_card.dart';
 import 'widgets/block_style_sheet.dart';
 import 'screens/gestures_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'screens/qr_scanner_screen.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'widgets/colour_picker.dart';
@@ -1063,7 +1065,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final isDesktop = width >= 900;
-    final inSplitMode = isDesktop && _activeBlock != null;
+    final inSplitMode = isDesktop;
 
     return Scaffold(
       body: Container(
@@ -1138,14 +1140,9 @@ class _HomeScreenState extends State<HomeScreen>
                             key: const ValueKey('mobile'),
                             child: _buildMobileBody(),
                           )
-                        : inSplitMode
-                        ? KeyedSubtree(
+                        : KeyedSubtree(
                             key: const ValueKey('desktop-split'),
                             child: _buildDesktopSplitBody(),
-                          )
-                        : KeyedSubtree(
-                            key: const ValueKey('desktop-full'),
-                            child: _buildDesktopFullBody(),
                           ),
                   ),
                 ),
@@ -1225,11 +1222,13 @@ class _HomeScreenState extends State<HomeScreen>
                               ),
                             ),
 
-                          if (!appSettings.showFloatingButton)
+                          if (isDesktop) _buildDesktopContinue(),
+                          if (!appSettings.showFloatingButton && !isDesktop)
                             _buildHomeBlocks(),
                           const SizedBox(height: 16),
                           // ── FLOATING BOTTOM BAR ──
-                          Container(
+                          if (!isDesktop)
+                            Container(
                             constraints: const BoxConstraints(minHeight: 96),
                             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                             child: Stack(
@@ -1451,7 +1450,7 @@ class _HomeScreenState extends State<HomeScreen>
             ),
 
             // ── THE FLOATING MENU BUTTON ──
-            if (appSettings.showFloatingButton)
+            if (appSettings.showFloatingButton && !isDesktop)
               FloatingMenuButton(items: _buildMenuItems()),
           ],
         ),
@@ -1485,6 +1484,70 @@ class _HomeScreenState extends State<HomeScreen>
     visible.insert(newIndex, item);
     await appSettings.setHomeOrder(visible.map((e) => e.blockKey).toList());
     if (mounted) setState(() {});
+  }
+
+  Widget _buildDesktopContinue() {
+    final active = _roleplays.where((r) => !r.isArchived).toList()
+      ..sort((a, b) => (b.lastPostAt ?? DateTime.fromMillisecondsSinceEpoch(0)).compareTo(a.lastPostAt ?? DateTime.fromMillisecondsSinceEpoch(0)));
+    if (active.isEmpty) return const SizedBox.shrink();
+    final first = active.first;
+    void openRp(_RPData rp) {
+      Navigator.of(context).push(fadeRoute(RPRoomScreen(partnerName: rp.partner, partnerCode: rp.partnerCode, genre: rp.genre, sessionId: rp.id, title: rp.title)));
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('CONTINUE', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 3)),
+          const SizedBox(height: 8),
+          LoreTap(
+            onTap: () => openRp(first),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: appSettings.surfaceColor, border: Border.all(color: cGold.withValues(alpha: 0.4)), borderRadius: BorderRadius.circular(12)),
+              child: Row(
+                children: [
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(first.hasTitle ? first.title : first.partner, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w300, fontStyle: FontStyle.italic, color: cParchment)),
+                    const SizedBox(height: 4),
+                    Text('${first.partner} - ${first.genre} - ${first.posts} posts', style: const TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 1)),
+                  ])),
+                  if (first.yourTurn) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(border: Border.all(color: cGold), borderRadius: BorderRadius.circular(10)), child: const Text('YOUR TURN', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 1))),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.chevron_right, size: 16, color: cSmoke),
+                ],
+              ),
+            ),
+          ),
+          for (final rp in active.skip(1).take(3))
+            LoreTap(
+              onTap: () => openRp(rp),
+              child: Container(
+                margin: const EdgeInsets.only(top: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(color: appSettings.surfaceColor, border: Border.all(color: cAsh), borderRadius: BorderRadius.circular(10)),
+                child: Row(children: [
+                  Expanded(child: Text(rp.hasTitle ? rp.title : rp.partner, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: cMist, fontWeight: FontWeight.w300))),
+                  if (rp.yourTurn) const Padding(padding: EdgeInsets.only(right: 8), child: Text('YOUR TURN', style: TextStyle(fontFamily: 'monospace', fontSize: 8, color: cGold, letterSpacing: 1))),
+                  Text('${rp.posts}p', style: const TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke)),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.chevron_right, size: 14, color: cSmoke),
+                ]),
+              ),
+            ),
+          const SizedBox(height: 16),
+          LoreTap(
+            onTap: () => Navigator.of(context).push(fadeRoute(const DiaryScreen())),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(color: appSettings.surfaceColor, border: Border.all(color: cAsh), borderRadius: BorderRadius.circular(10)),
+              child: const Row(children: [Icon(Icons.menu_book_outlined, size: 16, color: cGold), SizedBox(width: 10), Expanded(child: Text('Diary', style: TextStyle(fontSize: 14, color: cMist, fontWeight: FontWeight.w300))), Icon(Icons.chevron_right, size: 16, color: cSmoke)]),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildHomeBlocks() {
@@ -1805,6 +1868,7 @@ Widget _buildDesktopSplitBody() {
             const Divider(color: cAsh, height: 1),
 
             // ── Block list ──
+            _railTileOverview(),
             _railTile(
               'notifications',
               Icons.notifications_none,
@@ -1815,6 +1879,42 @@ Widget _buildDesktopSplitBody() {
             _railTile('preludes', Icons.lightbulb_outline, 'Preludes'),
             _railTile('card', Icons.credit_card_outlined, 'Request Card'),
             _railTile('settings', Icons.tune, 'Settings'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _railTileOverview() {
+    final active = _activeBlock == null;
+    return LoreTap(
+      onTap: () => setState(() => _activeBlock = null),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: active ? cGold.withValues(alpha: 0.06) : Colors.transparent,
+          border: Border(
+            left: BorderSide(
+              color: active ? cGold : Colors.transparent,
+              width: 2,
+            ),
+            bottom: const BorderSide(color: cAsh, width: 0.5),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.home_outlined, size: 16, color: active ? cGold : cSmoke),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Overview',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w300,
+                  color: cMist,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -1949,7 +2049,9 @@ Widget _buildDesktopSplitBody() {
           ), // <--- Add onRefresh
         );
       default:
-        return const SizedBox.shrink();
+        // Desktop overview: same home blocks as mobile, inside the split panel.
+        // _buildMobileBody() already caps itself at 900 on desktop.
+        return _buildMobileBody();
     }
   }
 
@@ -2004,13 +2106,17 @@ Widget _buildDesktopSplitBody() {
   void _showDownloadDialog(BuildContext context) {
     // ⚠️ REPLACE THIS URL WITH YOUR ACTUAL GITHUB RELEASE APK LINK! ⚠️
     const String apkUrl =
-        'https://github.com/VengefulRat/flutter_ex/releases/download/v1.0.0/app-release.apk';
+        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.2/flutter_ex-releases.apk';
+    // REPLACE WITH YOUR ACTUAL GITHUB RELEASE WINDOWS ZIP LINK WHEN YOU TAG!
+    const String windowsUrl =
+        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.3/LoreEx-Setup.exe';
 
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
         backgroundColor: cInk,
         shape: const RoundedRectangleBorder(),
+        child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -2064,6 +2170,22 @@ Widget _buildDesktopSplitBody() {
                   ],
                 ),
               ),
+              const SizedBox(height: 24),
+              const Divider(color: cAsh, height: 1),
+              const SizedBox(height: 16),
+              const Text('WINDOWS PC', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 4)),
+              const SizedBox(height: 12),
+              const Text('Get Lore on your PC. Share this link to yourself, then open it on your PC to download.', style: TextStyle(fontSize: 13, color: cMist, fontStyle: FontStyle.italic, height: 1.7)),
+              const SizedBox(height: 12),
+              Center(child: Container(padding: const EdgeInsets.all(8), color: Colors.white, child: QrImageView(data: windowsUrl, size: 120))),
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(child: GestureDetector(onTap: () async { await Clipboard.setData(const ClipboardData(text: windowsUrl)); if (context.mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: cInk, content: Text('PC link copied.', style: TextStyle(color: cGold)))); } }, child: Container(padding: const EdgeInsets.symmetric(vertical: 10), decoration: BoxDecoration(border: Border.all(color: cAsh)), child: const Center(child: Text('Copy PC link', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cMist, letterSpacing: 1)))))),
+                const SizedBox(width: 8),
+                Expanded(child: GestureDetector(onTap: () async { await SharePlus.instance.share(ShareParams(text: 'Download Lore for Windows PC: $windowsUrl')); }, child: Container(padding: const EdgeInsets.symmetric(vertical: 10), color: cParchment, child: const Center(child: Text('Share to yourself', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cVoid, letterSpacing: 1)))))),
+              ]),
+              const SizedBox(height: 12),
+              const Text('HOW TO INSTALL ON PC:\n1. Share / Copy this link to yourself (email / WhatsApp).\n2. Open it on your PC.\n3. Download LoreEx-Setup.exe and run it. It installs to Program Files and updates in place.', style: TextStyle(fontSize: 12, color: cParchment, height: 1.6)),
               const SizedBox(height: 24),
               Row(
                 children: [
@@ -2135,6 +2257,7 @@ Widget _buildDesktopSplitBody() {
           ),
         ),
       ),
+    ),
     );
   }
 }

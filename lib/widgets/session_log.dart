@@ -925,11 +925,13 @@ class _SessionLogViewState extends State<SessionLogView> {
   Widget _buildEntryCard(LogEntry e) {
     final expanded = _expandedId == e.id;
     final (label, color) = _labelAndColor(e);
-    return GestureDetector(
+    final isDesktop = MediaQuery.of(context).size.width > 900;
+    final hoverPreview = e.body.isEmpty ? '' : (e.body.length > 300 ? e.body.substring(0, 300) + '...' : e.body);
+    final card = GestureDetector(
       onTap: () => setState(() => _expandedId = expanded ? null : e.id),
       onLongPress: () => _showEntryActions(e),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: EdgeInsets.only(bottom: isDesktop ? 6 : 10),
         decoration: BoxDecoration(
           color: cVoid,
           border: Border(
@@ -943,7 +945,7 @@ class _SessionLogViewState extends State<SessionLogView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+              padding: EdgeInsets.fromLTRB(12, isDesktop ? 7 : 10, 12, isDesktop ? 6 : 8),
               child: Row(
                 children: [
                   Text(
@@ -972,8 +974,8 @@ class _SessionLogViewState extends State<SessionLogView> {
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
               child: Text(
                 e.title.isEmpty ? '(untitled)' : e.title,
-                style: const TextStyle(
-                  fontSize: 15,
+                style: TextStyle(
+                  fontSize: isDesktop ? 14 : 15,
                   fontWeight: FontWeight.w300,
                   fontStyle: FontStyle.italic,
                   color: cParchment,
@@ -1056,6 +1058,12 @@ class _SessionLogViewState extends State<SessionLogView> {
           ],
         ),
       ),
+    );
+    if (!isDesktop || hoverPreview.isEmpty) return card;
+    return Tooltip(
+      message: hoverPreview,
+      waitDuration: const Duration(milliseconds: 400),
+      child: card,
     );
   }
 

@@ -382,6 +382,7 @@ class FirestoreService {
     String? quotedAuthor,
     String? characterName,
     String? locationName,
+    Color? textColor,
   }) async {
     final code = _auth.currentCode;
     final name = _auth.currentName;
@@ -418,6 +419,7 @@ class FirestoreService {
         'authorName': name,
         'characterName': characterName,
         'locationName': locationName,
+        'textColor': textColor?.toARGB32(),
         'content': storedContent,
         'contentIv': storedIv,
         'quotedPostId': quotedPostId,
@@ -464,6 +466,7 @@ class FirestoreService {
     required String sessionId,
     required String postId,
     required String newContent,
+    Color? textColor,
   }) async {
     final sessionKey = await _requireSessionKey(sessionId);
     final enc = await _crypto.encryptContent(newContent, sessionKey);
@@ -475,6 +478,7 @@ class FirestoreService {
         .update({
           'content': enc['cipher']!,
           'contentIv': enc['iv'],
+          'textColor': textColor?.toARGB32(),
           'encrypted': true,
           'edited': true,
           'editedAt': FieldValue.serverTimestamp(),

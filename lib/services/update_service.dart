@@ -52,7 +52,15 @@ class UpdateService {
       int? apkSize;
       final assets = latestRelease['assets'] as List<dynamic>?;
       if (assets != null && assets.isNotEmpty) {
-        apkSize = (assets.first['size'] as num?)?.toInt();
+        final isWin = defaultTargetPlatform == TargetPlatform.windows;
+        Map<String, dynamic>? match;
+        for (final a in assets) {
+          final name = ((a as Map)['name'] as String? ?? '').toLowerCase();
+          if (isWin && name.endsWith('.exe')) { match = a as Map<String, dynamic>; break; }
+          if (!isWin && name.endsWith('.apk')) { match = a as Map<String, dynamic>; break; }
+        }
+        match ??= assets.first as Map<String, dynamic>;
+        apkSize = (match['size'] as num?)?.toInt();
       }
 
       if (!context.mounted) return;
@@ -282,8 +290,10 @@ class UpdateService {
     BuildContext context,
     String tag,
   ) async {
+    final isWin = defaultTargetPlatform == TargetPlatform.windows;
+    final fileName = isWin ? 'LoreEx-Setup.exe' : 'flutter_ex-releases.apk';
     final apkUrl =
-        'https://github.com/$_repoOwner/$_repoName/releases/download/$tag/flutter_ex-releases.apk';
+        'https://github.com/$_repoOwner/$_repoName/releases/download/$tag/$fileName';
 
     final progress = ValueNotifier<double>(0);
 

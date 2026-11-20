@@ -12,7 +12,8 @@ Future<void> downloadAndInstall(
 
   final dir = await getExternalStorageDirectory() ??
       await getApplicationDocumentsDirectory();
-  final file = File('${dir.path}/flutter_ex-releases.apk');
+  final fileName = Uri.parse(url).pathSegments.isNotEmpty ? Uri.parse(url).pathSegments.last : 'flutter_ex-releases.apk';
+  final file = File('${dir.path}/$fileName');
   debugPrint('DOWNLOADER: saving to ${file.path}');
 
   if (await file.exists()) {
@@ -38,10 +39,13 @@ Future<void> downloadAndInstall(
 
   debugPrint('DOWNLOADER: saved ${await file.length()} bytes, exists=${await file.exists()}');
 
-  final result = await OpenFilex.open(
-    file.path,
-    type: 'application/vnd.android.package-archive',
-  );
+  final isWin = Platform.isWindows;
+  final result = isWin
+      ? await OpenFilex.open(file.path)
+      : await OpenFilex.open(
+          file.path,
+          type: 'application/vnd.android.package-archive',
+        );
   debugPrint('DOWNLOADER: OpenFilex result type=${result.type} message=${result.message}');
 
   if (result.type != ResultType.done) {

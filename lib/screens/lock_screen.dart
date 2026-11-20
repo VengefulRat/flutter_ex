@@ -5,7 +5,7 @@ import '../services/auth_service.dart';
 import '../theme.dart';
 import 'package:local_auth/local_auth.dart';
 import 'gestures_screen.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 // ── Entry point ──
 Future<bool> showLockScreen(BuildContext context) async {
@@ -40,6 +40,16 @@ class _LockScreenState extends State<LockScreen> {
   String? _error;
   final _codeCtrl = TextEditingController();
   bool _codeLoading = false;
+  final _pinCtrl = TextEditingController();
+
+  // PC / web: real keyboard, no fingerprint scanner, no on-screen keypad.
+  bool get _isDesktopPlatform =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.linux;
+  bool _isDesktop(BuildContext context) =>
+      _isDesktopPlatform || MediaQuery.sizeOf(context).width >= 900;
 
   @override
   void initState() {
@@ -52,7 +62,7 @@ class _LockScreenState extends State<LockScreen> {
 
     // Check if biometrics are enabled and available
     final bioEnabled = await _auth.isBiometricsEnabled();
-    if (bioEnabled) {
+    if (bioEnabled && !_isDesktopPlatform) {
       try {
         final canCheck = await _localAuth.canCheckBiometrics;
         final isSupported = await _localAuth.isDeviceSupported();
@@ -161,6 +171,7 @@ class _LockScreenState extends State<LockScreen> {
         _verifying = false;
         _error = 'Incorrect PIN. Try again.';
       });
+      _pinCtrl.clear();
     }
   }
 
@@ -188,6 +199,7 @@ class _LockScreenState extends State<LockScreen> {
   @override
   void dispose() {
     _codeCtrl.dispose();
+    _pinCtrl.dispose();
     super.dispose();
   }
 
@@ -209,6 +221,7 @@ class _LockScreenState extends State<LockScreen> {
     return Focus(
       autofocus: true,
       onKeyEvent: (node, event) {
+        if (_isDesktop(context)) return KeyEventResult.ignored;
         if (_mode != 'pin' || _verifying) return KeyEventResult.ignored;
 
         if (event is KeyDownEvent) {
@@ -241,16 +254,22 @@ class _LockScreenState extends State<LockScreen> {
                       child: Column(
                         children: [
                           const Spacer(),
+                          Image.asset(
+                            'assets/images/1234.png',
+                            height: _isDesktop(context) ? 160 : 120,
+                            fit: BoxFit.contain,
+                          ),
+                          const SizedBox(height: 12),
                           const Text(
-                            'L o r e',
+                            'Your worlds have been waiting',
+                            textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 13,
-                              color: cGold,
-                              letterSpacing: 6,
-                              fontWeight: FontWeight.w300,
+                              fontSize: 12,
+                              color: cSmoke,
+                              fontStyle: FontStyle.italic,
                             ),
                           ),
-                          const SizedBox(height: 48),
+                          const SizedBox(height: 36),
                           if (_mode == 'pin')
                             _buildPinPrompt()
                           else
@@ -336,7 +355,7 @@ class _LockScreenState extends State<LockScreen> {
             ),
           ),
         ),
-        if (_biometricsAvailable) ...[
+        if (_biometricsAvailable && !_isDesktop(context)) ...[
           const SizedBox(height: 24),
           GestureDetector(
             onTap: _promptBiometrics,
@@ -362,7 +381,88 @@ class _LockScreenState extends State<LockScreen> {
           ),
         ],
         const SizedBox(height: 40),
-        _buildNumpad(),
+        if (_isDesktop(context))
+          SizedBox(
+            width: 280,
+            child: TextField(
+              controller: _pinCtrl,
+              autofocus: true,
+              enabled: !_verifying,
+              keyboardType: TextInputType.number,
+              obscureText: true,
+              maxLength: _pinLength,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 22,
+                color: cGold,
+                letterSpacing: 8,
+              ),
+              decoration: InputDecoration(
+                counterText: '',
+                hintText: 'Type PIN + Enter',
+                hintStyle: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 11,
+                  color: cSmoke,
+                  letterSpacing: 2,
+                ),
+                filled: true,
+                fillColor: cInk,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                border: const OutlineInputBorder(
+                  borderRadius: BorderRadius.zero,
+                  borderSide: BorderSide(color: cAsh),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.zero,
+                  borderSide: BorderSide(color: cGold.withValues(alpha: 0.6)),
+                ),
+              ),
+              onChanged: (v) {
+                if (_verifying) return;
+                final digits = v.replaceAll(RegExp(r'[^0-9]'), '');
+                if (digits != v) {
+                  _pinCtrl.text = digits;
+                  _pinCtrl.selection = TextSelection.fromPosition(
+                    TextPosition(offset: digits.length),
+                  );
+                }
+                setState(() {
+                  _pinInput = digits;
+                  _error = null;
+                });
+                if (digits.length == _pinLength) _verifyPin();
+              },
+              onSubmitted: (_) {
+                if (_verifying) return;
+                if (_pinInput.length == _pinLength) _verifyPin();
+              },
+            ),
+          ),
+        if (_isDesktop(context) && _verifying) ...[
+          const SizedBox(height: 20),
+          const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 1.5, color: cGold),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Unlocking...',
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 10,
+              color: cSmoke,
+              letterSpacing: 3,
+            ),
+          ),
+        ],
+        if (!_isDesktop(context))
+          _buildNumpad(),
       ],
     );
   }
@@ -1023,9 +1123,12 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
   }
 
   Widget _buildPinEntry({required bool isConfirm}) {
+    final isDesktop = MediaQuery.sizeOf(context).width >= 900;
     if (_savingPin) {
-      return Column(
+      return Center(
+        child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(
             width: 24,
@@ -1035,6 +1138,7 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
           const SizedBox(height: 24),
           const Text(
             'Securing your account...',
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
               color: cMist,
@@ -1054,6 +1158,7 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
             ),
           ),
         ],
+        ),
       );
     }
 
@@ -1102,7 +1207,21 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
             ),
           ],
           const SizedBox(height: 40),
-          _buildNumpad(),
+          if (isDesktop)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                'Type your PIN on your keyboard',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: cSmoke,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            )
+          else
+            _buildNumpad(),
         ],
       ),
     );

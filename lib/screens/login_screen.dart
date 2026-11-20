@@ -32,11 +32,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: cVoid,
-      resizeToAvoidBottomInset: true,
-      body: SafeArea(
-        child: AnimatedSwitcher(
+    final isDesktop = MediaQuery.sizeOf(context).width >= 900;
+    final panels = AnimatedSwitcher(
           duration: const Duration(milliseconds: 400),
           child: _mode == 0
               ? _LoginPanel(
@@ -46,7 +43,19 @@ class _LoginScreenState extends State<LoginScreen> {
               : _mode == 1
               ? _RegisterPanel(onSwitch: () => setState(() => _mode = 0))
               : const WebQRPanel(),
-        ),
+        );
+    return Scaffold(
+      backgroundColor: cVoid,
+      resizeToAvoidBottomInset: true,
+      body: SafeArea(
+        child: isDesktop
+            ? Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: panels,
+                ),
+              )
+            : panels,
       ),
     );
   }
@@ -656,7 +665,7 @@ class _LoginPanelState extends State<_LoginPanel> {
                 const SizedBox(height: 12),
                 const Text(
                   'This account is locked to another device.\n\n'
-                  'If this is you on a new phone, enter your PIN to transfer the account here.',
+                  'If this is you on a new device, enter your PIN to add this device. Your other devices stay signed in.',
                   style: TextStyle(
                     fontSize: 13,
                     color: cMist,
@@ -793,7 +802,7 @@ class _LoginPanelState extends State<_LoginPanel> {
                                     ),
                                   )
                                 : const Text(
-                                    'Transfer here',
+                                    'Add this device',
                                     style: TextStyle(
                                       fontFamily: 'monospace',
                                       fontSize: 9,
