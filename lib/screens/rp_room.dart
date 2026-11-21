@@ -24,6 +24,8 @@ import 'dart:ui' as ui;
 import '../widgets/holo_card_v2.dart';
 import '../widgets/card_frame.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // ─────────────────────────────────────────
 // DISPLAY MODE
@@ -501,8 +503,16 @@ Widget _selectablePostText({
 // ─────────────────────────────────────────
 // SCREEN
 // ─────────────────────────────────────────
-double _rpPostScale() => appSettings.rpPostSize == 'S' ? 0.85 : appSettings.rpPostSize == 'L' ? 1.18 : 1.0;
-double _rpEditorScale() => appSettings.rpEditorSize == 'S' ? 0.85 : appSettings.rpEditorSize == 'L' ? 1.18 : 1.0;
+double _rpPostScale() => appSettings.rpPostSize == 'S'
+    ? 0.85
+    : appSettings.rpPostSize == 'L'
+    ? 1.18
+    : 1.0;
+double _rpEditorScale() => appSettings.rpEditorSize == 'S'
+    ? 0.85
+    : appSettings.rpEditorSize == 'L'
+    ? 1.18
+    : 1.0;
 
 class RPRoomScreen extends StatefulWidget {
   final String partnerName;
@@ -518,6 +528,11 @@ class RPRoomScreen extends StatefulWidget {
     this.sessionId = '',
     this.title = '',
   });
+
+    // Which session is currently open, if any. Used by notification routing
+  // so tapping a notification for the room you're already in doesn't
+  // stack a duplicate copy on top.
+  static String? openSessionId;
 
   @override
   State<RPRoomScreen> createState() => _RPRoomScreenState();
@@ -820,6 +835,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   int _oocTotalNonUser = 0;
 
   final _oocCtrl = TextEditingController();
+  final _oocFocus = FocusNode();
   final _oocScrollCtrl = ScrollController();
 
   bool _settingsOpen = false;
@@ -865,10 +881,14 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   @override
   void initState() {
+    RPRoomScreen.openSessionId = widget.sessionId;
     super.initState();
     _sessionTitle = widget.title;
     _aiMoodEnabled = appSettings.aiMood;
-    _displayMode = RPDisplayMode.values.firstWhere((m) => m.name == appSettings.rpDisplayMode, orElse: () => RPDisplayMode.cards);
+    _displayMode = RPDisplayMode.values.firstWhere(
+      (m) => m.name == appSettings.rpDisplayMode,
+      orElse: () => RPDisplayMode.cards,
+    );
     appSettings.addListener(_onSettingsChanged);
     if (widget.sessionId.isNotEmpty && _sessionTitle.isEmpty) {
       _loadSessionTitle();
@@ -913,6 +933,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   @override
   void dispose() {
+    if (RPRoomScreen.openSessionId == widget.sessionId) {
+      RPRoomScreen.openSessionId = null;
+    }
     appSettings.removeListener(_onSettingsChanged);
     _selectionDebounce?.cancel();
     _editorCtrl.removeListener(_onEditorChanged);
@@ -928,6 +951,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     _editorCtrl.dispose();
     _scrollCtrl.dispose();
     _editorFocus.dispose();
+    _oocFocus.dispose();
     _oocCtrl.dispose();
     _oocScrollCtrl.dispose();
     super.dispose();
@@ -1003,9 +1027,12 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           final newNonUser = msgs.where((m) => !m.isUser).length;
           final isFirstLoad = _oocMessages.isEmpty && _oocTotalNonUser == 0;
           final oocVisible = _oocOpen || _desktopOOCExpanded;
-          if (!isFirstLoad && !oocVisible && newNonUser > _oocTotalNonUser) _oocUnread += newNonUser - _oocTotalNonUser;
+          if (!isFirstLoad && !oocVisible && newNonUser > _oocTotalNonUser)
+            _oocUnread += newNonUser - _oocTotalNonUser;
           _oocTotalNonUser = newNonUser;
-          _oocMessages..clear()..addAll(msgs);
+          _oocMessages
+            ..clear()
+            ..addAll(msgs);
         });
       }
     }, onError: _handleStreamError);
@@ -1102,8 +1129,14 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   void _onSettingsChanged() {
     if (!mounted) return;
-    setState(() { _aiMoodEnabled = appSettings.aiMood;
-    _displayMode = RPDisplayMode.values.firstWhere((m) => m.name == appSettings.rpDisplayMode, orElse: () => RPDisplayMode.cards); _initParticles(); });
+    setState(() {
+      _aiMoodEnabled = appSettings.aiMood;
+      _displayMode = RPDisplayMode.values.firstWhere(
+        (m) => m.name == appSettings.rpDisplayMode,
+        orElse: () => RPDisplayMode.cards,
+      );
+      _initParticles();
+    });
   }
 
   String get _draftKey =>
@@ -1192,7 +1225,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     final text = _editorCtrl.text;
     _lastTyped = DateTime.now();
     final captured = _lastTyped;
-        Future.delayed(_draftDebounce, () {
+    Future.delayed(_draftDebounce, () {
       if (_lastTyped == captured && mounted) _saveDraft(text);
     });
     if (!mounted) return;
@@ -1403,7 +1436,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           _sending = false;
         });
       }
-        } else {
+    } else {
       if (!mounted) return;
       final displayName =
           _activeCharacter?.name ?? (_auth.currentName ?? 'You');
@@ -1440,7 +1473,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     }
   }
 
-    Future<void> _deletePost(String id) async {
+  Future<void> _deletePost(String id) async {
     if (!mounted) return;
     final i = _posts.indexWhere((p) => p.id == id);
     if (i == -1) return;
@@ -1468,8 +1501,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   void _quotePost(String id) {
-  if (!mounted) return;
-  setState(() {
+    if (!mounted) return;
+    setState(() {
       _quotingPostId = id;
       _editorExpanded = true;
     });
@@ -1477,9 +1510,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   void _editPost(RPPost post) {
-  if (!mounted) return;
-  _editorCtrl.text = post.content;
-  setState(() {
+    if (!mounted) return;
+    _editorCtrl.text = post.content;
+    setState(() {
       _editingPostId = post.id;
       _quotingPostId = null;
       _editorExpanded = true;
@@ -1626,8 +1659,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   void _openLog() {
-  if (!mounted) return;
-  if (widget.sessionId.isEmpty) {
+    if (!mounted) return;
+    if (widget.sessionId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: cInk,
@@ -1642,7 +1675,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     SessionLogSheet.show(context, widget.sessionId);
   }
 
-    void _addToLogFromText(String selectedText) {
+  void _addToLogFromText(String selectedText) {
     if (!mounted) return;
     if (widget.sessionId.isEmpty) return;
     SessionLogSheet.promptFromSelection(
@@ -1668,7 +1701,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     }
   }
 
-    Future<void> _addSelectionToLog() async {
+  Future<void> _addSelectionToLog() async {
     final text = _selectedText;
     if (text.isEmpty) return;
     if (!mounted) return;
@@ -1760,10 +1793,25 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     if (isDesktop) {
       return Focus(
         onKeyEvent: (node, event) {
-          if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.keyF && !HardwareKeyboard.instance.isControlPressed && !HardwareKeyboard.instance.isMetaPressed && !HardwareKeyboard.instance.isAltPressed) {
-            if (_editorFocus.hasFocus) return KeyEventResult.ignored;
+          if (event is KeyDownEvent &&
+              event.logicalKey == LogicalKeyboardKey.keyF &&
+              !HardwareKeyboard.instance.isControlPressed &&
+              !HardwareKeyboard.instance.isMetaPressed &&
+              !HardwareKeyboard.instance.isAltPressed) {
+            if (_editorFocus.hasFocus || _oocFocus.hasFocus)
+              return KeyEventResult.ignored;
+            final primary = FocusManager.instance.primaryFocus;
+            if (primary != null && primary.context?.widget is EditableText) {
+              return KeyEventResult.ignored;
+            }
             setState(() {
-              if (_desktopFocusMode) { _desktopLogCollapsed = false; _desktopToolsCollapsed = false; } else { _desktopLogCollapsed = true; _desktopToolsCollapsed = true; }
+              if (_desktopFocusMode) {
+                _desktopLogCollapsed = false;
+                _desktopToolsCollapsed = false;
+              } else {
+                _desktopLogCollapsed = true;
+                _desktopToolsCollapsed = true;
+              }
             });
             return KeyEventResult.handled;
           }
@@ -1777,7 +1825,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   Color _effectiveBg(Color moodColor) {
     if (appSettings.rpMoodOverride == 'fixed') return appSettings.rpBgColor;
-    if (appSettings.rpMoodOverride == 'tint') return Color.lerp(moodColor, appSettings.rpBgColor, 0.5) ?? moodColor;
+    if (appSettings.rpMoodOverride == 'tint')
+      return Color.lerp(moodColor, appSettings.rpBgColor, 0.5) ?? moodColor;
     return moodColor;
   }
 
@@ -1820,16 +1869,23 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // Left Sidebar (Session Log)
-                          if (appSettings.rpShowLogSidebar && !_desktopLogCollapsed) SizedBox(
-                            width: 300,
-                            child: Container(
-                              decoration: const BoxDecoration(
-                                color: Colors.black12,
-                                border: Border(right: BorderSide(color: cAsh)),
+                          if (appSettings.rpShowLogSidebar &&
+                              !_desktopLogCollapsed)
+                            SizedBox(
+                              width: 300,
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  color: Colors.black12,
+                                  border: Border(
+                                    right: BorderSide(color: cAsh),
+                                  ),
+                                ),
+                                child: SessionLogView(
+                                  log: _log,
+                                  isSidebar: true,
+                                ),
                               ),
-                              child: SessionLogView(log: _log, isSidebar: true),
                             ),
-                          ),
 
                           // Center (Posts + Editor)
                           Expanded(
@@ -1849,192 +1905,207 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                           ),
 
                           // Right Sidebar (Tools + OOC)
-                          if (appSettings.rpShowToolsSidebar && !_desktopToolsCollapsed) SizedBox(
-                            width: 320,
-                            child: Container(
-                              decoration: const BoxDecoration(
-                                color: Colors.black12,
-                                border: Border(left: BorderSide(color: cAsh)),
-                              ),
-                              child: Column(
-                                children: [
-                                  Expanded(
-                                    child: RPToolsPanel(
-                                      isSidebar: true,
-                                      notes: _notes,
-                                      myStats: _myStats,
-                                      partnerStats: _partnerStatsN.value,
-                                      partnerName: widget.partnerName,
-                                      importedWorlds: _importedWorlds,
-                                      importedCharacters: _importedCharacters,
-                                      availableWorlds: _sandboxWorlds,
-                                      availableCharacters: _sandboxCharacters,
-                                      onDiceRolled: (msg) {
-                                        if (widget.sessionId.isNotEmpty) {
-                                          _fs.addOocMessage(
-                                            sessionId: widget.sessionId,
-                                            content: msg,
-                                            isSystem: true,
-                                          );
-                                          _log.addEvent(
-                                            title: 'Dice roll',
-                                            body: msg,
-                                            source: 'dice',
-                                          );
-                                        }
-                                      },
-                                      onMyStatsChanged: (block) =>
-                                          _saveMyStats(block),
-                                      onImportWorld: (w) {
-                                        setState(() {
-                                          if (!_importedWorlds.any(
-                                            (x) => x.id == w.id,
-                                          )) {
-                                            _importedWorlds.add(w);
+                          if (appSettings.rpShowToolsSidebar &&
+                              !_desktopToolsCollapsed)
+                            SizedBox(
+                              width: 320,
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  color: Colors.black12,
+                                  border: Border(left: BorderSide(color: cAsh)),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Expanded(
+                                      child: RPToolsPanel(
+                                        isSidebar: true,
+                                        notes: _notes,
+                                        myStats: _myStats,
+                                        partnerStats: _partnerStatsN.value,
+                                        partnerName: widget.partnerName,
+                                        importedWorlds: _importedWorlds,
+                                        importedCharacters: _importedCharacters,
+                                        availableWorlds: _sandboxWorlds,
+                                        availableCharacters: _sandboxCharacters,
+                                        onDiceRolled: (msg) {
+                                          if (widget.sessionId.isNotEmpty) {
+                                            _fs.addOocMessage(
+                                              sessionId: widget.sessionId,
+                                              content: msg,
+                                              isSystem: true,
+                                            );
+                                            _log.addEvent(
+                                              title: 'Dice roll',
+                                              body: msg,
+                                              source: 'dice',
+                                            );
                                           }
-                                        });
-                                        if (widget.sessionId.isNotEmpty) {
-                                          _log.addWorldEntry(w);
-                                          _fs.saveImportedItems(
-                                            widget.sessionId,
-                                            _importedCharacters
-                                                .map((c) => c.id)
-                                                .toList(),
-                                            _importedWorlds
-                                                .map((w) => w.id)
-                                                .toList(),
-                                          );
-                                        }
-                                      },
-                                      onImportCharacter: (c) {
-                                        setState(() {
-                                          if (!_importedCharacters.any(
-                                            (x) => x.id == c.id,
-                                          )) {
-                                            _importedCharacters.add(c);
+                                        },
+                                        onMyStatsChanged: (block) =>
+                                            _saveMyStats(block),
+                                        onImportWorld: (w) {
+                                          setState(() {
+                                            if (!_importedWorlds.any(
+                                              (x) => x.id == w.id,
+                                            )) {
+                                              _importedWorlds.add(w);
+                                            }
+                                          });
+                                          if (widget.sessionId.isNotEmpty) {
+                                            _log.addWorldEntry(w);
+                                            _fs.saveImportedItems(
+                                              widget.sessionId,
+                                              _importedCharacters
+                                                  .map((c) => c.id)
+                                                  .toList(),
+                                              _importedWorlds
+                                                  .map((w) => w.id)
+                                                  .toList(),
+                                            );
                                           }
-                                        });
-                                        if (widget.sessionId.isNotEmpty) {
-                                          _log.addCharacterEntry(c);
-                                          _fs.saveImportedItems(
-                                            widget.sessionId,
-                                            _importedCharacters
-                                                .map((c) => c.id)
-                                                .toList(),
-                                            _importedWorlds
-                                                .map((w) => w.id)
-                                                .toList(),
+                                        },
+                                        onImportCharacter: (c) {
+                                          setState(() {
+                                            if (!_importedCharacters.any(
+                                              (x) => x.id == c.id,
+                                            )) {
+                                              _importedCharacters.add(c);
+                                            }
+                                          });
+                                          if (widget.sessionId.isNotEmpty) {
+                                            _log.addCharacterEntry(c);
+                                            _fs.saveImportedItems(
+                                              widget.sessionId,
+                                              _importedCharacters
+                                                  .map((c) => c.id)
+                                                  .toList(),
+                                              _importedWorlds
+                                                  .map((w) => w.id)
+                                                  .toList(),
+                                            );
+                                          }
+                                        },
+                                        onRemoveWorld: (w) {
+                                          setState(
+                                            () => _importedWorlds.removeWhere(
+                                              (x) => x.id == w.id,
+                                            ),
                                           );
-                                        }
-                                      },
-                                      onRemoveWorld: (w) {
-                                        setState(
-                                          () => _importedWorlds.removeWhere(
-                                            (x) => x.id == w.id,
-                                          ),
-                                        );
-                                        if (widget.sessionId.isNotEmpty) {
-                                          _fs.saveImportedItems(
-                                            widget.sessionId,
-                                            _importedCharacters
-                                                .map((c) => c.id)
-                                                .toList(),
-                                            _importedWorlds
-                                                .map((w) => w.id)
-                                                .toList(),
+                                          if (widget.sessionId.isNotEmpty) {
+                                            _fs.saveImportedItems(
+                                              widget.sessionId,
+                                              _importedCharacters
+                                                  .map((c) => c.id)
+                                                  .toList(),
+                                              _importedWorlds
+                                                  .map((w) => w.id)
+                                                  .toList(),
+                                            );
+                                          }
+                                        },
+                                        onRemoveCharacter: (c) {
+                                          setState(
+                                            () =>
+                                                _importedCharacters.removeWhere(
+                                                  (x) => x.id == c.id,
+                                                ),
                                           );
-                                        }
-                                      },
-                                      onRemoveCharacter: (c) {
-                                        setState(
-                                          () => _importedCharacters.removeWhere(
-                                            (x) => x.id == c.id,
-                                          ),
-                                        );
-                                        if (widget.sessionId.isNotEmpty) {
-                                          _fs.saveImportedItems(
-                                            widget.sessionId,
-                                            _importedCharacters
-                                                .map((c) => c.id)
-                                                .toList(),
-                                            _importedWorlds
-                                                .map((w) => w.id)
-                                                .toList(),
-                                          );
-                                        }
-                                      },
+                                          if (widget.sessionId.isNotEmpty) {
+                                            _fs.saveImportedItems(
+                                              widget.sessionId,
+                                              _importedCharacters
+                                                  .map((c) => c.id)
+                                                  .toList(),
+                                              _importedWorlds
+                                                  .map((w) => w.id)
+                                                  .toList(),
+                                            );
+                                          }
+                                        },
+                                      ),
                                     ),
-                                  ),
-                                  const Divider(color: cAsh, height: 1),
-                                  if (appSettings.rpShowOoc) AnimatedContainer(
-                                    duration: const Duration(milliseconds: 250),
-                                    curve: Curves.easeInOut,
-                                    height: _desktopOOCExpanded ? 300 : 50,
-                                    child: Column(
-                                      children: [
-                                        Material(
-                                          color: cInk,
-                                          child: InkWell(
-                                            onTap: () {
-                                              setState(
-                                                () => _desktopOOCExpanded =
-                                                    !_desktopOOCExpanded,
-                                              );
-                                              if (_desktopOOCExpanded) { _oocUnread = 0; _scrollOocToBottom(); }
-                                            },
-                                            child: Container(
-                                              height: 50,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 16,
-                                                  ),
-                                              decoration: const BoxDecoration(
-                                                border: Border(
-                                                  bottom: BorderSide(
-                                                    color: cAsh,
+                                    const Divider(color: cAsh, height: 1),
+                                    if (appSettings.rpShowOoc)
+                                      AnimatedContainer(
+                                        duration: const Duration(
+                                          milliseconds: 250,
+                                        ),
+                                        curve: Curves.easeInOut,
+                                        height: _desktopOOCExpanded ? 300 : 50,
+                                        child: Column(
+                                          children: [
+                                            Material(
+                                              color: cInk,
+                                              child: InkWell(
+                                                onTap: () {
+                                                  setState(
+                                                    () => _desktopOOCExpanded =
+                                                        !_desktopOOCExpanded,
+                                                  );
+                                                  if (_desktopOOCExpanded) {
+                                                    _oocUnread = 0;
+                                                    _scrollOocToBottom();
+                                                  }
+                                                },
+                                                child: Container(
+                                                  height: 50,
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 16,
+                                                      ),
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                        border: Border(
+                                                          bottom: BorderSide(
+                                                            color: cAsh,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                  child: Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceBetween,
+                                                    children: [
+                                                      const Text(
+                                                        'OOC CHAT',
+                                                        style: TextStyle(
+                                                          fontFamily:
+                                                              'monospace',
+                                                          fontSize: 11,
+                                                          color: cIce,
+                                                          letterSpacing: 4,
+                                                        ),
+                                                      ),
+                                                      if (_oocUnread > 0 &&
+                                                          !_desktopFocusMode)
+                                                        _OocBadge(
+                                                          count: _oocUnread,
+                                                        ),
+                                                      Icon(
+                                                        _desktopOOCExpanded
+                                                            ? Icons
+                                                                  .keyboard_arrow_down
+                                                            : Icons
+                                                                  .keyboard_arrow_up,
+                                                        size: 16,
+                                                        color: cSmoke,
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
                                               ),
-                                              child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
-                                                children: [
-                                                  const Text(
-                                                    'OOC CHAT',
-                                                    style: TextStyle(
-                                                      fontFamily: 'monospace',
-                                                      fontSize: 11,
-                                                      color: cIce,
-                                                      letterSpacing: 4,
-                                                    ),
-                                                  ),
-                                                  if (_oocUnread > 0) _OocBadge(count: _oocUnread),
-                                                  Icon(
-                                                    _desktopOOCExpanded
-                                                        ? Icons
-                                                              .keyboard_arrow_down
-                                                        : Icons
-                                                              .keyboard_arrow_up,
-                                                    size: 16,
-                                                    color: cSmoke,
-                                                  ),
-                                                ],
-                                              ),
                                             ),
-                                          ),
+                                            if (_desktopOOCExpanded)
+                                              Expanded(
+                                                child: _buildOOCDesktopWidget(),
+                                              ),
+                                          ],
                                         ),
-                                        if (_desktopOOCExpanded)
-                                          Expanded(
-                                            child: _buildOOCDesktopWidget(),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -2143,28 +2214,35 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   bottom: _editorExpanded ? 320 : 90,
                   child: GestureDetector(
                     onTap: () {
-                      setState(() { _oocOpen = true; _oocUnread = 0; });
+                      setState(() {
+                        _oocOpen = true;
+                        _oocUnread = 0;
+                      });
                       _scrollOocToBottom();
                     },
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [
                         Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: cInk,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: cAsh),
-                      ),
-                      child: const Icon(
-                        Icons.chat_bubble_outline,
-                        color: cSmoke,
-                        size: 20,
-                      ),
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: cInk,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: cAsh),
+                          ),
+                          child: const Icon(
+                            Icons.chat_bubble_outline,
+                            color: cSmoke,
+                            size: 20,
+                          ),
                         ),
-                        if (_oocUnread > 0)
-                          Positioned(top: -4, right: -4, child: _OocBadge(count: _oocUnread)),
+                        if (_oocUnread > 0 && !_desktopFocusMode)
+                          Positioned(
+                            top: -4,
+                            right: -4,
+                            child: _OocBadge(count: _oocUnread),
+                          ),
                       ],
                     ),
                   ),
@@ -2192,16 +2270,36 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     if (!appSettings.rpHeaderShow) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(children: [
-          LoreTap(onTap: () => Navigator.of(context).pop(), child: const Icon(Icons.arrow_back_ios, color: cSmoke, size: 16)),
-          const Spacer(),
-          LoreTap(onTap: () => setState(() => _settingsOpen = !_settingsOpen), child: const Icon(Icons.tune, color: cSmoke, size: 18)),
-        ]),
+        child: Row(
+          children: [
+            LoreTap(
+              onTap: () => Navigator.of(context).pop(),
+              child: const Icon(Icons.arrow_back_ios, color: cSmoke, size: 16),
+            ),
+            const Spacer(),
+            LoreTap(
+              onTap: () => setState(() => _settingsOpen = !_settingsOpen),
+              child: const Icon(Icons.tune, color: cSmoke, size: 18),
+            ),
+          ],
+        ),
       );
     }
-    final titleSize = appSettings.rpHeaderSize == 'S' ? 13.0 : appSettings.rpHeaderSize == 'L' ? 20.0 : 16.0;
-    final subSize = appSettings.rpHeaderSize == 'S' ? 8.0 : appSettings.rpHeaderSize == 'L' ? 10.0 : 9.0;
-    final vPad = appSettings.rpHeaderSize == 'S' ? 8.0 : appSettings.rpHeaderSize == 'L' ? 16.0 : 12.0;
+    final titleSize = appSettings.rpHeaderSize == 'S'
+        ? 13.0
+        : appSettings.rpHeaderSize == 'L'
+        ? 20.0
+        : 16.0;
+    final subSize = appSettings.rpHeaderSize == 'S'
+        ? 8.0
+        : appSettings.rpHeaderSize == 'L'
+        ? 10.0
+        : 9.0;
+    final vPad = appSettings.rpHeaderSize == 'S'
+        ? 8.0
+        : appSettings.rpHeaderSize == 'L'
+        ? 16.0
+        : 12.0;
     return ClipRect(
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(
@@ -2333,51 +2431,53 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                 ),
               const SizedBox(width: 8),
               Tooltip(
-                message: MediaQuery.sizeOf(context).width >= 900 ? 'Log (Ctrl+B)' : 'Log',
+                message: MediaQuery.sizeOf(context).width >= 900
+                    ? 'Log (Ctrl+B)'
+                    : 'Log',
                 child: LoreTap(
-                onTap: () {
-                  final isDesktop =
-                      MediaQuery.sizeOf(context).width >= 900;
-                  if (isDesktop) {
-                    setState(
-                      () => _desktopLogCollapsed = !_desktopLogCollapsed,
-                    );
-                  } else {
-                    _openLog();
-                  }
-                },
-                child: Icon(
-                  _desktopLogCollapsed
-                      ? Icons.menu_book_outlined
-                      : Icons.menu_book,
-                  color: _desktopLogCollapsed ? cSmoke : cGold,
-                  size: MediaQuery.sizeOf(context).width >= 900 ? 16 : 18,
+                  onTap: () {
+                    final isDesktop = MediaQuery.sizeOf(context).width >= 900;
+                    if (isDesktop) {
+                      setState(
+                        () => _desktopLogCollapsed = !_desktopLogCollapsed,
+                      );
+                    } else {
+                      _openLog();
+                    }
+                  },
+                  child: Icon(
+                    _desktopLogCollapsed
+                        ? Icons.menu_book_outlined
+                        : Icons.menu_book,
+                    color: _desktopLogCollapsed ? cSmoke : cGold,
+                    size: MediaQuery.sizeOf(context).width >= 900 ? 16 : 18,
+                  ),
                 ),
-              ),
               ),
               SizedBox(width: MediaQuery.sizeOf(context).width >= 900 ? 8 : 12),
               Tooltip(
-                message: MediaQuery.sizeOf(context).width >= 900 ? 'Tools (Ctrl+T)' : 'Tools',
+                message: MediaQuery.sizeOf(context).width >= 900
+                    ? 'Tools (Ctrl+T)'
+                    : 'Tools',
                 child: LoreTap(
-                onTap: () {
-                  final isDesktop =
-                      MediaQuery.sizeOf(context).width >= 900;
-                  if (isDesktop) {
-                    setState(
-                      () => _desktopToolsCollapsed = !_desktopToolsCollapsed,
-                    );
-                  } else {
-                    _openToolsPanel();
-                  }
-                },
-                child: Icon(
-                  _desktopToolsCollapsed
-                      ? Icons.construction_outlined
-                      : Icons.construction,
-                  color: _desktopToolsCollapsed ? cSmoke : cGold,
-                  size: MediaQuery.sizeOf(context).width >= 900 ? 16 : 18,
+                  onTap: () {
+                    final isDesktop = MediaQuery.sizeOf(context).width >= 900;
+                    if (isDesktop) {
+                      setState(
+                        () => _desktopToolsCollapsed = !_desktopToolsCollapsed,
+                      );
+                    } else {
+                      _openToolsPanel();
+                    }
+                  },
+                  child: Icon(
+                    _desktopToolsCollapsed
+                        ? Icons.construction_outlined
+                        : Icons.construction,
+                    color: _desktopToolsCollapsed ? cSmoke : cGold,
+                    size: MediaQuery.sizeOf(context).width >= 900 ? 16 : 18,
+                  ),
                 ),
-              ),
               ),
               SizedBox(width: MediaQuery.sizeOf(context).width >= 900 ? 8 : 12),
               // Desktop only: Focus mode - collapse both, tap again to restore.
@@ -2385,39 +2485,39 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                 Tooltip(
                   message: 'Focus (F)',
                   child: LoreTap(
-                  onTap: () => setState(() {
-                    if (_desktopFocusMode) {
-                      _desktopLogCollapsed = false;
-                      _desktopToolsCollapsed = false;
-                    } else {
-                      _desktopLogCollapsed = true;
-                      _desktopToolsCollapsed = true;
-                    }
-                  }),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: _desktopFocusMode ? cGold : cAsh,
+                    onTap: () => setState(() {
+                      if (_desktopFocusMode) {
+                        _desktopLogCollapsed = false;
+                        _desktopToolsCollapsed = false;
+                      } else {
+                        _desktopLogCollapsed = true;
+                        _desktopToolsCollapsed = true;
+                      }
+                    }),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
                       ),
-                      color: _desktopFocusMode
-                          ? cGold.withValues(alpha: 0.12)
-                          : Colors.transparent,
-                    ),
-                    child: Text(
-                      _desktopFocusMode ? 'EXIT FOCUS' : 'FOCUS',
-                      style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 9,
-                        color: _desktopFocusMode ? cGold : cSmoke,
-                        letterSpacing: 2,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: _desktopFocusMode ? cGold : cAsh,
+                        ),
+                        color: _desktopFocusMode
+                            ? cGold.withValues(alpha: 0.12)
+                            : Colors.transparent,
+                      ),
+                      child: Text(
+                        _desktopFocusMode ? 'EXIT FOCUS' : 'FOCUS',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 9,
+                          color: _desktopFocusMode ? cGold : cSmoke,
+                          letterSpacing: 2,
+                        ),
                       ),
                     ),
                   ),
-                ),
                 ),
               if (MediaQuery.sizeOf(context).width >= 900)
                 const SizedBox(width: 8),
@@ -2492,7 +2592,12 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         behavior: NoGlowBehavior(),
         child: ListView.builder(
           controller: _scrollCtrl,
-          padding: EdgeInsets.fromLTRB(MediaQuery.of(context).size.width > 900 ? 8 : 12, MediaQuery.of(context).size.width > 900 ? 8 : 12, MediaQuery.of(context).size.width > 900 ? 8 : 12, 8),
+          padding: EdgeInsets.fromLTRB(
+            MediaQuery.of(context).size.width > 900 ? 8 : 12,
+            MediaQuery.of(context).size.width > 900 ? 8 : 12,
+            MediaQuery.of(context).size.width > 900 ? 8 : 12,
+            8,
+          ),
           itemCount: _posts.length,
           itemBuilder: (_, i) => _PostCard(
             post: _posts[i],
@@ -2537,13 +2642,20 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         behavior: NoGlowBehavior(),
         child: ListView.builder(
           controller: _scrollCtrl,
-          padding: EdgeInsets.fromLTRB(12, MediaQuery.of(context).size.width > 900 ? 10 : 16, 12, 8),
+          padding: EdgeInsets.fromLTRB(
+            12,
+            MediaQuery.of(context).size.width > 900 ? 10 : 16,
+            12,
+            8,
+          ),
           itemCount: _posts.length,
           itemBuilder: (_, i) {
             final post = _posts[i];
             final isUser = post.isUser;
             return Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).size.width > 900 ? 10 : 16),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).size.width > 900 ? 10 : 16,
+              ),
               child: Row(
                 mainAxisAlignment: isUser
                     ? MainAxisAlignment.end
@@ -2644,8 +2756,13 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                           ),
                           Container(
                             padding: EdgeInsets.symmetric(
-                              horizontal: MediaQuery.of(context).size.width > 900 ? 12 : 14,
-                              vertical: MediaQuery.of(context).size.width > 900 ? 8 : 12,
+                              horizontal:
+                                  MediaQuery.of(context).size.width > 900
+                                  ? 12
+                                  : 14,
+                              vertical: MediaQuery.of(context).size.width > 900
+                                  ? 8
+                                  : 12,
                             ),
                             decoration: BoxDecoration(
                               color: isUser
@@ -2741,12 +2858,19 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         behavior: NoGlowBehavior(),
         child: ListView.builder(
           controller: _scrollCtrl,
-          padding: EdgeInsets.fromLTRB(MediaQuery.of(context).size.width > 900 ? 16 : 24, MediaQuery.of(context).size.width > 900 ? 16 : 24, MediaQuery.of(context).size.width > 900 ? 16 : 24, 8),
+          padding: EdgeInsets.fromLTRB(
+            MediaQuery.of(context).size.width > 900 ? 16 : 24,
+            MediaQuery.of(context).size.width > 900 ? 16 : 24,
+            MediaQuery.of(context).size.width > 900 ? 16 : 24,
+            8,
+          ),
           itemCount: _posts.length,
           itemBuilder: (_, i) {
             final post = _posts[i];
             return Padding(
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).size.width > 900 ? 18 : 28),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).size.width > 900 ? 18 : 28,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -2984,7 +3108,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     );
   }
 
-    void _showPostActions(RPPost post) {
+  void _showPostActions(RPPost post) {
     if (!mounted) return;
     showModalBottomSheet(
       context: context,
@@ -3652,16 +3776,35 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   behavior: NoGlowBehavior(),
                   child: Focus(
                     onKeyEvent: (node, event) {
-                      final isDesktop = MediaQuery.sizeOf(context).width >= 900 || kIsWeb;
+                      final isDesktop =
+                          MediaQuery.sizeOf(context).width >= 900 || kIsWeb;
                       if (!isDesktop) return KeyEventResult.ignored;
                       if (event is KeyDownEvent) {
-                        final isCtrl = HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed;
-                        if (isCtrl && event.logicalKey == LogicalKeyboardKey.keyB) {
-                          if (MediaQuery.sizeOf(context).width >= 900) { setState(() => _desktopLogCollapsed = !_desktopLogCollapsed); } else { _openLog(); }
+                        final isCtrl =
+                            HardwareKeyboard.instance.isControlPressed ||
+                            HardwareKeyboard.instance.isMetaPressed;
+                        if (isCtrl &&
+                            event.logicalKey == LogicalKeyboardKey.keyB) {
+                          if (MediaQuery.sizeOf(context).width >= 900) {
+                            setState(
+                              () =>
+                                  _desktopLogCollapsed = !_desktopLogCollapsed,
+                            );
+                          } else {
+                            _openLog();
+                          }
                           return KeyEventResult.handled;
                         }
-                        if (isCtrl && event.logicalKey == LogicalKeyboardKey.keyT) {
-                          if (MediaQuery.sizeOf(context).width >= 900) { setState(() => _desktopToolsCollapsed = !_desktopToolsCollapsed); } else { _openToolsPanel(); }
+                        if (isCtrl &&
+                            event.logicalKey == LogicalKeyboardKey.keyT) {
+                          if (MediaQuery.sizeOf(context).width >= 900) {
+                            setState(
+                              () => _desktopToolsCollapsed =
+                                  !_desktopToolsCollapsed,
+                            );
+                          } else {
+                            _openToolsPanel();
+                          }
                           return KeyEventResult.handled;
                         }
                         final isEnter =
@@ -4043,7 +4186,11 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                       letterSpacing: 4,
                     ),
                   ),
-                  if (_oocUnread > 0) Padding(padding: const EdgeInsets.only(left: 8), child: _OocBadge(count: _oocUnread)),
+                  if (_oocUnread > 0 && !_desktopFocusMode)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: _OocBadge(count: _oocUnread),
+                    ),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => setState(() => _oocOpen = false),
@@ -4097,8 +4244,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                 ),
                               ),
                             if (msg.content.isNotEmpty)
-                              Text(
-                                msg.content,
+                              _OocLinkText(
+                                text: msg.content,
                                 style: TextStyle(
                                   fontSize: 13,
                                   color:
@@ -4205,6 +4352,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                       },
                       child: TextField(
                         controller: _oocCtrl,
+                        focusNode: _oocFocus,
                         style: const TextStyle(fontSize: 13, color: cParchment),
                         decoration: const InputDecoration(
                           hintText: 'Out of character...',
@@ -4250,7 +4398,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       bottom: 16,
       child: Container(
         width: 270,
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height - 76),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height - 76,
+        ),
         decoration: BoxDecoration(
           color: cInk,
           border: Border.all(color: cAsh),
@@ -4516,105 +4666,347 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         const Divider(color: cAsh, height: 1),
         const Padding(
           padding: EdgeInsets.fromLTRB(14, 12, 14, 6),
-          child: Text('RP ROOM CUSTOMIZE', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+          child: Text(
+            'RP ROOM CUSTOMIZE',
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 9,
+              color: cSmoke,
+              letterSpacing: 3,
+            ),
+          ),
         ),
-        _settingToggle('Show header', appSettings.rpHeaderShow, (v) => appSettings.setRpHeaderShow(v)),
+        _settingToggle(
+          'Show header',
+          appSettings.rpHeaderShow,
+          (v) => appSettings.setRpHeaderShow(v),
+        ),
         if (appSettings.rpHeaderShow) ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
-            child: Row(children: [
-              const Text('Header size', style: TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
-              const Spacer(),
-              _rpChip('S', appSettings.rpHeaderSize == 'S', () => appSettings.setRpHeaderSize('S')),
-              const SizedBox(width: 6),
-              _rpChip('M', appSettings.rpHeaderSize == 'M', () => appSettings.setRpHeaderSize('M')),
-              const SizedBox(width: 6),
-              _rpChip('L', appSettings.rpHeaderSize == 'L', () => appSettings.setRpHeaderSize('L')),
-            ]),
+            child: Row(
+              children: [
+                const Text(
+                  'Header size',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: cMist,
+                    fontWeight: FontWeight.w300,
+                  ),
+                ),
+                const Spacer(),
+                _rpChip(
+                  'S',
+                  appSettings.rpHeaderSize == 'S',
+                  () => appSettings.setRpHeaderSize('S'),
+                ),
+                const SizedBox(width: 6),
+                _rpChip(
+                  'M',
+                  appSettings.rpHeaderSize == 'M',
+                  () => appSettings.setRpHeaderSize('M'),
+                ),
+                const SizedBox(width: 6),
+                _rpChip(
+                  'L',
+                  appSettings.rpHeaderSize == 'L',
+                  () => appSettings.setRpHeaderSize('L'),
+                ),
+              ],
+            ),
           ),
-          _rpColorRow('Header accent', appSettings.rpHeaderAccent, (c) => appSettings.setRpHeaderAccent(c)),
+          _rpColorRow(
+            'Header accent',
+            appSettings.rpHeaderAccent,
+            (c) => appSettings.setRpHeaderAccent(c),
+          ),
         ],
         const Padding(
           padding: EdgeInsets.fromLTRB(14, 10, 14, 6),
-          child: Text('BACKGROUND', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+          child: Text(
+            'BACKGROUND',
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 9,
+              color: cSmoke,
+              letterSpacing: 3,
+            ),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
-          child: Wrap(spacing: 6, children: [
-            _rpChip('Mood', appSettings.rpMoodOverride == 'off', () => appSettings.setRpMoodOverride('off')),
-            _rpChip('Tint', appSettings.rpMoodOverride == 'tint', () => appSettings.setRpMoodOverride('tint')),
-            _rpChip('Fixed', appSettings.rpMoodOverride == 'fixed', () => appSettings.setRpMoodOverride('fixed')),
-          ]),
+          child: Wrap(
+            spacing: 6,
+            children: [
+              _rpChip(
+                'Mood',
+                appSettings.rpMoodOverride == 'off',
+                () => appSettings.setRpMoodOverride('off'),
+              ),
+              _rpChip(
+                'Tint',
+                appSettings.rpMoodOverride == 'tint',
+                () => appSettings.setRpMoodOverride('tint'),
+              ),
+              _rpChip(
+                'Fixed',
+                appSettings.rpMoodOverride == 'fixed',
+                () => appSettings.setRpMoodOverride('fixed'),
+              ),
+            ],
+          ),
         ),
-        if (appSettings.rpMoodOverride != 'off') _rpColorRow('Background colour', appSettings.rpBgColor, (c) => appSettings.setRpBgColor(c)),
-        _settingToggle('Particles', appSettings.rpParticlesOn, (v) => appSettings.setRpParticlesOn(v)),
+        if (appSettings.rpMoodOverride != 'off')
+          _rpColorRow(
+            'Background colour',
+            appSettings.rpBgColor,
+            (c) => appSettings.setRpBgColor(c),
+          ),
+        _settingToggle(
+          'Particles',
+          appSettings.rpParticlesOn,
+          (v) => appSettings.setRpParticlesOn(v),
+        ),
         const Padding(
           padding: EdgeInsets.fromLTRB(14, 10, 14, 6),
-          child: Text('SIZES', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+          child: Text(
+            'SIZES',
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 9,
+              color: cSmoke,
+              letterSpacing: 3,
+            ),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
-          child: Row(children: [
-            const Text('Post size', style: TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
-            const Spacer(),
-            _rpChip('S', appSettings.rpPostSize == 'S', () => appSettings.setRpPostSize('S')),
-            const SizedBox(width: 6),
-            _rpChip('M', appSettings.rpPostSize == 'M', () => appSettings.setRpPostSize('M')),
-            const SizedBox(width: 6),
-            _rpChip('L', appSettings.rpPostSize == 'L', () => appSettings.setRpPostSize('L')),
-          ]),
+          child: Row(
+            children: [
+              const Text(
+                'Post size',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: cMist,
+                  fontWeight: FontWeight.w300,
+                ),
+              ),
+              const Spacer(),
+              _rpChip(
+                'S',
+                appSettings.rpPostSize == 'S',
+                () => appSettings.setRpPostSize('S'),
+              ),
+              const SizedBox(width: 6),
+              _rpChip(
+                'M',
+                appSettings.rpPostSize == 'M',
+                () => appSettings.setRpPostSize('M'),
+              ),
+              const SizedBox(width: 6),
+              _rpChip(
+                'L',
+                appSettings.rpPostSize == 'L',
+                () => appSettings.setRpPostSize('L'),
+              ),
+            ],
+          ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 6),
-          child: Row(children: [
-            const Text('Editor size', style: TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
-            const Spacer(),
-            _rpChip('S', appSettings.rpEditorSize == 'S', () => appSettings.setRpEditorSize('S')),
-            const SizedBox(width: 6),
-            _rpChip('M', appSettings.rpEditorSize == 'M', () => appSettings.setRpEditorSize('M')),
-            const SizedBox(width: 6),
-            _rpChip('L', appSettings.rpEditorSize == 'L', () => appSettings.setRpEditorSize('L')),
-          ]),
+          child: Row(
+            children: [
+              const Text(
+                'Editor size',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: cMist,
+                  fontWeight: FontWeight.w300,
+                ),
+              ),
+              const Spacer(),
+              _rpChip(
+                'S',
+                appSettings.rpEditorSize == 'S',
+                () => appSettings.setRpEditorSize('S'),
+              ),
+              const SizedBox(width: 6),
+              _rpChip(
+                'M',
+                appSettings.rpEditorSize == 'M',
+                () => appSettings.setRpEditorSize('M'),
+              ),
+              const SizedBox(width: 6),
+              _rpChip(
+                'L',
+                appSettings.rpEditorSize == 'L',
+                () => appSettings.setRpEditorSize('L'),
+              ),
+            ],
+          ),
         ),
         const Padding(
           padding: EdgeInsets.fromLTRB(14, 10, 14, 6),
-          child: Text('PANELS', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 3)),
+          child: Text(
+            'PANELS',
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 9,
+              color: cSmoke,
+              letterSpacing: 3,
+            ),
+          ),
         ),
-        _settingToggle('Session Log sidebar', appSettings.rpShowLogSidebar, (v) => appSettings.setRpShowLogSidebar(v)),
-        _settingToggle('Tools sidebar', appSettings.rpShowToolsSidebar, (v) => appSettings.setRpShowToolsSidebar(v)),
-        _settingToggle('OOC panel', appSettings.rpShowOoc, (v) => appSettings.setRpShowOoc(v)),
-        _settingToggle('OOC unread badge', appSettings.rpOocBadgeOn, (v) => appSettings.setRpOocBadgeOn(v)),
+        _settingToggle(
+          'Session Log sidebar',
+          appSettings.rpShowLogSidebar,
+          (v) => appSettings.setRpShowLogSidebar(v),
+        ),
+        _settingToggle(
+          'Tools sidebar',
+          appSettings.rpShowToolsSidebar,
+          (v) => appSettings.setRpShowToolsSidebar(v),
+        ),
+        _settingToggle(
+          'OOC panel',
+          appSettings.rpShowOoc,
+          (v) => appSettings.setRpShowOoc(v),
+        ),
+        _settingToggle(
+          'OOC unread badge',
+          appSettings.rpOocBadgeOn,
+          (v) => appSettings.setRpOocBadgeOn(v),
+        ),
+        _settingToggle('Mute all sounds', sounds.masterMute, (v) async {
+          await sounds.setMasterMute(v);
+          setState(() {});
+        }),
+        // Notification volume slider
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 4, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text(
+                    'Notification volume',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: cMist,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${(sounds.notificationVolume * 100).round()}%',
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                      color: cGold,
+                    ),
+                  ),
+                ],
+              ),
+              Slider(
+                value: sounds.notificationVolume,
+                min: 0.0,
+                max: 1.0,
+                divisions: 20,
+                activeColor: cGold,
+                inactiveColor: cAsh,
+                onChanged: (v) {
+                  sounds.setNotificationVolume(v);
+                  setState(() {});
+                },
+              ),
+              const Text(
+                'OOC DING, new post chime, all notification sounds.',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: cSmoke,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
+
   Widget _rpChip(String label, bool active, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(border: Border.all(color: active ? cGold : cAsh), color: active ? cGold.withValues(alpha: 0.08) : Colors.transparent),
-        child: Text(label, style: TextStyle(fontFamily: 'monospace', fontSize: 9, letterSpacing: 1, color: active ? cGold : cSmoke)),
+        decoration: BoxDecoration(
+          border: Border.all(color: active ? cGold : cAsh),
+          color: active ? cGold.withValues(alpha: 0.08) : Colors.transparent,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 9,
+            letterSpacing: 1,
+            color: active ? cGold : cSmoke,
+          ),
+        ),
       ),
     );
   }
-  Widget _rpColorRow(String label, Color current, ValueChanged<Color> onPicked) {
+
+  Widget _rpColorRow(
+    String label,
+    Color current,
+    ValueChanged<Color> onPicked,
+  ) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 2, 14, 8),
-      child: Row(children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: cMist, fontWeight: FontWeight.w300)),
-        const Spacer(),
-        LoreTap(
-          onTap: () => LoreColourPicker.show(context, current: current, onPicked: onPicked),
-          child: Container(width: 28, height: 28, decoration: BoxDecoration(color: current, shape: BoxShape.circle, border: Border.all(color: Colors.white24))),
-        ),
-      ]),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: cMist,
+              fontWeight: FontWeight.w300,
+            ),
+          ),
+          const Spacer(),
+          LoreTap(
+            onTap: () => LoreColourPicker.show(
+              context,
+              current: current,
+              onPicked: onPicked,
+            ),
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: current,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white24),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
+
   Widget _modeBtn(RPDisplayMode mode, IconData icon, String label) {
     final active = _displayMode == mode;
     return Expanded(
       child: GestureDetector(
-        onTap: () { appSettings.setRpDisplayMode(mode.name); setState(() { _displayMode = mode; _settingsOpen = false; }); },
+        onTap: () {
+          appSettings.setRpDisplayMode(mode.name);
+          setState(() {
+            _displayMode = mode;
+            _settingsOpen = false;
+          });
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
@@ -4732,8 +5124,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                             ),
                           ),
                         if (msg.content.isNotEmpty)
-                          Text(
-                            msg.content,
+                          _OocLinkText(
+                            text: msg.content,
                             style: TextStyle(
                               fontSize: 13,
                               color: appSettings.textColourFor('ooc') ?? cMist,
@@ -4835,6 +5227,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   },
                   child: TextField(
                     controller: _oocCtrl,
+                    focusNode: _oocFocus,
                     style: const TextStyle(fontSize: 13, color: cParchment),
                     decoration: const InputDecoration(
                       hintText: 'Out of character...',
@@ -5084,7 +5477,7 @@ class _OocMediaPreviewState extends State<_OocMediaPreview> {
     }
   }
 
-    Future<void> _downloadAndDecrypt() async {
+  Future<void> _downloadAndDecrypt() async {
     if (!mounted) return;
     setState(() => _loading = true);
     try {
@@ -5269,22 +5662,81 @@ class _OocBadge extends StatefulWidget {
   State<_OocBadge> createState() => _OocBadgeState();
 }
 
-class _OocBadgeState extends State<_OocBadge> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
+class _OocLinkText extends StatelessWidget {
+  final String text;
+  final TextStyle style;
+  const _OocLinkText({required this.text, required this.style});
+
   @override
-  void dispose() { _c.dispose(); super.dispose(); }
+  Widget build(BuildContext context) {
+    final urlReg = RegExp(r'https?://[^\s]+');
+    final spans = <TextSpan>[];
+    var last = 0;
+    for (final m in urlReg.allMatches(text)) {
+      if (m.start > last) {
+        spans.add(TextSpan(text: text.substring(last, m.start), style: style));
+      }
+      final url = m.group(0)!;
+      spans.add(
+        TextSpan(
+          text: url,
+          style: style.copyWith(
+            color: cIce,
+            decoration: TextDecoration.underline,
+          ),
+          recognizer: TapGestureRecognizer()
+            ..onTap = () async {
+              final uri = Uri.tryParse(url);
+              if (uri != null) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+        ),
+      );
+      last = m.end;
+    }
+    if (last < text.length) {
+      spans.add(TextSpan(text: text.substring(last), style: style));
+    }
+    // SelectableText = long-press / drag to copy on phone + PC
+    return SelectableText.rich(TextSpan(children: spans));
+  }
+}
+
+class _OocBadgeState extends State<_OocBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _c,
-      builder: (_, child) => Transform.scale(
-        scale: 1.0 + _c.value * 0.15,
-        child: child,
-      ),
+      builder: (_, child) =>
+          Transform.scale(scale: 1.0 + _c.value * 0.15, child: child),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(color: cGold, borderRadius: BorderRadius.circular(10), border: Border.all(color: cInk)),
-        child: Text('', style: const TextStyle(fontFamily: 'monospace', fontSize: 10, color: cInk, fontWeight: FontWeight.bold)),
+        decoration: BoxDecoration(
+          color: cGold,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: cInk),
+        ),
+        child: Text(
+          '${widget.count}',
+          style: const TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 10,
+            color: cInk,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
@@ -5377,166 +5829,183 @@ class _PostCardState extends State<_PostCard>
 
     final isDesktop = MediaQuery.of(context).size.width > 900;
     return MouseRegion(
-      onEnter: (_) { if (isDesktop) setState(() => _hovering = true); },
-      onExit: (_) { if (isDesktop) setState(() => _hovering = false); },
+      onEnter: (_) {
+        if (isDesktop) setState(() => _hovering = true);
+      },
+      onExit: (_) {
+        if (isDesktop) setState(() => _hovering = false);
+      },
       child: GestureDetector(
-      onTap: widget.onTap,
-      child: Container(
-        margin: EdgeInsets.only(bottom: isDesktop ? 6 : 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFF08080A).withValues(alpha: 0.82),
-          border: Border(
-            left: BorderSide(
-              color: post.isUser ? nameColor : cSmoke,
-              width: post.isUser ? 2 : 1,
+        onTap: widget.onTap,
+        child: Container(
+          margin: EdgeInsets.only(bottom: isDesktop ? 6 : 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF08080A).withValues(alpha: 0.82),
+            border: Border(
+              left: BorderSide(
+                color: post.isUser ? nameColor : cSmoke,
+                width: post.isUser ? 2 : 1,
+              ),
+              top: const BorderSide(color: cAsh),
+              right: const BorderSide(color: cAsh),
+              bottom: const BorderSide(color: cAsh),
             ),
-            top: const BorderSide(color: cAsh),
-            right: const BorderSide(color: cAsh),
-            bottom: const BorderSide(color: cAsh),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (post.quotedContent != null)
-              Container(
-                margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-                padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  border: Border(left: BorderSide(color: cSmoke, width: 2)),
-                ),
-                child: Text(
-                  '${post.quotedAuthor ?? ""}: ${post.quotedContent}...',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: cSmoke,
-                    fontStyle: FontStyle.italic,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (post.quotedContent != null)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+                  padding: const EdgeInsets.all(10),
+                  decoration: const BoxDecoration(
+                    border: Border(left: BorderSide(color: cSmoke, width: 2)),
+                  ),
+                  child: Text(
+                    '${post.quotedAuthor ?? ""}: ${post.quotedContent}...',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: cSmoke,
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
                 ),
-              ),
-            GestureDetector(
-              onLongPress: widget.onLongPress,
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-                child: Row(
-                  children: [
-                    Text(
-                      post.characterName ?? post.author,
-                      style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 10,
-                        color: nameColor,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                    if (post.locationName != null) ...[
-                      const Text(
-                        ' · ',
+              GestureDetector(
+                onLongPress: widget.onLongPress,
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+                  child: Row(
+                    children: [
+                      Text(
+                        post.characterName ?? post.author,
                         style: TextStyle(
                           fontFamily: 'monospace',
                           fontSize: 10,
-                          color: cSmoke,
+                          color: nameColor,
+                          letterSpacing: 2,
                         ),
                       ),
+                      if (post.locationName != null) ...[
+                        const Text(
+                          ' · ',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 10,
+                            color: cSmoke,
+                          ),
+                        ),
+                        Text(
+                          post.locationName!,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 10,
+                            color: cSmoke,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
+                      const Spacer(),
+                      if (_hovering && isDesktop) ...[
+                        if (widget.onQuote != null)
+                          _hoverIcon(
+                            Icons.format_quote,
+                            'Quote',
+                            widget.onQuote!,
+                          ),
+                        if (widget.onEdit != null)
+                          _hoverIcon(
+                            Icons.edit_outlined,
+                            'Edit',
+                            widget.onEdit!,
+                          ),
+                        if (widget.onMore != null)
+                          _hoverIcon(Icons.more_horiz, 'More', widget.onMore!),
+                        const SizedBox(width: 4),
+                      ],
                       Text(
-                        post.locationName!,
+                        '${post.wordCount} words',
                         style: const TextStyle(
                           fontFamily: 'monospace',
-                          fontSize: 10,
+                          fontSize: 9,
                           color: cSmoke,
                           letterSpacing: 1,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      AnimatedRotation(
+                        turns: widget.isExpanded ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 300),
+                        child: const Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 14,
+                          color: cSmoke,
+                        ),
+                      ),
                     ],
-                    const Spacer(),
-                    if (_hovering && isDesktop) ...[
-                      if (widget.onQuote != null) _hoverIcon(Icons.format_quote, 'Quote', widget.onQuote!),
-                      if (widget.onEdit != null) _hoverIcon(Icons.edit_outlined, 'Edit', widget.onEdit!),
-                      if (widget.onMore != null) _hoverIcon(Icons.more_horiz, 'More', widget.onMore!),
-                      const SizedBox(width: 4),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                child: _selectablePostText(
+                  text: preview,
+                  style: TextStyle(
+                    fontSize: post.fontSize * _rpPostScale(),
+                    color: post.textColor.withValues(alpha: 0.7),
+                    fontStyle: post.italic
+                        ? FontStyle.italic
+                        : FontStyle.normal,
+                    fontWeight: post.bold ? FontWeight.bold : FontWeight.w300,
+                    height: 1.7,
+                  ),
+                  onAddToLog: widget.onAddToLog ?? (_) {},
+                  onSelectionChanged: widget.onSelectionChanged,
+                ),
+              ),
+              SizeTransition(
+                sizeFactor: _expand,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    border: Border(top: BorderSide(color: cAsh)),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _selectablePostText(
+                        text: post.content,
+                        style: TextStyle(
+                          fontSize: post.fontSize * _rpPostScale(),
+                          color: post.textColor,
+                          fontStyle: post.italic
+                              ? FontStyle.italic
+                              : FontStyle.normal,
+                          fontWeight: post.bold
+                              ? FontWeight.bold
+                              : FontWeight.w300,
+                          height: 1.9,
+                        ),
+                        onAddToLog: widget.onAddToLog ?? (_) {},
+                        onSelectionChanged: widget.onSelectionChanged,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        '${post.timestamp.hour.toString().padLeft(2, '0')}:${post.timestamp.minute.toString().padLeft(2, '0')}',
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 9,
+                          color: cSmoke,
+                          letterSpacing: 2,
+                        ),
+                      ),
                     ],
-                    Text(
-                      '${post.wordCount} words',
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 9,
-                        color: cSmoke,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    AnimatedRotation(
-                      turns: widget.isExpanded ? 0.5 : 0,
-                      duration: const Duration(milliseconds: 300),
-                      child: const Icon(
-                        Icons.keyboard_arrow_down,
-                        size: 14,
-                        color: cSmoke,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-              child: _selectablePostText(
-                text: preview,
-                style: TextStyle(
-                  fontSize: post.fontSize * _rpPostScale(),
-                  color: post.textColor.withValues(alpha: 0.7),
-                  fontStyle: post.italic ? FontStyle.italic : FontStyle.normal,
-                  fontWeight: post.bold ? FontWeight.bold : FontWeight.w300,
-                  height: 1.7,
-                ),
-                onAddToLog: widget.onAddToLog ?? (_) {},
-                onSelectionChanged: widget.onSelectionChanged,
-              ),
-            ),
-            SizeTransition(
-              sizeFactor: _expand,
-              child: Container(
-                decoration: const BoxDecoration(
-                  border: Border(top: BorderSide(color: cAsh)),
-                ),
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _selectablePostText(
-                      text: post.content,
-                      style: TextStyle(
-                        fontSize: post.fontSize * _rpPostScale(),
-                        color: post.textColor,
-                        fontStyle: post.italic
-                            ? FontStyle.italic
-                            : FontStyle.normal,
-                        fontWeight: post.bold
-                            ? FontWeight.bold
-                            : FontWeight.w300,
-                        height: 1.9,
-                      ),
-                      onAddToLog: widget.onAddToLog ?? (_) {},
-                      onSelectionChanged: widget.onSelectionChanged,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      '${post.timestamp.hour.toString().padLeft(2, '0')}:${post.timestamp.minute.toString().padLeft(2, '0')}',
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 9,
-                        color: cSmoke,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -5575,4 +6044,3 @@ class _MoodShaderPainter extends CustomPainter {
       old.moodColor != moodColor ||
       old.intensity != intensity;
 }
-
