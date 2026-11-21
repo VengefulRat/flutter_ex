@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import '../models/world.dart';
+import 'dart:async';
 
 // ─────────────────────────────────────────
 // DATA MODEL
@@ -146,10 +147,11 @@ class SessionLog extends ChangeNotifier {
   }
 
   Future<void> _add(LogEntry e) async {
-    await load();
-    _entries.insert(0, e);
-    await _save();
-  }
+  await load();
+  _entries.insert(0, e);
+  await _save();
+  await pushToCloud(e);
+}
 
   Future<void> addRule(String title, String body) =>
       _add(_make(type: LogEntryType.rule, title: title, body: body));
@@ -255,12 +257,14 @@ class SessionLog extends ChangeNotifier {
       worldData: old.worldData,
     );
     await _save();
+    await pushToCloud(_entries[i]);
   }
 
   Future<void> remove(String id) async {
-    _entries.removeWhere((e) => e.id == id);
-    await _save();
-  }
+  _entries.removeWhere((e) => e.id == id);
+  await _save();
+  await deleteFromCloud(id);
+}
 
   Future<void> addRestoredEntry(LogEntry entry) async {
     if (_entries.any((e) => e.id == entry.id)) return;
@@ -295,11 +299,22 @@ class SessionLog extends ChangeNotifier {
     try { await FirestoreService().deleteLogEntry(sessionId: sessionId, entryId: id); } catch (err) { print('delete log cloud failed: $err'); }
   }
 
+  StreamSubscription? _liveSub;
+
+Future<void> startLiveSync() async {
+  if (_liveSub != null) return;
+  await load();
+  _liveSub = FirestoreService().logEntries(sessionId).listen((cloud) async {
+    // ... your code as-is ...
+  });
+}
+
   Future<void> update(LogEntry e) async {
     final i = _entries.indexWhere((x) => x.id == e.id);
     if (i != -1) {
       _entries[i] = e;
       await _save();
+      await pushToCloud(e);
     }
   }
 
@@ -330,6 +345,7 @@ class SessionLogSheet {
     final log = SessionLog.forSession(sessionId);
     await log.load();
     await log.syncFromCloud();
+    await log.startLiveSync();
     if (!context.mounted) return;
     showModalBottomSheet(
       context: context,

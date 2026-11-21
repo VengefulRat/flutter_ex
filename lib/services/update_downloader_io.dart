@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
 
 Future<void> downloadAndInstall(
   String url,
@@ -10,9 +9,15 @@ Future<void> downloadAndInstall(
 ) async {
   debugPrint('DOWNLOADER: starting $url');
 
-  final dir = await getExternalStorageDirectory() ??
-      await getApplicationDocumentsDirectory();
-  final fileName = Uri.parse(url).pathSegments.isNotEmpty ? Uri.parse(url).pathSegments.last : 'flutter_ex-releases.apk';
+  // Windows: use %TEMP%, not Documents / ExternalStorage (Android-only).
+  // The installer needs to replace the running exe, so we must exit after launching it.
+  final fileName = Uri.parse(url).pathSegments.isNotEmpty
+      ? Uri.parse(url).pathSegments.last
+      : 'LoreEx-Setup.exe';
+
+  final dir = Platform.isWindows
+      ? Directory.systemTemp.createTempSync('lore_update_')
+      : Directory.systemTemp;
   final file = File('${dir.path}/$fileName');
   debugPrint('DOWNLOADER: saving to ${file.path}');
 
@@ -39,13 +44,25 @@ Future<void> downloadAndInstall(
 
   debugPrint('DOWNLOADER: saved ${await file.length()} bytes, exists=${await file.exists()}');
 
-  final isWin = Platform.isWindows;
-  final result = isWin
-      ? await OpenFilex.open(file.path)
-      : await OpenFilex.open(
-          file.path,
-          type: 'application/vnd.android.package-archive',
-        );
+  if (Platform.isWindows) {
+    // Inno Setup will prompt for admin itself (PrivilegesRequired=admin in lore_ex.iss).
+    // Launch detached, then exit so the installer can overwrite the running exe.
+    await Process.start(
+      file.path,
+      [],
+      mode: ProcessStartMode.detached,
+    );
+    debugPrint('DOWNLOADER: installer launched, exiting app');
+    // Small delay so the detached process actually spawns before we exit.
+    await Future.delayed(const Duration(milliseconds: 500));
+    exit(0);
+  }
+
+  // Android: keep existing behaviour.
+  final result = await OpenFilex.open(
+    file.path,
+    type: 'application/vnd.android.package-archive',
+  );
   debugPrint('DOWNLOADER: OpenFilex result type=${result.type} message=${result.message}');
 
   if (result.type != ResultType.done) {

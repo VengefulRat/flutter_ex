@@ -2427,10 +2427,10 @@ const SizedBox(height: 12),
   void _showDownloadDialog(BuildContext context) {
     // ⚠️ REPLACE THIS URL WITH YOUR ACTUAL GITHUB RELEASE APK LINK! ⚠️
     const String apkUrl =
-        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.4/flutter_ex-releases.apk';
+        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.5/flutter_ex-releases.apk';
     // REPLACE WITH YOUR ACTUAL GITHUB RELEASE WINDOWS ZIP LINK WHEN YOU TAG!
     const String windowsUrl =
-        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.4/LoreEx-Setup.exe';
+        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.5/LoreEx-Setup.exe';
 
     showDialog(
       context: context,
@@ -8504,7 +8504,7 @@ class _RPEditorScreenState extends State<_RPEditorScreen> {
 void showDownloadDialog(BuildContext context) {
   // ⚠️ REPLACE THIS URL WITH YOUR ACTUAL GITHUB RELEASE APK LINK! ⚠️
   const String apkUrl =
-      'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.4/flutter_ex-releases.apk';
+      'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.5/flutter_ex-releases.apk';
 
   showDialog(
     context: context,

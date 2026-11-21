@@ -844,6 +844,7 @@ try {
 
   final _oocCtrl = TextEditingController();
   final _oocFocus = FocusNode();
+  final _oocFocus2 = FocusNode();
   final _oocScrollCtrl = ScrollController();
 
   bool _settingsOpen = false;
@@ -961,6 +962,7 @@ try {
     _scrollCtrl.dispose();
     _editorFocus.dispose();
     _oocFocus.dispose();
+    _oocFocus2.dispose();
     _oocCtrl.dispose();
     _oocScrollCtrl.dispose();
     super.dispose();
@@ -1807,7 +1809,7 @@ try {
               !HardwareKeyboard.instance.isControlPressed &&
               !HardwareKeyboard.instance.isMetaPressed &&
               !HardwareKeyboard.instance.isAltPressed) {
-            if (_editorFocus.hasFocus || _oocFocus.hasFocus)
+            if (_editorFocus.hasFocus || _oocFocus.hasFocus || _oocFocus2.hasFocus)
               return KeyEventResult.ignored;
             final primary = FocusManager.instance.primaryFocus;
             if (primary != null && primary.context?.widget is EditableText) {
@@ -4360,7 +4362,7 @@ try {
                       },
                       child: TextField(
                         controller: _oocCtrl,
-                        focusNode: _oocFocus,
+                        focusNode: _oocFocus2,
                         style: const TextStyle(fontSize: 13, color: cParchment),
                         decoration: const InputDecoration(
                           hintText: 'Out of character...',
