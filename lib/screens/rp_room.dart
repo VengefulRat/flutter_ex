@@ -2076,8 +2076,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                                           letterSpacing: 4,
                                                         ),
                                                       ),
-                                                      if (_oocUnread > 0 &&
-                                                          !_desktopFocusMode)
+                                                      if (_oocUnread > 0 && !_desktopFocusMode && appSettings.rpOocBadgeOn)
                                                         _OocBadge(
                                                           count: _oocUnread,
                                                         ),
@@ -2237,7 +2236,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                             size: 20,
                           ),
                         ),
-                        if (_oocUnread > 0 && !_desktopFocusMode)
+                        if (_oocUnread > 0 && !_desktopFocusMode && appSettings.rpOocBadgeOn)
                           Positioned(
                             top: -4,
                             right: -4,
@@ -4186,7 +4185,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                       letterSpacing: 4,
                     ),
                   ),
-                  if (_oocUnread > 0 && !_desktopFocusMode)
+                  if (_oocUnread > 0 && !_desktopFocusMode && appSettings.rpOocBadgeOn)
                     Padding(
                       padding: const EdgeInsets.only(left: 8),
                       child: _OocBadge(count: _oocUnread),
