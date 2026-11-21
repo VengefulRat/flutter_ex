@@ -727,16 +727,24 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       final targetPath =
           '${dir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-      final compressedFile = await FlutterImageCompress.compressAndGetFile(
-        image.path,
-        targetPath,
-        quality: 70,
-        minWidth: 1024,
-        minHeight: 1024,
-      );
-
-      if (compressedFile == null) return;
-      final bytes = await compressedFile.readAsBytes();
+      Uint8List bytes;
+try {
+  final compressedFile = await FlutterImageCompress.compressAndGetFile(
+    image.path,
+    targetPath,
+    quality: 70,
+    minWidth: 1024,
+    minHeight: 1024,
+  );
+  if (compressedFile != null) {
+    bytes = await compressedFile.readAsBytes();
+  } else {
+    bytes = await image.readAsBytes();
+  }
+} catch (_) {
+  // Windows / unsupported format: fall back to raw picked bytes
+  bytes = await image.readAsBytes();
+}
 
       if (bytes.length > 5 * 1024 * 1024) {
         if (mounted) {
