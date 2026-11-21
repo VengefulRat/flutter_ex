@@ -298,9 +298,19 @@ class AuthService {
       if (rawMap is Map) {
         final deviceId = await _deviceId();
         final cloud = rawMap[deviceId];
-        if (cloud == null) {
-          return false;
-        }
+if (cloud == null) {
+  // #1: new device, not a kick. Adopt it: give it its own version,
+  // register it in the map, and let it in. Previously this returned
+  // false, so every first login on a second device kicked instantly.
+  final v = DateTime.now().millisecondsSinceEpoch;
+  try {
+    await _db.collection('users').doc(code).update({
+      'sessionVersions.$deviceId': v,
+    });
+  } catch (_) {}
+  await prefs.setInt(localKey, v);
+  return true;
+}
         if (local == null) {
           await prefs.setInt(localKey, cloud as int);
           return true;

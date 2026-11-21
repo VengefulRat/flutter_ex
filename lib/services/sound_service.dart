@@ -13,6 +13,7 @@ class SoundKey {
   static const sessionAccept = 'sound_session_accept';
   static const moodSwitch    = 'sound_mood_switch';
   static const masterMute    = 'sound_master_mute';
+  static const notificationVolume = 'sound_notification_volume';
 
   static const all = [
     rpPost,
@@ -85,6 +86,8 @@ class SoundService {
       // Fresh player per play: concurrent chimes overlap instead of
       // cutting each other off via a shared player's stop().
       final player = AudioPlayer();
+      if (masterMute) return;
+await player.setVolume(notificationVolume);
 
       // Tell Android this is a notification sound, not media,
       // and do NOT request audio focus from other apps.
@@ -110,6 +113,15 @@ class SoundService {
     } catch (e) {
       debugPrint('[SoundService] play failed ($key): $e');
     }
+  }
+
+  double get notificationVolume =>
+      _prefs?.getDouble(SoundKey.notificationVolume) ?? 0.5;
+
+  Future<void> setNotificationVolume(double value) async {
+    await init();
+    final v = value.clamp(0.0, 1.0);
+    await _prefs?.setDouble(SoundKey.notificationVolume, v);
   }
 
   void dispose() {

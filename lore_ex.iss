@@ -1,4 +1,6 @@
 [Setup]
+PrivilegesRequired=admin
+PrivilegesRequiredOverridesAllowed=dialog
 AppName=Lore Ex
 AppVersion=8.4.3
 DefaultDirName={autopf}\Lore Ex
@@ -7,7 +9,6 @@ OutputDir=installer-output
 OutputBaseFilename=LoreEx-Setup
 Compression=lzma2
 SolidCompression=yes
-PrivilegesRequired=lowest
 DisableProgramGroupPage=yes
 UninstallDisplayName=Lore Ex
 SetupIconFile=windows\runner\resources\app_icon.ico
