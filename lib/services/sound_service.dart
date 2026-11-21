@@ -87,7 +87,7 @@ class SoundService {
       // cutting each other off via a shared player's stop().
       final player = AudioPlayer();
       if (masterMute) return;
-await player.setVolume(notificationVolume);
+await player.setVolume(notificationVolume * masterVolume);
 
       // Tell Android this is a notification sound, not media,
       // and do NOT request audio focus from other apps.
@@ -122,6 +122,15 @@ await player.setVolume(notificationVolume);
     await init();
     final v = value.clamp(0.0, 1.0);
     await _prefs?.setDouble(SoundKey.notificationVolume, v);
+  }
+
+  double get masterVolume =>
+      _prefs?.getDouble('sound_master_volume') ?? 1.0;
+
+  Future<void> setMasterVolume(double value) async {
+    await init();
+    final v = value.clamp(0.0, 1.0);
+    await _prefs?.setDouble('sound_master_volume', v);
   }
 
   void dispose() {

@@ -207,14 +207,14 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         ),
       );
-      await _player.setVolume(0.8);
+      await _player.setVolume(sounds.masterVolume);
       await _player.play(AssetSource('sounds/echoes_of_the_deep.mp3'));
     } catch (_) {}
   }
 
   Future<void> _fadeOutMusic() async {
     try {
-      for (double v = 0.8; v >= 0; v -= 0.05) {
+      for (double v = sounds.masterVolume; v >= 0; v -= 0.05) {
         if (_musicStopping || !mounted) return;
         await Future.delayed(const Duration(milliseconds: 100));
         if (_musicStopping || !mounted) return;
@@ -461,6 +461,7 @@ class _HomeScreenState extends State<HomeScreen>
   List<_RPData> _brainstorms = [];
   Map<String, dynamic>? _profile;
   _RPData? _continueSession;
+  String _desktopContinueSort = 'last'; // last | posts | az
   StreamSubscription? _sessionsSub;
   StreamSubscription? _notifsSub;
   StreamSubscription? _fcmOpenedAppSub;
@@ -1654,10 +1655,16 @@ const SizedBox(height: 12),
 
   Widget _buildDesktopContinue() {
     final active = _roleplays.where((r) => !r.isArchived).toList()
-      ..sort(
-        (a, b) => (b.lastPostAt ?? DateTime.fromMillisecondsSinceEpoch(0))
-            .compareTo(a.lastPostAt ?? DateTime.fromMillisecondsSinceEpoch(0)),
-      );
+      ..sort((a, b) {
+        if (_desktopContinueSort == 'posts') return b.posts.compareTo(a.posts);
+        if (_desktopContinueSort == 'az') {
+          final an = a.hasTitle ? a.title : a.partner;
+          final bn = b.hasTitle ? b.title : b.partner;
+          return an.toLowerCase().compareTo(bn.toLowerCase());
+        }
+        return (b.lastPostAt ?? DateTime.fromMillisecondsSinceEpoch(0))
+            .compareTo(a.lastPostAt ?? DateTime.fromMillisecondsSinceEpoch(0));
+      });
     if (active.isEmpty) return const SizedBox.shrink();
     final first = active.first;
     void openRp(_RPData rp) {
@@ -1679,14 +1686,27 @@ const SizedBox(height: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'CONTINUE',
-            style: TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 9,
-              color: cGold,
-              letterSpacing: 3,
-            ),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'CONTINUE',
+                  style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 3),
+                ),
+              ),
+              LoreTap(
+                onTap: () {
+                  setState(() {
+                    _desktopContinueSort = _desktopContinueSort == 'last' ? 'posts' : _desktopContinueSort == 'posts' ? 'az' : 'last';
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(border: Border.all(color: cGold.withValues(alpha: 0.5)), borderRadius: BorderRadius.circular(10)),
+                  child: Text(_desktopContinueSort == 'posts' ? 'MOST POSTS' : _desktopContinueSort == 'az' ? 'A-Z' : 'LAST USED', style: const TextStyle(fontFamily: 'monospace', fontSize: 8, color: cGold, letterSpacing: 1)),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           LoreTap(
@@ -1809,36 +1829,6 @@ const SizedBox(height: 12),
                 ),
               ),
             ),
-          const SizedBox(height: 16),
-          LoreTap(
-            onTap: () =>
-                Navigator.of(context).push(fadeRoute(const DiaryScreen())),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              decoration: BoxDecoration(
-                color: appSettings.surfaceColor,
-                border: Border.all(color: cAsh),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.menu_book_outlined, size: 16, color: cGold),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Diary',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: cMist,
-                        fontWeight: FontWeight.w300,
-                      ),
-                    ),
-                  ),
-                  Icon(Icons.chevron_right, size: 16, color: cSmoke),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -2427,10 +2417,10 @@ const SizedBox(height: 12),
   void _showDownloadDialog(BuildContext context) {
     // ⚠️ REPLACE THIS URL WITH YOUR ACTUAL GITHUB RELEASE APK LINK! ⚠️
     const String apkUrl =
-        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.5/flutter_ex-releases.apk';
+        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.6/flutter_ex-releases.apk';
     // REPLACE WITH YOUR ACTUAL GITHUB RELEASE WINDOWS ZIP LINK WHEN YOU TAG!
     const String windowsUrl =
-        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.5/LoreEx-Setup.exe';
+        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.6/LoreEx-Setup.exe';
 
     showDialog(
       context: context,
@@ -5056,6 +5046,7 @@ class _SoundSettings extends StatefulWidget {
 
 class _SoundSettingsState extends State<_SoundSettings> {
   bool _masterMute = false;
+  double _masterVolume = 1.0;
   final Map<String, bool> _enabled = {};
 
   @override
@@ -5074,6 +5065,7 @@ class _SoundSettingsState extends State<_SoundSettings> {
     if (mounted) {
       setState(() {
         _masterMute = master;
+        _masterVolume = sounds.masterVolume;
         _enabled.addAll(map);
       });
     }
@@ -5095,6 +5087,24 @@ class _SoundSettingsState extends State<_SoundSettings> {
           },
           icon: _masterMute ? Icons.volume_off : Icons.volume_up,
           color: cGold,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Icon(_masterVolume == 0 ? Icons.volume_off : Icons.volume_up, size: 14, color: cGold),
+            const SizedBox(width: 8),
+            const Expanded(child: Text('Master volume', style: TextStyle(fontSize: 13, color: cMist, fontWeight: FontWeight.w300))),
+            Text('%', style: const TextStyle(fontFamily: 'monospace', fontSize: 11, color: cSmoke)),
+          ],
+        ),
+        Slider(
+          value: _masterVolume,
+          min: 0.0,
+          max: 1.0,
+          divisions: 20,
+          activeColor: cGold,
+          inactiveColor: cAsh,
+          onChanged: _masterMute ? null : (v) async { await sounds.setMasterVolume(v); setState(() => _masterVolume = v); },
         ),
         const SizedBox(height: 12),
         Container(
@@ -8504,7 +8514,7 @@ class _RPEditorScreenState extends State<_RPEditorScreen> {
 void showDownloadDialog(BuildContext context) {
   // ⚠️ REPLACE THIS URL WITH YOUR ACTUAL GITHUB RELEASE APK LINK! ⚠️
   const String apkUrl =
-      'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.5/flutter_ex-releases.apk';
+      'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.6/flutter_ex-releases.apk';
 
   showDialog(
     context: context,
