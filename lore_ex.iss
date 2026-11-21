@@ -1,4 +1,8 @@
 [Setup]
+SetupIconFile=assets\installer\lore_icon.ico
+WizardImageFile=assets\installer\WizardImage.bmp
+WizardSmallImageFile=assets\installer\WizardSmallImage.bmp
+WizardImageStretch=no
 PrivilegesRequired=admin
 PrivilegesRequiredOverridesAllowed=dialog
 AppName=Lore Ex
@@ -11,7 +15,6 @@ Compression=lzma2
 SolidCompression=yes
 DisableProgramGroupPage=yes
 UninstallDisplayName=Lore Ex
-SetupIconFile=windows\runner\resources\app_icon.ico
 
 [Files]
 Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
