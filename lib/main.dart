@@ -1229,218 +1229,226 @@ class _HomeScreenState extends State<HomeScreen>
                           // ── FLOATING BOTTOM BAR ──
                           if (!isDesktop)
                             Container(
-                            constraints: const BoxConstraints(minHeight: 96),
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              alignment: Alignment.bottomCenter,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: HoloCardV2(
-                                        accent: cSmoke,
-                                        intensity: 0.35,
-                                        seed: 'sandbox_btn'.hashCode,
-                                        bgColor: appSettings.surfaceColor,
-                                        child: LoreTap(
-                                          onTap: () async {
-                                            await Navigator.of(context).push(
-                                              fadeRoute(const SandboxScreen()),
-                                            );
-                                            if (mounted)
-                                              await _refreshProfile();
-                                          },
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 16,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: appSettings.surfaceColor,
-                                              border: Border.all(
-                                                color: cAsh,
-                                                width: 1.5,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black
-                                                      .withValues(alpha: 0.6),
-                                                  blurRadius: 12,
-                                                  offset: const Offset(0, 6),
-                                                ),
-                                              ],
-                                            ),
-                                            child: const Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.public_outlined,
-                                                  size: 16,
-                                                  color: cSmoke,
-                                                ),
-                                                SizedBox(width: 8),
-                                                Text(
-                                                  'Sandbox',
-                                                  style: TextStyle(
-                                                    fontFamily: 'monospace',
-                                                    fontSize: 11,
-                                                    color: cSmoke,
-                                                    letterSpacing: 1,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 90),
-                                    Expanded(
-                                      child: HoloCardV2(
-                                        accent: cGold,
-                                        intensity: 0.4,
-                                        seed: 'find_btn'.hashCode,
-                                        bgColor: appSettings.surfaceColor,
-                                        child: LoreTap(
-                                          onTap: () =>
-                                              Navigator.of(context).push(
+                              constraints: const BoxConstraints(minHeight: 96),
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                alignment: Alignment.bottomCenter,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: HoloCardV2(
+                                          accent: cSmoke,
+                                          intensity: 0.35,
+                                          seed: 'sandbox_btn'.hashCode,
+                                          bgColor: appSettings.surfaceColor,
+                                          child: LoreTap(
+                                            onTap: () async {
+                                              await Navigator.of(context).push(
                                                 fadeRoute(
-                                                  const CardDiscoveryScreen(),
+                                                  const SandboxScreen(),
                                                 ),
-                                              ),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 16,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: appSettings.surfaceColor,
-                                              border: Border.all(
-                                                color: cGold.withValues(
-                                                  alpha: 0.5,
-                                                ),
-                                                width: 1.5,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black
-                                                      .withValues(alpha: 0.6),
-                                                  blurRadius: 12,
-                                                  offset: const Offset(0, 6),
-                                                ),
-                                                BoxShadow(
-                                                  color: cGold.withValues(
-                                                    alpha: 0.15,
+                                              );
+                                              if (mounted)
+                                                await _refreshProfile();
+                                            },
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 16,
                                                   ),
-                                                  blurRadius: 20,
-                                                  offset: const Offset(0, 8),
+                                              decoration: BoxDecoration(
+                                                color: appSettings.surfaceColor,
+                                                border: Border.all(
+                                                  color: cAsh,
+                                                  width: 1.5,
                                                 ),
-                                              ],
-                                            ),
-                                            child: const Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.explore_outlined,
-                                                  size: 16,
-                                                  color: cGold,
-                                                ),
-                                                SizedBox(width: 8),
-                                                Text(
-                                                  'Find Partners',
-                                                  style: TextStyle(
-                                                    fontFamily: 'monospace',
-                                                    fontSize: 11,
-                                                    color: cGold,
-                                                    letterSpacing: 1,
-                                                    fontWeight: FontWeight.w600,
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withValues(alpha: 0.6),
+                                                    blurRadius: 12,
+                                                    offset: const Offset(0, 6),
                                                   ),
-                                                ),
-                                              ],
+                                                ],
+                                              ),
+                                              child: const Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.public_outlined,
+                                                    size: 16,
+                                                    color: cSmoke,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text(
+                                                    'Sandbox',
+                                                    style: TextStyle(
+                                                      fontFamily: 'monospace',
+                                                      fontSize: 11,
+                                                      color: cSmoke,
+                                                      letterSpacing: 1,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                Positioned(
-                                  bottom: 0,
-                                  child: HoloCardV2(
-                                    accent: cGold,
-                                    intensity: 0.6,
-                                    seed: 'diary_btn'.hashCode,
-                                    bgColor: appSettings.bgColor,
-                                    maxTiltDegrees: 15,
-                                    child: LoreTap(
-                                      onTap: () => Navigator.of(
-                                        context,
-                                      ).push(fadeRoute(const DiaryScreen())),
-                                      child: Container(
-                                        width: 82,
-                                        height: 82,
-                                        decoration: BoxDecoration(
-                                          color: appSettings.bgColor,
-                                          border: Border.all(
-                                            color: cGold.withValues(alpha: 0.7),
-                                            width: 1.5,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(
-                                                alpha: 0.8,
+                                      const SizedBox(width: 90),
+                                      Expanded(
+                                        child: HoloCardV2(
+                                          accent: cGold,
+                                          intensity: 0.4,
+                                          seed: 'find_btn'.hashCode,
+                                          bgColor: appSettings.surfaceColor,
+                                          child: LoreTap(
+                                            onTap: () =>
+                                                Navigator.of(context).push(
+                                                  fadeRoute(
+                                                    const CardDiscoveryScreen(),
+                                                  ),
+                                                ),
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 16,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: appSettings.surfaceColor,
+                                                border: Border.all(
+                                                  color: cGold.withValues(
+                                                    alpha: 0.5,
+                                                  ),
+                                                  width: 1.5,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withValues(alpha: 0.6),
+                                                    blurRadius: 12,
+                                                    offset: const Offset(0, 6),
+                                                  ),
+                                                  BoxShadow(
+                                                    color: cGold.withValues(
+                                                      alpha: 0.15,
+                                                    ),
+                                                    blurRadius: 20,
+                                                    offset: const Offset(0, 8),
+                                                  ),
+                                                ],
                                               ),
-                                              blurRadius: 16,
-                                              offset: const Offset(0, 8),
-                                            ),
-                                            BoxShadow(
-                                              color: cGold.withValues(
-                                                alpha: 0.25,
+                                              child: const Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.explore_outlined,
+                                                    size: 16,
+                                                    color: cGold,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text(
+                                                    'Find Partners',
+                                                    style: TextStyle(
+                                                      fontFamily: 'monospace',
+                                                      fontSize: 11,
+                                                      color: cGold,
+                                                      letterSpacing: 1,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                              blurRadius: 30,
-                                              offset: const Offset(0, 12),
-                                              spreadRadius: -2,
                                             ),
-                                          ],
+                                          ),
                                         ),
-                                        child: const Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.menu_book_outlined,
-                                              size: 24,
-                                              color: cGold,
-                                            ),
-                                            SizedBox(height: 6),
-                                            Text(
-                                              'Diary',
-                                              style: TextStyle(
-                                                fontFamily: 'monospace',
-                                                fontSize: 10,
-                                                color: cGold,
-                                                letterSpacing: 2,
-                                                fontWeight: FontWeight.w600,
+                                      ),
+                                    ],
+                                  ),
+                                  Positioned(
+                                    bottom: 0,
+                                    child: HoloCardV2(
+                                      accent: cGold,
+                                      intensity: 0.6,
+                                      seed: 'diary_btn'.hashCode,
+                                      bgColor: appSettings.bgColor,
+                                      maxTiltDegrees: 15,
+                                      child: LoreTap(
+                                        onTap: () => Navigator.of(
+                                          context,
+                                        ).push(fadeRoute(const DiaryScreen())),
+                                        child: Container(
+                                          width: 82,
+                                          height: 82,
+                                          decoration: BoxDecoration(
+                                            color: appSettings.bgColor,
+                                            border: Border.all(
+                                              color: cGold.withValues(
+                                                alpha: 0.7,
                                               ),
+                                              width: 1.5,
                                             ),
-                                          ],
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(
+                                                  alpha: 0.8,
+                                                ),
+                                                blurRadius: 16,
+                                                offset: const Offset(0, 8),
+                                              ),
+                                              BoxShadow(
+                                                color: cGold.withValues(
+                                                  alpha: 0.25,
+                                                ),
+                                                blurRadius: 30,
+                                                offset: const Offset(0, 12),
+                                                spreadRadius: -2,
+                                              ),
+                                            ],
+                                          ),
+                                          child: const Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.menu_book_outlined,
+                                                size: 24,
+                                                color: cGold,
+                                              ),
+                                              SizedBox(height: 6),
+                                              Text(
+                                                'Diary',
+                                                style: TextStyle(
+                                                  fontFamily: 'monospace',
+                                                  fontSize: 10,
+                                                  color: cGold,
+                                                  letterSpacing: 2,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -1448,7 +1456,151 @@ class _HomeScreenState extends State<HomeScreen>
                 );
               },
             ),
-
+            // ── DESKTOP RIGHT RAIL: Sandbox + Diary ──
+            if (isDesktop)
+              Positioned(
+                right: 16,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Sandbox
+                      Tooltip(
+                        message: 'Sandbox',
+                        child: LoreTap(
+                          onTap: () async {
+                            await Navigator.of(
+                              context,
+                            ).push(fadeRoute(const SandboxScreen()));
+                            if (mounted) await _refreshProfile();
+                          },
+                          child: Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: appSettings.surfaceColor,
+                              border: Border.all(color: cAsh, width: 1.5),
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.6),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.public_outlined,
+                                  size: 20,
+                                  color: cSmoke,
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Sandbox',
+                                  style: TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 8,
+                                    color: cSmoke,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+// Find Partners (desktop right rail - same destination as mobile)
+Tooltip(
+message: 'Find Partners',
+child: LoreTap(
+onTap: () => Navigator.of(context).push(fadeRoute(const CardDiscoveryScreen())),
+child: Container(
+width: 56,
+height: 56,
+decoration: BoxDecoration(
+color: appSettings.surfaceColor,
+border: Border.all(color: cGold.withValues(alpha: 0.5), width: 1.5),
+borderRadius: BorderRadius.circular(14),
+boxShadow: [
+BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 12, offset: const Offset(0, 6)),
+],
+),
+child: const Column(
+mainAxisAlignment: MainAxisAlignment.center,
+children: [
+Icon(Icons.explore_outlined, size: 20, color: cGold),
+SizedBox(height: 4),
+Text('Partners', style: TextStyle(fontFamily: 'monospace', fontSize: 8, color: cGold, letterSpacing: 1)),
+],
+),
+),
+),
+),
+const SizedBox(height: 12),
+// Diary
+                      Tooltip(
+                        message: 'Diary',
+                        child: LoreTap(
+                          onTap: () => Navigator.of(
+                            context,
+                          ).push(fadeRoute(const DiaryScreen())),
+                          child: Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: appSettings.bgColor,
+                              border: Border.all(
+                                color: cGold.withValues(alpha: 0.7),
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.8),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 8),
+                                ),
+                                BoxShadow(
+                                  color: cGold.withValues(alpha: 0.25),
+                                  blurRadius: 30,
+                                  offset: const Offset(0, 12),
+                                  spreadRadius: -2,
+                                ),
+                              ],
+                            ),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.menu_book_outlined,
+                                  size: 20,
+                                  color: cGold,
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Diary',
+                                  style: TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 8,
+                                    color: cGold,
+                                    letterSpacing: 2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             // ── THE FLOATING MENU BUTTON ──
             if (appSettings.showFloatingButton && !isDesktop)
               FloatingMenuButton(items: _buildMenuItems()),
@@ -1461,7 +1613,9 @@ class _HomeScreenState extends State<HomeScreen>
   List<FloatingMenuItem> _orderedMenuItems() {
     final items = _buildMenuItems();
     // Hide hidden blocks
-    final visible = items.where((it) => !appSettings.isBlockHidden(it.blockKey)).toList();
+    final visible = items
+        .where((it) => !appSettings.isBlockHidden(it.blockKey))
+        .toList();
     // Order by saved homeOrder, unknown keys keep their original order at the end
     final order = appSettings.homeOrder;
     if (order.isEmpty) return visible;
@@ -1488,32 +1642,100 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildDesktopContinue() {
     final active = _roleplays.where((r) => !r.isArchived).toList()
-      ..sort((a, b) => (b.lastPostAt ?? DateTime.fromMillisecondsSinceEpoch(0)).compareTo(a.lastPostAt ?? DateTime.fromMillisecondsSinceEpoch(0)));
+      ..sort(
+        (a, b) => (b.lastPostAt ?? DateTime.fromMillisecondsSinceEpoch(0))
+            .compareTo(a.lastPostAt ?? DateTime.fromMillisecondsSinceEpoch(0)),
+      );
     if (active.isEmpty) return const SizedBox.shrink();
     final first = active.first;
     void openRp(_RPData rp) {
-      Navigator.of(context).push(fadeRoute(RPRoomScreen(partnerName: rp.partner, partnerCode: rp.partnerCode, genre: rp.genre, sessionId: rp.id, title: rp.title)));
+      Navigator.of(context).push(
+        fadeRoute(
+          RPRoomScreen(
+            partnerName: rp.partner,
+            partnerCode: rp.partnerCode,
+            genre: rp.genre,
+            sessionId: rp.id,
+            title: rp.title,
+          ),
+        ),
+      );
     }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('CONTINUE', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 3)),
+          const Text(
+            'CONTINUE',
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 9,
+              color: cGold,
+              letterSpacing: 3,
+            ),
+          ),
           const SizedBox(height: 8),
           LoreTap(
             onTap: () => openRp(first),
             child: Container(
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: appSettings.surfaceColor, border: Border.all(color: cGold.withValues(alpha: 0.4)), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: appSettings.surfaceColor,
+                border: Border.all(color: cGold.withValues(alpha: 0.4)),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Row(
                 children: [
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(first.hasTitle ? first.title : first.partner, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w300, fontStyle: FontStyle.italic, color: cParchment)),
-                    const SizedBox(height: 4),
-                    Text('${first.partner} - ${first.genre} - ${first.posts} posts', style: const TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke, letterSpacing: 1)),
-                  ])),
-                  if (first.yourTurn) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(border: Border.all(color: cGold), borderRadius: BorderRadius.circular(10)), child: const Text('YOUR TURN', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 1))),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          first.hasTitle ? first.title : first.partner,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w300,
+                            fontStyle: FontStyle.italic,
+                            color: cParchment,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${first.partner} - ${first.genre} - ${first.posts} posts',
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 9,
+                            color: cSmoke,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (first.yourTurn)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: cGold),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        'YOUR TURN',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 9,
+                          color: cGold,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
                   const SizedBox(width: 8),
                   const Icon(Icons.chevron_right, size: 16, color: cSmoke),
                 ],
@@ -1525,24 +1747,84 @@ class _HomeScreenState extends State<HomeScreen>
               onTap: () => openRp(rp),
               child: Container(
                 margin: const EdgeInsets.only(top: 6),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(color: appSettings.surfaceColor, border: Border.all(color: cAsh), borderRadius: BorderRadius.circular(10)),
-                child: Row(children: [
-                  Expanded(child: Text(rp.hasTitle ? rp.title : rp.partner, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: cMist, fontWeight: FontWeight.w300))),
-                  if (rp.yourTurn) const Padding(padding: EdgeInsets.only(right: 8), child: Text('YOUR TURN', style: TextStyle(fontFamily: 'monospace', fontSize: 8, color: cGold, letterSpacing: 1))),
-                  Text('${rp.posts}p', style: const TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke)),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.chevron_right, size: 14, color: cSmoke),
-                ]),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: appSettings.surfaceColor,
+                  border: Border.all(color: cAsh),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        rp.hasTitle ? rp.title : rp.partner,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: cMist,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                    ),
+                    if (rp.yourTurn)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 8),
+                        child: Text(
+                          'YOUR TURN',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 8,
+                            color: cGold,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                    Text(
+                      '${rp.posts}p',
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 9,
+                        color: cSmoke,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right, size: 14, color: cSmoke),
+                  ],
+                ),
               ),
             ),
           const SizedBox(height: 16),
           LoreTap(
-            onTap: () => Navigator.of(context).push(fadeRoute(const DiaryScreen())),
+            onTap: () =>
+                Navigator.of(context).push(fadeRoute(const DiaryScreen())),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              decoration: BoxDecoration(color: appSettings.surfaceColor, border: Border.all(color: cAsh), borderRadius: BorderRadius.circular(10)),
-              child: const Row(children: [Icon(Icons.menu_book_outlined, size: 16, color: cGold), SizedBox(width: 10), Expanded(child: Text('Diary', style: TextStyle(fontSize: 14, color: cMist, fontWeight: FontWeight.w300))), Icon(Icons.chevron_right, size: 16, color: cSmoke)]),
+              decoration: BoxDecoration(
+                color: appSettings.surfaceColor,
+                border: Border.all(color: cAsh),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.menu_book_outlined, size: 16, color: cGold),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Diary',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: cMist,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, size: 16, color: cSmoke),
+                ],
+              ),
             ),
           ),
         ],
@@ -1557,7 +1839,11 @@ class _HomeScreenState extends State<HomeScreen>
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Text(
           'All blocks hidden. Turn them back on in Settings > Customize layout.',
-          style: TextStyle(fontSize: 12, color: cSmoke, fontStyle: FontStyle.italic),
+          style: TextStyle(
+            fontSize: 12,
+            color: cSmoke,
+            fontStyle: FontStyle.italic,
+          ),
         ),
       );
     }
@@ -1570,16 +1856,21 @@ class _HomeScreenState extends State<HomeScreen>
               key: ValueKey(items[i].blockKey),
               margin: const EdgeInsets.only(bottom: 10),
               decoration: BoxDecoration(
-                color: appSettings.styleForBlock(items[i].blockKey).background ??
+                color:
+                    appSettings.styleForBlock(items[i].blockKey).background ??
                     appSettings.surfaceColor,
                 border: Border.all(color: cAsh, width: 1.5),
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: appSettings.styleForBlock(items[i].blockKey).glowEnabled
+                boxShadow:
+                    appSettings.styleForBlock(items[i].blockKey).glowEnabled
                     ? [
                         BoxShadow(
-                          color: (appSettings.styleForBlock(items[i].blockKey).glowColor ??
-                                  cGold)
-                              .withValues(alpha: 0.35),
+                          color:
+                              (appSettings
+                                          .styleForBlock(items[i].blockKey)
+                                          .glowColor ??
+                                      cGold)
+                                  .withValues(alpha: 0.35),
                           blurRadius: 14,
                           spreadRadius: 1,
                         ),
@@ -1588,11 +1879,14 @@ class _HomeScreenState extends State<HomeScreen>
               ),
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  vertical: appSettings.styleForBlock(items[i].blockKey).size == 'small'
+                  vertical:
+                      appSettings.styleForBlock(items[i].blockKey).size ==
+                          'small'
                       ? 8
-                      : appSettings.styleForBlock(items[i].blockKey).size == 'large'
-                          ? 22
-                          : 12,
+                      : appSettings.styleForBlock(items[i].blockKey).size ==
+                            'large'
+                      ? 22
+                      : 12,
                   horizontal: 10,
                 ),
                 child: Row(
@@ -1621,12 +1915,17 @@ class _HomeScreenState extends State<HomeScreen>
                     const SizedBox(width: 8),
                     Icon(
                       items[i].icon,
-                      size: appSettings.styleForBlock(items[i].blockKey).size == 'small'
+                      size:
+                          appSettings.styleForBlock(items[i].blockKey).size ==
+                              'small'
                           ? 14
-                          : appSettings.styleForBlock(items[i].blockKey).size == 'large'
-                              ? 22
-                              : 18,
-                      color: appSettings.styleForBlock(items[i].blockKey).accent ?? items[i].accent,
+                          : appSettings.styleForBlock(items[i].blockKey).size ==
+                                'large'
+                          ? 22
+                          : 18,
+                      color:
+                          appSettings.styleForBlock(items[i].blockKey).accent ??
+                          items[i].accent,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -1636,11 +1935,18 @@ class _HomeScreenState extends State<HomeScreen>
                         child: Text(
                           items[i].label,
                           style: TextStyle(
-                            fontSize: appSettings.styleForBlock(items[i].blockKey).size == 'small'
+                            fontSize:
+                                appSettings
+                                        .styleForBlock(items[i].blockKey)
+                                        .size ==
+                                    'small'
                                 ? 12
-                                : appSettings.styleForBlock(items[i].blockKey).size == 'large'
-                                    ? 16
-                                    : 14,
+                                : appSettings
+                                          .styleForBlock(items[i].blockKey)
+                                          .size ==
+                                      'large'
+                                ? 16
+                                : 14,
                             color: cMist,
                             fontWeight: FontWeight.w300,
                           ),
@@ -1649,7 +1955,10 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                     if (items[i].badge != null)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           border: Border.all(color: cGold),
                           borderRadius: BorderRadius.circular(10),
@@ -1740,23 +2049,23 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // DESKTOP: SPLIT
-// Left sidebar (fixed width) + right content panel (expands).
-// Capped at 1280 total so it doesn't stretch across a 4K monitor.
-// Side nav 280 + content ~1000 = comfortable reading width.
-Widget _buildDesktopSplitBody() {
-  return Center(
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 1280),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildSideNav(),
-          Expanded(child: _buildContentPanel()),
-        ],
+  // Left sidebar (fixed width) + right content panel (expands).
+  // Capped at 1280 total so it doesn't stretch across a 4K monitor.
+  // Side nav 280 + content ~1000 = comfortable reading width.
+  Widget _buildDesktopSplitBody() {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1280),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildSideNav(),
+            Expanded(child: _buildContentPanel()),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   // The persistent left rail shown in split mode.
   Widget _buildSideNav() {
@@ -2117,147 +2426,239 @@ Widget _buildDesktopSplitBody() {
         backgroundColor: cInk,
         shape: const RoundedRectangleBorder(),
         child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'ANDROID APK',
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 9,
-                  color: cGold,
-                  letterSpacing: 4,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Lore is available for Android devices. Since we are an independent platform, you will need to side-load the app.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: cMist,
-                  fontStyle: FontStyle.italic,
-                  height: 1.7,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(border: Border.all(color: cAsh)),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'HOW TO INSTALL:',
-                      style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 9,
-                        color: cSmoke,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      '1. Tap "Download APK" below.\n2. Open the downloaded file.\n3. If prompted, allow "Install from Unknown Sources" in your settings.\n4. Install and open Lore.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: cParchment,
-                        height: 1.6,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Divider(color: cAsh, height: 1),
-              const SizedBox(height: 16),
-              const Text('WINDOWS PC', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 4)),
-              const SizedBox(height: 12),
-              const Text('Get Lore on your PC. Share this link to yourself, then open it on your PC to download.', style: TextStyle(fontSize: 13, color: cMist, fontStyle: FontStyle.italic, height: 1.7)),
-              const SizedBox(height: 12),
-              Center(child: Container(padding: const EdgeInsets.all(8), color: Colors.white, child: QrImageView(data: windowsUrl, size: 120))),
-              const SizedBox(height: 12),
-              Row(children: [
-                Expanded(child: GestureDetector(onTap: () async { await Clipboard.setData(const ClipboardData(text: windowsUrl)); if (context.mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: cInk, content: Text('PC link copied.', style: TextStyle(color: cGold)))); } }, child: Container(padding: const EdgeInsets.symmetric(vertical: 10), decoration: BoxDecoration(border: Border.all(color: cAsh)), child: const Center(child: Text('Copy PC link', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cMist, letterSpacing: 1)))))),
-                const SizedBox(width: 8),
-                Expanded(child: GestureDetector(onTap: () async { await SharePlus.instance.share(ShareParams(text: 'Download Lore for Windows PC: $windowsUrl')); }, child: Container(padding: const EdgeInsets.symmetric(vertical: 10), color: cParchment, child: const Center(child: Text('Share to yourself', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cVoid, letterSpacing: 1)))))),
-              ]),
-              const SizedBox(height: 12),
-              const Text('HOW TO INSTALL ON PC:\n1. Share / Copy this link to yourself (email / WhatsApp).\n2. Open it on your PC.\n3. Download LoreEx-Setup.exe and run it. It installs to Program Files and updates in place.', style: TextStyle(fontSize: 12, color: cParchment, height: 1.6)),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(ctx),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: cAsh),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 9,
-                              color: cSmoke,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'ANDROID APK',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 9,
+                    color: cGold,
+                    letterSpacing: 4,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () async {
-                        Navigator.pop(ctx);
-                        final uri = Uri.parse(apkUrl);
-                        if (!await launchUrl(
-                          uri,
-                          mode: LaunchMode.externalApplication,
-                        )) {
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Lore is available for Android devices. Since we are an independent platform, you will need to side-load the app.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: cMist,
+                    fontStyle: FontStyle.italic,
+                    height: 1.7,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(border: Border.all(color: cAsh)),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'HOW TO INSTALL:',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 9,
+                          color: cSmoke,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        '1. Tap "Download APK" below.\n2. Open the downloaded file.\n3. If prompted, allow "Install from Unknown Sources" in your settings.\n4. Install and open Lore.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: cParchment,
+                          height: 1.6,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Divider(color: cAsh, height: 1),
+                const SizedBox(height: 16),
+                const Text(
+                  'WINDOWS PC',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 9,
+                    color: cGold,
+                    letterSpacing: 4,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Get Lore on your PC. Share this link to yourself, then open it on your PC to download.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: cMist,
+                    fontStyle: FontStyle.italic,
+                    height: 1.7,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    color: Colors.white,
+                    child: QrImageView(data: windowsUrl, size: 120),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () async {
+                          await Clipboard.setData(
+                            const ClipboardData(text: windowsUrl),
+                          );
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 backgroundColor: cInk,
                                 content: Text(
-                                  'Could not open download link.',
-                                  style: TextStyle(color: cEmber),
+                                  'PC link copied.',
+                                  style: TextStyle(color: cGold),
                                 ),
                               ),
                             );
                           }
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        color: cParchment,
-                        child: const Center(
-                          child: Text(
-                            'Download APK',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 9,
-                              color: cVoid,
-                              letterSpacing: 1,
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: cAsh),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'Copy PC link',
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 9,
+                                color: cMist,
+                                letterSpacing: 1,
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () async {
+                          await SharePlus.instance.share(
+                            ShareParams(
+                              text: 'Download Lore for Windows PC: $windowsUrl',
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          color: cParchment,
+                          child: const Center(
+                            child: Text(
+                              'Share to yourself',
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 9,
+                                color: cVoid,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'HOW TO INSTALL ON PC:\n1. Share / Copy this link to yourself (email / WhatsApp).\n2. Open it on your PC.\n3. Download LoreEx-Setup.exe and run it. It installs to Program Files and updates in place.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: cParchment,
+                    height: 1.6,
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(ctx),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: cAsh),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 9,
+                                color: cSmoke,
+                                letterSpacing: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () async {
+                          Navigator.pop(ctx);
+                          final uri = Uri.parse(apkUrl);
+                          if (!await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
+                          )) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  backgroundColor: cInk,
+                                  content: Text(
+                                    'Could not open download link.',
+                                    style: TextStyle(color: cEmber),
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          color: cParchment,
+                          child: const Center(
+                            child: Text(
+                              'Download APK',
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 9,
+                                color: cVoid,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
     );
   }
 }
