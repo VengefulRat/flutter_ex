@@ -577,6 +577,18 @@ class _HomeScreenState extends State<HomeScreen>
   void _routeFromMessage(Map<String, dynamic> data) async {
     final type = data['type'] as String? ?? '';
     final sessionId = data['sessionId'] as String? ?? '';
+    // #7: don't push a duplicate RP room if this session is already open
+    if (sessionId.isNotEmpty &&
+        (type == 'rp_post' || type == 'ooc_message') &&
+        RPRoomScreen.openSessionId == sessionId) {
+      return;
+    }
+    // #7: don't push a duplicate RP room if this session is already open
+    if (sessionId.isNotEmpty &&
+        (type == 'rp_post' || type == 'ooc_message') &&
+        RPRoomScreen.openSessionId == sessionId) {
+      return;
+    }
     final notifId = data['notifId'] as String? ?? '';
 
     if (sessionId.isNotEmpty &&
