@@ -760,110 +760,116 @@ class _RPToolsPanelState extends State<RPToolsPanel>
 
   void _addStatEntry(StatBlock block) {
     final nameCtrl = TextEditingController();
+    final maxCtrl = TextEditingController(text: '10');
+    bool isPool = false;
     showDialog(
       context: context,
-      builder: (_) => Dialog(
-        backgroundColor: cInk,
-        shape: const RoundedRectangleBorder(),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'NEW STAT',
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 9,
-                  color: cGold,
-                  letterSpacing: 4,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameCtrl,
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: cParchment,
-                  fontStyle: FontStyle.italic,
-                ),
-                decoration: const InputDecoration(
-                  hintText: 'Stat name...',
-                  hintStyle: TextStyle(
-                    color: cSmoke,
-                    fontStyle: FontStyle.italic,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setDState) => Dialog(
+          backgroundColor: cInk,
+          shape: const RoundedRectangleBorder(),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('NEW STAT', style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 4)),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameCtrl,
+                  style: const TextStyle(fontSize: 15, color: cParchment, fontStyle: FontStyle.italic),
+                  decoration: const InputDecoration(
+                    hintText: 'Stat name...',
+                    hintStyle: TextStyle(color: cSmoke, fontStyle: FontStyle.italic),
+                    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: cAsh)),
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: cSmoke)),
                   ),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: cAsh),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: cSmoke),
-                  ),
+                  cursorColor: cGold,
                 ),
-                cursorColor: cGold,
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: cAsh),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 10,
-                              color: cSmoke,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                        ),
-                      ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: _statTypeChip('Static', !isPool, () => setDState(() => isPool = false))),
+                    const SizedBox(width: 10),
+                    Expanded(child: _statTypeChip('Current / Max', isPool, () => setDState(() => isPool = true))),
+                  ],
+                ),
+                if (isPool) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: maxCtrl,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(fontSize: 15, color: cParchment, fontStyle: FontStyle.italic),
+                    decoration: const InputDecoration(
+                      hintText: 'Max value...',
+                      hintStyle: TextStyle(color: cSmoke, fontStyle: FontStyle.italic),
+                      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: cAsh)),
+                      focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: cSmoke)),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        final name = nameCtrl.text.trim();
-                        if (name.isEmpty) return;
-                        block.stats.add(StatEntry(name: name, value: 10));
-                        widget.onMyStatsChanged(block);
-                        setState(() => _statsRevision++);
-                        Navigator.of(context).pop();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        color: cParchment,
-                        child: const Center(
-                          child: Text(
-                            'Add',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 10,
-                              color: cVoid,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                    cursorColor: cGold,
                   ),
                 ],
-              ),
-            ],
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(border: Border.all(color: cAsh)),
+                          child: const Center(child: Text('Cancel', style: TextStyle(fontFamily: 'monospace', fontSize: 10, color: cSmoke, letterSpacing: 2))),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          final name = nameCtrl.text.trim();
+                          if (name.isEmpty) return;
+                          if (isPool) {
+                            final max = int.tryParse(maxCtrl.text.trim()) ?? 10;
+                            block.stats.add(StatEntry(name: name, value: max, isPool: true, maxValue: max));
+                          } else {
+                            block.stats.add(StatEntry(name: name, value: 10));
+                          }
+                          widget.onMyStatsChanged(block);
+                          setState(() => _statsRevision++);
+                          Navigator.of(context).pop();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          color: cParchment,
+                          child: const Center(child: Text('Add', style: TextStyle(fontFamily: 'monospace', fontSize: 10, color: cVoid, letterSpacing: 2))),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  Widget _statTypeChip(String label, bool selected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? cParchment : Colors.transparent,
+          border: Border.all(color: selected ? cParchment : cAsh),
+        ),
+        child: Center(child: Text(label, style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: selected ? cVoid : cSmoke, letterSpacing: 1))),
+      ),
+    );
+  }
+
 
   // ════════════ DICE ════════════
     Widget _buildDiceTab() => Column(
