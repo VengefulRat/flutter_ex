@@ -1216,7 +1216,7 @@ class AppSettings extends ChangeNotifier {
       case 'Small':
         return 12.0;
       case 'Large':
-        return 17.0;
+        return 20.0;
       default:
         return 14.0;
     }

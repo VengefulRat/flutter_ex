@@ -506,12 +506,12 @@ Widget _selectablePostText({
 double _rpPostScale() => appSettings.rpPostSize == 'S'
     ? 0.85
     : appSettings.rpPostSize == 'L'
-    ? 1.18
+    ? 1.35
     : 1.0;
 double _rpEditorScale() => appSettings.rpEditorSize == 'S'
     ? 0.85
     : appSettings.rpEditorSize == 'L'
-    ? 1.18
+    ? 1.35
     : 1.0;
 
 class RPRoomScreen extends StatefulWidget {
@@ -848,6 +848,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   Timer? _statsSaveDebounce;
   final List<WorldEntry> _importedWorlds = [];
   final List<CharacterEntry> _importedCharacters = [];
+  List<CharacterEntry> get _switcherCharacters => _importedCharacters.isNotEmpty ? _importedCharacters : _sandboxCharacters;
   List<WorldEntry> _sandboxWorlds = [];
   List<CharacterEntry> _sandboxCharacters = [];
 
@@ -3417,7 +3418,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _importedCharacters.length + 1, // +1 for "Myself"
+                itemCount: _switcherCharacters.length + 1, // +1 for "Myself"
                 itemBuilder: (context, index) {
                   // First item is always "Myself"
                   if (index == 0) {
@@ -3436,7 +3437,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   }
 
                   // The rest are imported characters
-                  final c = _importedCharacters[index - 1];
+                  final c = _switcherCharacters[index - 1];
                   final isSelected = _activeCharacter?.id == c.id;
 
                   return _CharacterSwitcherCard(
@@ -3462,7 +3463,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               ),
             ),
 
-            if (_importedCharacters.isEmpty)
+            if (_switcherCharacters.isEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(20, 10, 20, 0),
                 child: Text(
