@@ -10,6 +10,7 @@ import 'crypto_service.dart';
 import '../models/world.dart';
 import '../settings.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'sandbox_sync.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -407,10 +408,6 @@ if (cloud == null) {
     await prefs.remove(_bgTimestampKey);
     await prefs.remove(_lockAttemptsKey);
     await prefs.remove(_lockAttemptsTsKey);
-    await prefs.remove(_biometricsKey);
-    await prefs.remove(_bgTimestampKey);
-    await prefs.remove(_lockAttemptsKey);
-    await prefs.remove(_lockAttemptsTsKey);
 
         final code = _cachedCode;
     if (code != null) {
@@ -437,6 +434,12 @@ if (cloud == null) {
     _cachedName = null;
     CryptoService().lock();
 
+    // Flush any pending debounced writes to the cloud BEFORE wiping local
+    // storage. Otherwise, a timer could fire after the next user logs in
+    // and push the old user's data to the new user's account.
+    await SandboxSync.flush();
+    await appSettings.flushToCloud();
+
     // Wipe local sandbox and preferences so the next account on this
     // device doesn't inherit anything from the one signing out.
     await SandboxStorage.clear();
@@ -449,12 +452,8 @@ if (cloud == null) {
   // PIN — local (fast, used by lock screen)
   // ════════════════════════════════════════
 
-  /// Persists a new PIN. Enforces the length policy. Writes both the
-  /// local copy (for the lock screen) and the server copy (for transfer
-  /// recovery). Also generates or re-encrypts the E2E keypair.
-  ///
-  /// Throws ArgumentError if the PIN is shorter than [pinMinLength].
   Future<void> savePin(String pin) async {
+    // ── 1. Validate format (no writes yet) ──
     if (pin.length < pinMinLength) {
       throw ArgumentError('PIN must be at least $pinMinLength digits.');
     }
@@ -462,50 +461,37 @@ if (cloud == null) {
       throw ArgumentError('PIN must contain digits only.');
     }
 
-    final prefs = await SharedPreferences.getInstance();
     final salt = _randomBytes(32);
     final hash = await _hashPinPbkdf2(pin, salt);
-
-    await prefs.setString(_pinHashKey, hash);
-    await prefs.setString(_pinSaltKey, base64.encode(salt));
-    await prefs.setString(_pinVersionKey, 'pbkdf2');
-    await prefs.setInt(_pinLengthKey, pin.length);
+    final saltB64 = base64.encode(salt);
 
     final code = _cachedCode;
-    if (code != null) {
-      await _db.collection('users').doc(code).update({
-        'pinHash': hash,
-        'pinSalt': base64.encode(salt),
-        'pinHashVersion': 'pbkdf2',
-        'pinLength': pin.length,
-        'pinAttempts': 0,
-        'pinLockedUntil': FieldValue.delete(),
-      });
 
+    if (code != null) {
       final crypto = CryptoService();
       if (crypto.isUnlocked) {
-        // Key already in memory — safe to re-encrypt with the new PIN.
+        // Key is in memory — safe to re-encrypt with the new PIN.
         await crypto.reEncryptPrivateKeyWithNewPin(
-            userCode: code, newPin: pin);
+          userCode: code,
+          newPin: pin,
+        );
       } else {
-        // Key NOT in memory. Check Firestore before doing anything
-        // destructive: if this account already has an encrypted private
-        // key on file, generating a new keypair here would permanently
-        // orphan every existing session. Try the PIN against the
-        // existing key instead.
+        // Key not in memory. Check Firestore to decide what to do.
         final doc = await _db.collection('users').doc(code).get();
         final hasExistingKey =
             doc.data()?['encryptedPrivateKey'] != null;
 
         if (!hasExistingKey) {
-          // Fresh account. Safe to generate.
+          // Fresh account — safe to generate a new keypair.
           await crypto.generateAndSaveKeypair(
-              userCode: code, pin: pin);
+            userCode: code,
+            pin: pin,
+          );
         } else {
-          // Existing account on a wiped device. Try to unlock with the
-          // PIN the user entered.
           final unlocked = await crypto.unlockPrivateKey(
-              userCode: code, pin: pin);
+            userCode: code,
+            pin: pin,
+          );
           if (!unlocked) {
             throw ArgumentError(
               'This account already has encryption keys, and the PIN you '
@@ -513,10 +499,25 @@ if (cloud == null) {
               'otherwise older content will stay locked on this device.',
             );
           }
-          // Unlock succeeded. The key is now in memory and is already
-          // encrypted with this same PIN on Firestore — nothing to save.
         }
       }
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_pinHashKey, hash);
+    await prefs.setString(_pinSaltKey, saltB64);
+    await prefs.setString(_pinVersionKey, 'pbkdf2');
+    await prefs.setInt(_pinLengthKey, pin.length);
+
+    if (code != null) {
+      await _db.collection('users').doc(code).update({
+        'pinHash': hash,
+        'pinSalt': saltB64,
+        'pinHashVersion': 'pbkdf2',
+        'pinLength': pin.length,
+        'pinAttempts': 0,
+        'pinLockedUntil': FieldValue.delete(),
+      });
     }
   }
 

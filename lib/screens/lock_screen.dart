@@ -142,7 +142,7 @@ class _LockScreenState extends State<LockScreen> {
     setState(() => _pinInput = _pinInput.substring(0, _pinInput.length - 1));
   }
 
-  Future<void> _verifyPin() async {
+    Future<void> _verifyPin() async {
     if (_verifying) return;
     if (!mounted) return;
     setState(() => _verifying = true);
@@ -158,8 +158,19 @@ class _LockScreenState extends State<LockScreen> {
 
     if (ok && mounted) {
       await _auth.clearLockScreenAttempts();
-      await _auth.unlockWithPin(_pinInput);
+  
+      final unlocked = await _auth.unlockWithPin(_pinInput);
       if (!mounted) return;
+      if (!unlocked) {
+        setState(() {
+          _pinInput = '';
+          _verifying = false;
+          _error =
+              'Couldn\'t unlock your stories with that PIN. Try your unique code.';
+        });
+        _pinCtrl.clear();
+        return;
+      }
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop(true);
       }
@@ -175,7 +186,7 @@ class _LockScreenState extends State<LockScreen> {
     }
   }
 
-  Future<void> _verifyCode() async {
+    Future<void> _verifyCode() async {
     final code = _codeCtrl.text.trim().toUpperCase();
     if (code.isEmpty) return;
     setState(() {
@@ -184,16 +195,29 @@ class _LockScreenState extends State<LockScreen> {
     });
     final result = await _auth.login(code);
     if (!mounted) return;
-    if (result.success) {
-      Navigator.of(context).pop(true);
-    } else {
+    if (!result.success) {
       setState(() {
         _codeLoading = false;
         _error = result.isDeviceLocked
             ? 'This account is locked to another device.'
             : 'Code not found.';
       });
+      return;
     }
+
+    final unlocked = await _auth.silentUnlock();
+    if (!mounted) return;
+    if (unlocked) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+
+    setState(() {
+      _codeLoading = false;
+      _mode = 'pin';
+      _error =
+          'Code accepted. Enter your PIN to unlock your stories on this device.';
+    });
   }
 
   @override
@@ -827,11 +851,12 @@ class _LockSetupScreenState extends State<LockSetupScreen> {
 
   Future<void> _saveTimingOnly(String timing) async {
     await _auth.saveLockTiming(timing);
-    if (mounted)
+    if (mounted) {
       setState(() {
         _currentTiming = timing;
         _step = 0;
       });
+    }
   }
 
   @override

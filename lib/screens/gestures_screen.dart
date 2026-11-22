@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../settings.dart';
-import '../main.dart' show HomeScreen;
-
-/// Scales a base font size by the user's Settings text-size preference.
-/// Medium (14pt) is the reference, same as the rest of the app.
-double _dSize(double base) => base * (appSettings.baseFontSize / 14.0);
+import 'home_screen.dart';
 
 class GesturesScreen extends StatelessWidget {
   final bool isFirstTime;

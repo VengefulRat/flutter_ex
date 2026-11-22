@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../theme.dart';
@@ -9,22 +8,26 @@ import '../widgets/shared.dart';
 import '../services/auth_service.dart';
 import '../settings.dart';
 import '../services/sandbox_sync.dart';
-import '../services/firestore_service.dart';
-import '../widgets/support_link.dart';
-import '../main.dart' show HomeScreen, showDownloadDialog;
-import 'lock_screen.dart';
+import 'home_screen.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
+import '../main.dart' show showDownloadDialog;
 
 class WebQRPanel extends StatefulWidget {
-  const WebQRPanel();
+    const WebQRPanel({super.key});
   @override
   State<WebQRPanel> createState() => WebQRPanelState();
 }
 
 class WebQRPanelState extends State<WebQRPanel> {
-  final String _sessionId =
-      '${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(9999)}';
+    final String _sessionId = _generateSessionId();
+
+  static String _generateSessionId() {
+    final rnd = Random.secure();
+    return List<int>.generate(32, (_) => rnd.nextInt(256))
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
+  }
   final _db = FirebaseFirestore.instance;
   final _auth = AuthService();
   final _pinCtrl = TextEditingController();
@@ -91,7 +94,7 @@ class WebQRPanelState extends State<WebQRPanel> {
     });
   }
 
-  Future<void> _completeWebLogin() async {
+    Future<void> _completeWebLogin() async {
     final pin = _pinCtrl.text.trim();
     if (pin.isEmpty) {
       setState(() => _error = 'Please enter your PIN.');
@@ -114,6 +117,36 @@ class WebQRPanelState extends State<WebQRPanel> {
       }
     }
 
+    // Verify the PIN against the server FIRST. This is what enforces the
+    // attempt counter and lockout after 5 wrong tries, and it fires
+    // security notifications when someone is hammering the account.
+    // Skipping this (as the old code did) meant the web flow had no
+    // rate limit at all — an attacker could try PINs forever.
+    final verification = await _auth.verifyPinRemote(_userCode, pin);
+    if (!mounted) return;
+
+    if (verification.isLocked) {
+      await _auth.signOut();
+      if (!mounted) return;
+      setState(() {
+        _loggingIn = false;
+        _error = 'Account locked. Try again in a few minutes.';
+      });
+      return;
+    }
+
+    if (!verification.success) {
+      final remaining = verification.attemptsRemaining;
+      setState(() {
+        _loggingIn = false;
+        _error = remaining > 0
+            ? 'Incorrect PIN. $remaining attempt${remaining == 1 ? '' : 's'} remaining.'
+            : (verification.error ?? 'Incorrect PIN.');
+      });
+      return;
+    }
+
+    // PIN is verified by the server. Now actually load the crypto key.
     final unlocked = await _auth.unlockWithPin(pin);
     if (!mounted) return;
     if (!unlocked) {
@@ -121,13 +154,13 @@ class WebQRPanelState extends State<WebQRPanel> {
       if (!mounted) return;
       setState(() {
         _loggingIn = false;
-        _error = 'Incorrect PIN.';
+        _error = 'Could not unlock. Try again.';
       });
       return;
     }
 
     await appSettings.syncFromCloud();
-    await SandboxSync.syncOnLogin(); // <-- THIS IS THE FIX FOR BRAVE
+    await SandboxSync.syncOnLogin();
     if (!mounted) return;
     Navigator.of(
       context,
@@ -162,8 +195,9 @@ class WebQRPanelState extends State<WebQRPanel> {
           },
           onError: (e) {
             debugPrint('web_auth_sessions listen failed: $e');
-            if (mounted)
+            if (mounted) {
               setState(() => _error = 'Could not listen for approval: $e');
+            }
           },
         );
   }

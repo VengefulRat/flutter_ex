@@ -942,7 +942,7 @@ class _SessionLogViewState extends State<SessionLogView> {
     final expanded = _expandedId == e.id;
     final (label, color) = _labelAndColor(e);
     final isDesktop = MediaQuery.of(context).size.width > 900;
-    final hoverPreview = e.body.isEmpty ? '' : (e.body.length > 300 ? e.body.substring(0, 300) + '...' : e.body);
+    final hoverPreview = e.body.isEmpty ? '' : (e.body.length > 300 ? '${e.body.substring(0, 300)}...' : e.body);
     final card = GestureDetector(
       onTap: () => setState(() => _expandedId = expanded ? null : e.id),
       onLongPress: () => _showEntryActions(e),

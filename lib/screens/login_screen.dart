@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../main.dart' show HomeScreen;
+import 'home_screen.dart';
 import '../theme.dart';
 import '../widgets/shared.dart';
 import '../services/auth_service.dart';

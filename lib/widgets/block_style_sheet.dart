@@ -955,7 +955,7 @@ class _ProfileStyleSheetState extends State<ProfileStyleSheet> {
                   ),
                   _valueSlider(
                     label: 'Frame outset',
-                    valueLabel: '${appSettings.animatedBorderFrameOutset.toStringAsFixed(0)}',
+                    valueLabel: appSettings.animatedBorderFrameOutset.toStringAsFixed(0),
                     value: appSettings.animatedBorderFrameOutset,
                     min: -8,
                     max: 20,

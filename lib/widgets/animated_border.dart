@@ -1184,10 +1184,11 @@ class _StarsPainter extends CustomPainter {
         final a2 = a1 + math.pi / 5;
         final outer = Offset(math.cos(a1) * r, math.sin(a1) * r);
         final inner = Offset(math.cos(a2) * r * 0.45, math.sin(a2) * r * 0.45);
-        if (i == 0)
+        if (i == 0) {
           path.moveTo(outer.dx, outer.dy);
-        else
+        } else {
           path.lineTo(outer.dx, outer.dy);
+        }
         path.lineTo(inner.dx, inner.dy);
       }
       path.close();

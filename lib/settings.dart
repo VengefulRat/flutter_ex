@@ -928,7 +928,8 @@ class AppSettings extends ChangeNotifier {
       _fanCardSize = j['fanCardSize'] as String;
     }
     if (j['hiddenBlocks'] is List) {
-      _hiddenBlocks = Set<String>.from((j['hiddenBlocks'] as List).map((e) => e.toString()));
+            _hiddenBlocks = Set<String>.from((j['hiddenBlocks'] as List).map((e) => e.toString()));
+    }
     _rpHeaderShow = j['rpHeaderShow'] as bool? ?? _rpHeaderShow;
     _rpHeaderSize = j['rpHeaderSize'] as String? ?? _rpHeaderSize;
     if (j['rpHeaderAccent'] is int) _rpHeaderAccent = Color(j['rpHeaderAccent'] as int);
@@ -1016,7 +1017,6 @@ class AppSettings extends ChangeNotifier {
     _sandboxSparkTextSize = j['sandboxSparkTextSize'] as String? ?? _sandboxSparkTextSize;
     _sandboxShowSparkLabels = j['sandboxShowSparkLabels'] as bool? ?? _sandboxShowSparkLabels;
     _sandboxSparkPadding = j['sandboxSparkPadding'] as String? ?? _sandboxSparkPadding;
-    }
     if (j['profileGlowColor'] is int) {
       _profileGlowColor = Color(j['profileGlowColor'] as int);
     }
@@ -1635,8 +1635,9 @@ class AppSettings extends ChangeNotifier {
         v != 'runes' &&
         v != 'thorns' &&
         v != 'feathers' &&
-        v != 'claws')
+        v != 'claws') {
       return;
+    }
     _animatedBorderPattern = v;
     (await SharedPreferences.getInstance()).setString(
       _kAnimatedBorderPattern,

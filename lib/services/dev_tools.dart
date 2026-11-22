@@ -292,22 +292,23 @@ class DevTools {
       for (final p in participants) {
         if (p != myCode) fakeCodes.add(p);
       }
-      final posts = await s.reference.collection('posts').get();
-      for (final p in posts.docs) {
-        await p.reference.delete();
+      // Delete all subcollections before deleting the parent session
+      final subcollections = ['posts', 'ooc', 'brainstorm', 'stats', 'log'];
+      for (final sub in subcollections) {
+        final docs = await s.reference.collection(sub).get();
+        for (final doc in docs.docs) {
+          await doc.reference.delete();
+        }
       }
-      final ooc = await s.reference.collection('ooc').get();
-      for (final o in ooc.docs) {
-        await o.reference.delete();
-      }
-      await s.reference.delete();
-    }
 
-    // Demo users — only the fake partners from MY sessions.
-    for (final fakeCode in fakeCodes) {
-      final userDoc = await _db.collection('users').doc(fakeCode).get();
-      if (userDoc.exists && userDoc.data()?['isDemo'] == true) {
-        await userDoc.reference.delete();
+      await s.reference.delete();
+
+      // Demo users — only the fake partners from MY sessions.
+      for (final fakeCode in fakeCodes) {
+        final userDoc = await _db.collection('users').doc(fakeCode).get();
+        if (userDoc.exists && userDoc.data()?['isDemo'] == true) {
+          await userDoc.reference.delete();
+        }
       }
     }
   }

@@ -1038,8 +1038,9 @@ try {
           final newNonUser = msgs.where((m) => !m.isUser).length;
           final isFirstLoad = _oocMessages.isEmpty && _oocTotalNonUser == 0;
           final oocVisible = _oocOpen || _desktopOOCExpanded;
-          if (!isFirstLoad && !oocVisible && newNonUser > _oocTotalNonUser)
+          if (!isFirstLoad && !oocVisible && newNonUser > _oocTotalNonUser) {
             _oocUnread += newNonUser - _oocTotalNonUser;
+          }
           _oocTotalNonUser = newNonUser;
           _oocMessages
             ..clear()
@@ -1809,8 +1810,9 @@ try {
               !HardwareKeyboard.instance.isControlPressed &&
               !HardwareKeyboard.instance.isMetaPressed &&
               !HardwareKeyboard.instance.isAltPressed) {
-            if (_editorFocus.hasFocus || _oocFocus.hasFocus || _oocFocus2.hasFocus)
+            if (_editorFocus.hasFocus || _oocFocus.hasFocus || _oocFocus2.hasFocus) {
               return KeyEventResult.ignored;
+            }
             final primary = FocusManager.instance.primaryFocus;
             if (primary != null && primary.context?.widget is EditableText) {
               return KeyEventResult.ignored;
@@ -1836,8 +1838,9 @@ try {
 
   Color _effectiveBg(Color moodColor) {
     if (appSettings.rpMoodOverride == 'fixed') return appSettings.rpBgColor;
-    if (appSettings.rpMoodOverride == 'tint')
+    if (appSettings.rpMoodOverride == 'tint') {
       return Color.lerp(moodColor, appSettings.rpBgColor, 0.5) ?? moodColor;
+    }
     return moodColor;
   }
 

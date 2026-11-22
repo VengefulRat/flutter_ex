@@ -15,3 +15,7 @@
 
 -keep class com.lore.app.MainActivity { *; }
 -keep class com.lore.app.** { *; }
+
+# Keep ML Kit barcode scanning classes
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.android.gms.internal.mlkit_vision_barcode.** { *; }

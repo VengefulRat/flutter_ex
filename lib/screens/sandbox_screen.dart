@@ -2139,8 +2139,9 @@ class _WorldsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (worlds.isEmpty)
+    if (worlds.isEmpty) {
       return _emptyState('No worlds yet.', 'Tap + to start building one.');
+    }
     return ScrollConfiguration(
       behavior: NoGlowBehavior(),
       child: ListView.builder(
@@ -2367,8 +2368,9 @@ class _CharactersTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (characters.isEmpty)
+    if (characters.isEmpty) {
       return _emptyState('No characters yet.', 'Tap + to create one.');
+    }
     return ScrollConfiguration(
       behavior: NoGlowBehavior(),
       child: GridView.builder(

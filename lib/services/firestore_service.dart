@@ -326,7 +326,7 @@ class FirestoreService {
   // POSTS (RP Room)
   // ════════════════════════════════════════
 
-  Stream<List<Map<String, dynamic>>> sessionPosts(String sessionId) {
+    Stream<List<Map<String, dynamic>>> sessionPosts(String sessionId) {
     return _db
         .collection('sessions')
         .doc(sessionId)
@@ -334,43 +334,7 @@ class FirestoreService {
         .snapshots()
         .asyncMap((snap) async {
           final sessionKey = await _sessionKey(sessionId);
-          final docs = <Map<String, dynamic>>[];
-          for (final d in snap.docs) {
-            final data = Map<String, dynamic>.from(d.data());
-            data['id'] = d.id;
-
-            if (data['encrypted'] == true && sessionKey != null) {
-              final cipher = data['content'] as String?;
-              final iv = data['contentIv'] as String?;
-              if (cipher != null && iv != null) {
-                final plain = await _crypto.decryptContent(
-                  cipherB64: cipher,
-                  ivB64: iv,
-                  sessionKey: sessionKey,
-                );
-                data['content'] = plain ?? '[encrypted]';
-              }
-              final qCipher = data['quotedContent'] as String?;
-              final qIv = data['quotedContentIv'] as String?;
-              if (qCipher != null && qIv != null) {
-                final qPlain = await _crypto.decryptContent(
-                  cipherB64: qCipher,
-                  ivB64: qIv,
-                  sessionKey: sessionKey,
-                );
-                data['quotedContent'] = qPlain;
-              }
-            }
-            docs.add(data);
-          }
-          docs.sort((a, b) {
-            final at = a['createdAt'];
-            final bt = b['createdAt'];
-            if (at == null) return -1;
-            if (bt == null) return 1;
-            return (at as dynamic).compareTo(bt as dynamic);
-          });
-          return docs;
+          return _decryptDocs(snap, sessionKey, ['content', 'quotedContent']);
         });
   }
 
@@ -505,7 +469,7 @@ class FirestoreService {
   // BRAINSTORM MESSAGES
   // ════════════════════════════════════════
 
-  Stream<List<Map<String, dynamic>>> brainstormMessages(String sessionId) {
+    Stream<List<Map<String, dynamic>>> brainstormMessages(String sessionId) {
     return _db
         .collection('sessions')
         .doc(sessionId)
@@ -513,32 +477,7 @@ class FirestoreService {
         .snapshots()
         .asyncMap((snap) async {
           final sessionKey = await _sessionKey(sessionId);
-          final docs = <Map<String, dynamic>>[];
-          for (final d in snap.docs) {
-            final data = Map<String, dynamic>.from(d.data());
-            data['id'] = d.id;
-            if (data['encrypted'] == true && sessionKey != null) {
-              final cipher = data['content'] as String?;
-              final iv = data['contentIv'] as String?;
-              if (cipher != null && iv != null) {
-                final plain = await _crypto.decryptContent(
-                  cipherB64: cipher,
-                  ivB64: iv,
-                  sessionKey: sessionKey,
-                );
-                data['content'] = plain ?? '[encrypted]';
-              }
-            }
-            docs.add(data);
-          }
-          docs.sort((a, b) {
-            final at = a['createdAt'];
-            final bt = b['createdAt'];
-            if (at == null) return -1;
-            if (bt == null) return 1;
-            return (at as dynamic).compareTo(bt as dynamic);
-          });
-          return docs;
+          return _decryptDocs(snap, sessionKey, ['content']);
         });
   }
 
@@ -603,7 +542,7 @@ class FirestoreService {
   // OOC MESSAGES
   // ════════════════════════════════════════
 
-  Stream<List<Map<String, dynamic>>> oocMessages(String sessionId) {
+    Stream<List<Map<String, dynamic>>> oocMessages(String sessionId) {
     return _db
         .collection('sessions')
         .doc(sessionId)
@@ -611,32 +550,7 @@ class FirestoreService {
         .snapshots()
         .asyncMap((snap) async {
           final sessionKey = await _sessionKey(sessionId);
-          final docs = <Map<String, dynamic>>[];
-          for (final d in snap.docs) {
-            final data = Map<String, dynamic>.from(d.data());
-            data['id'] = d.id;
-            if (data['encrypted'] == true && sessionKey != null) {
-              final cipher = data['content'] as String?;
-              final iv = data['contentIv'] as String?;
-              if (cipher != null && iv != null) {
-                final plain = await _crypto.decryptContent(
-                  cipherB64: cipher,
-                  ivB64: iv,
-                  sessionKey: sessionKey,
-                );
-                data['content'] = plain ?? '[encrypted]';
-              }
-            }
-            docs.add(data);
-          }
-          docs.sort((a, b) {
-            final at = a['createdAt'];
-            final bt = b['createdAt'];
-            if (at == null) return -1;
-            if (bt == null) return 1;
-            return (at as dynamic).compareTo(bt as dynamic);
-          });
-          return docs;
+          return _decryptDocs(snap, sessionKey, ['content']);
         });
   }
 
@@ -730,30 +644,25 @@ Future<void> deleteLogEntry({required String sessionId, required String entryId}
   await _db.collection('sessions').doc(sessionId).collection('log').doc(entryId).delete();
 }
 
-Stream<List<Map<String, dynamic>>> logEntries(String sessionId) {
-  return _db.collection('sessions').doc(sessionId).collection('log').snapshots().asyncMap((snap) async {
-    final sessionKey = await _sessionKey(sessionId);
-    final out = <Map<String, dynamic>>[];
-    for (final d in snap.docs) {
-      final data = Map<String, dynamic>.from(d.data());
-      if (data['encrypted'] == true && sessionKey != null) {
-          final cipher = data['content'] as String?;
-          final iv = data['contentIv'] as String?;
-          if (cipher == null || iv == null) continue;
-        final plain = await _crypto.decryptContent(
-          cipherB64: cipher,
-          ivB64: iv,
-          sessionKey: sessionKey,
-        );
-        if (plain != null) {
-          try { out.add(Map<String, dynamic>.from(jsonDecode(plain))); } catch (_) {}
-        }
-      }
-    }
-    out.sort((a, b) => (a['createdAt'] as int? ?? 0).compareTo(b['createdAt'] as int? ?? 0));
-    return out;
-  });
-}
+  Stream<List<Map<String, dynamic>>> logEntries(String sessionId) {
+    return _db
+        .collection('sessions')
+        .doc(sessionId)
+        .collection('log')
+        .snapshots()
+        .asyncMap((snap) async {
+          final sessionKey = await _sessionKey(sessionId);
+          final docs = await _decryptDocs(snap, sessionKey, ['content']);
+          
+          final out = <Map<String, dynamic>>[];
+          for (final d in docs) {
+            if (d['content'] != null && d['content'] != '[encrypted]') {
+              try { out.add(Map<String, dynamic>.from(jsonDecode(d['content']))); } catch (_) {}
+            }
+          }
+          return out;
+        });
+  }
 
   // ════════════════════════════════════════
   // NOTIFICATIONS
@@ -775,13 +684,19 @@ Stream<List<Map<String, dynamic>>> logEntries(String sessionId) {
           }).toList();
 
           // Filter based on the user's Alert Settings
-          return all.where((n) {
+                    return all.where((n) {
             final type = n['type'] as String? ?? '';
             if (type == 'rp_post' && !appSettings.notifRpPost) return false;
             if (type == 'ooc_message' && !appSettings.notifOoc) return false;
-            if (type == 'brainstorm_message' && !appSettings.notifBrainstorm) {
-              return false;
-            }
+            if (type == 'brainstorm_message' && !appSettings.notifBrainstorm) return false;
+            
+            // These two were previously ignored by the backend!
+            if (type == 'interest' && !appSettings.notifInterest) return false;
+            if (type == 'accepted' && !appSettings.notifNewPost) return false;
+
+            // Security warnings should ALWAYS show, no matter what toggles are off.
+            if (type == 'security_warning') return true;
+
             return true;
           }).toList();
         });
@@ -1186,7 +1101,7 @@ Stream<List<Map<String, dynamic>>> logEntries(String sessionId) {
   Future<void> deleteSessionCompletely(String sessionId) async {
     try {
       // 1. Delete subcollections (chunked to avoid timeouts)
-      final subcollections = ['posts', 'ooc', 'brainstorm', 'stats'];
+      final subcollections = ['posts', 'ooc', 'brainstorm', 'stats', 'log'];
       for (var sub in subcollections) {
         final snap = await _db
             .collection('sessions')
@@ -1232,5 +1147,40 @@ Stream<List<Map<String, dynamic>>> logEntries(String sessionId) {
       print('[deleteSession] FAILED: $e');
       rethrow;
     }
+  }
+    // ── Helper to decrypt a list of docs ──
+  Future<List<Map<String, dynamic>>> _decryptDocs(
+    QuerySnapshot snap,
+    dynamic sessionKey,
+    List<String> fieldsToDecrypt,
+  ) async {
+    final docs = <Map<String, dynamic>>[];
+    for (final d in snap.docs) {
+      final data = Map<String, dynamic>.from(d.data() as Map);
+      data['id'] = d.id;
+      if (data['encrypted'] == true && sessionKey != null) {
+        for (final field in fieldsToDecrypt) {
+          final cipher = data[field] as String?;
+          final iv = data['${field}Iv'] as String?;
+          if (cipher != null && iv != null) {
+            final plain = await _crypto.decryptContent(
+              cipherB64: cipher,
+              ivB64: iv,
+              sessionKey: sessionKey,
+            );
+            data[field] = plain ?? '[encrypted]';
+          }
+        }
+      }
+      docs.add(data);
+    }
+    docs.sort((a, b) {
+      final at = a['createdAt'];
+      final bt = b['createdAt'];
+      if (at == null) return -1;
+      if (bt == null) return 1;
+      return (at as dynamic).compareTo(bt as dynamic);
+    });
+    return docs;
   }
 }
