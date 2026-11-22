@@ -33,7 +33,8 @@ import 'diary_screen.dart';
 import 'settings_screen.dart';
 import 'card_discovery_screen.dart';
 import '../main.dart' show LandingScreen;
-
+import 'dart:io' show Platform;
+import 'dart:ffi' show Abi;
 // ════════════════════════════════════════
 // HOME SCREEN
 // ════════════════════════════════════════
@@ -2019,12 +2020,22 @@ const SizedBox(height: 12),
   }
 
   void _showDownloadDialog(BuildContext context) {
-    // ⚠️ REPLACE THIS URL WITH YOUR ACTUAL GITHUB RELEASE APK LINK! ⚠️
-    const String apkUrl =
-        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.6/flutter_ex-releases.apk';
-    // REPLACE WITH YOUR ACTUAL GITHUB RELEASE WINDOWS ZIP LINK WHEN YOU TAG!
-    const String windowsUrl =
-        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.6/LoreEx-Setup.exe';
+  // Check which chip the phone has
+  String abiSuffix = 'arm64-v8a'; // Default for 95% of phones
+  if (Platform.isAndroid) {
+    if (Abi.current() == Abi.androidArm) {
+      abiSuffix = 'armeabi-v7a';
+    } else if (Abi.current() == Abi.androidX64) {
+      abiSuffix = 'x86_64';
+    }
+  }
+
+  // Dynamically build the URL
+  final String apkUrl =
+      'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.7/app-$abiSuffix-release.apk';
+      
+  final String windowsUrl =
+      'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.7/LoreEx-Setup.exe';
 
     showDialog(
       context: context,
@@ -2122,7 +2133,7 @@ const SizedBox(height: 12),
                       child: GestureDetector(
                         onTap: () async {
                           await Clipboard.setData(
-                            const ClipboardData(text: windowsUrl),
+                            ClipboardData(text: windowsUrl),
                           );
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
