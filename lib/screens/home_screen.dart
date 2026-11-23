@@ -2216,10 +2216,10 @@ class _HomeScreenState extends State<HomeScreen>
     String abiSuffix = 'arm64-v8a';
 
     final String apkUrl =
-        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.7/app-$abiSuffix-release.apk';
+        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.9/app-$abiSuffix-release.apk';
 
     final String windowsUrl =
-        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.7/LoreEx-Setup.exe';
+        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.9/LoreEx-Setup.exe';
 
     showDialog(
       context: context,
