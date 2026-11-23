@@ -89,7 +89,20 @@ class OOCMessage {
 // ─────────────────────────────────────────
 // MOOD ENGINE
 // ─────────────────────────────────────────
-enum StoryMood { neutral, dark, tense, warm, eerie, battle, rain, snow }
+enum StoryMood {
+  neutral,
+  dark,
+  tense,
+  warm,
+  eerie,
+  battle,
+  rain,
+  snow,
+  romantic,
+  spicy,
+  sad,
+  triumphant,
+}
 
 class MoodEngine {
   static final _sentiment = Sentiment();
@@ -235,6 +248,56 @@ class MoodEngine {
       'laughter': 3,
       'relief': 3,
     },
+    StoryMood.romantic: {
+      'love': 3,
+      'kiss': 3,
+      'heart': 2,
+      'blush': 3,
+      'tender': 3,
+      'embrace': 4,
+      'desire': 4,
+      'passion': 4,
+      'whispered': 2,
+      'caress': 4,
+      'intimate': 4,
+    },
+    StoryMood.spicy: {
+      'bite': 3,
+      'claw': 3,
+      'shiver': 3,
+      'moan': 4,
+      'gasps': 3,
+      'ravenous': 4,
+      'feral': 4,
+      'heat': 3,
+      'burn': 3,
+      'rough': 4,
+      'spicy': 5,
+      'explicit': 5,
+    },
+    StoryMood.sad: {
+      'tears': 3,
+      'weep': 4,
+      'lonely': 3,
+      'sorrow': 4,
+      'grief': 4,
+      'missed': 2,
+      'sigh': 2,
+      'hollow': 3,
+      'empty': 2,
+      'goodbye': 4,
+    },
+    StoryMood.triumphant: {
+      'victory': 4,
+      'cheer': 3,
+      'glory': 4,
+      'won': 3,
+      'triumph': 5,
+      'celebrate': 3,
+      'hero': 2,
+      'cheered': 3,
+      'saved': 3,
+    },
   };
 
   static (StoryMood, int) _genreScore(String lower) {
@@ -304,6 +367,14 @@ class MoodEngine {
         return const Color(0xFF060810);
       case StoryMood.neutral:
         return cVoid;
+      case StoryMood.romantic:
+        return const Color(0xFF0E0510);
+      case StoryMood.spicy:
+        return const Color(0xFF100505);
+      case StoryMood.sad:
+        return const Color(0xFF05060A);
+      case StoryMood.triumphant:
+        return const Color(0xFF0C0A04);
     }
   }
 
@@ -325,6 +396,14 @@ class MoodEngine {
         return 'Snow';
       case StoryMood.neutral:
         return 'Neutral';
+      case StoryMood.romantic:
+        return 'Romantic';
+      case StoryMood.spicy:
+        return 'Spicy';
+      case StoryMood.sad:
+        return 'Sad';
+      case StoryMood.triumphant:
+        return 'Triumphant';
     }
   }
 }
@@ -443,6 +522,15 @@ class MoodParticlePainter extends CustomPainter {
         return const Color(0xFF7060C0);
       case StoryMood.tense:
         return const Color(0xFFCC3030);
+      // ADD THESE 4 LINES:
+      case StoryMood.romantic:
+        return const Color(0xFFFF80AB);
+      case StoryMood.spicy:
+        return const Color(0xFFFF5252);
+      case StoryMood.sad:
+        return const Color(0xFF64B5F6);
+      case StoryMood.triumphant:
+        return const Color(0xFFFFD54F);
       default:
         return const Color(0xFF5a5a5a);
     }
@@ -529,9 +617,6 @@ class RPRoomScreen extends StatefulWidget {
     this.title = '',
   });
 
-    // Which session is currently open, if any. Used by notification routing
-  // so tapping a notification for the room you're already in doesn't
-  // stack a duplicate copy on top.
   static String? openSessionId;
 
   @override
@@ -728,23 +813,23 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           '${dir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
       Uint8List bytes;
-try {
-  final compressedFile = await FlutterImageCompress.compressAndGetFile(
-    image.path,
-    targetPath,
-    quality: 70,
-    minWidth: 1024,
-    minHeight: 1024,
-  );
-  if (compressedFile != null) {
-    bytes = await compressedFile.readAsBytes();
-  } else {
-    bytes = await image.readAsBytes();
-  }
-} catch (_) {
-  // Windows / unsupported format: fall back to raw picked bytes
-  bytes = await image.readAsBytes();
-}
+      try {
+        final compressedFile = await FlutterImageCompress.compressAndGetFile(
+          image.path,
+          targetPath,
+          quality: 70,
+          minWidth: 1024,
+          minHeight: 1024,
+        );
+        if (compressedFile != null) {
+          bytes = await compressedFile.readAsBytes();
+        } else {
+          bytes = await image.readAsBytes();
+        }
+      } catch (_) {
+        // Windows / unsupported format: fall back to raw picked bytes
+        bytes = await image.readAsBytes();
+      }
 
       if (bytes.length > 5 * 1024 * 1024) {
         if (mounted) {
@@ -801,6 +886,135 @@ try {
   }
 
   Timer? _selectionDebounce;
+  Timer? _moodHapticTimer;
+  late AnimationController _pulseCtrl;
+  double _pulseValue = 0.0;
+
+  void _updateMoodHaptics(StoryMood mood) {
+    _moodHapticTimer?.cancel();
+    _pulseValue = 0.0;
+    if (!appSettings.moodHaptics) return;
+
+    void beat(VoidCallback haptic, Duration interval, Duration pulseDur) {
+      haptic();
+      _pulseCtrl.duration = pulseDur;
+      _pulseCtrl.forward(from: 0);
+      _moodHapticTimer = Timer.periodic(interval, (_) {
+        if (!mounted) return;
+        haptic();
+        if (appSettings.rpMoodOverride == 'off') {
+          _pulseCtrl.duration = pulseDur;
+          _pulseCtrl.forward(from: 0);
+        }
+      });
+    }
+
+    switch (mood) {
+      case StoryMood.romantic:
+        _moodHapticTimer = Timer.periodic(const Duration(milliseconds: 1200), (
+          _,
+        ) {
+          HapticFeedback.lightImpact();
+          Future.delayed(const Duration(milliseconds: 180), () {
+            if (mounted) HapticFeedback.lightImpact();
+          });
+          if (appSettings.rpMoodOverride == 'off') {
+            _pulseCtrl.duration = const Duration(milliseconds: 600);
+            _pulseCtrl.forward(from: 0);
+          }
+        });
+        break;
+      case StoryMood.battle:
+        beat(
+          () => HapticFeedback.mediumImpact(),
+          const Duration(milliseconds: 800),
+          const Duration(milliseconds: 280),
+        );
+        break;
+      case StoryMood.spicy:
+        beat(
+          () => HapticFeedback.selectionClick(),
+          const Duration(milliseconds: 500),
+          const Duration(milliseconds: 180),
+        );
+        break;
+      case StoryMood.sad:
+        beat(
+          () => HapticFeedback.heavyImpact(),
+          const Duration(milliseconds: 2500),
+          const Duration(milliseconds: 900),
+        );
+        break;
+      case StoryMood.tense:
+        beat(
+          () => HapticFeedback.lightImpact(),
+          const Duration(milliseconds: 600),
+          const Duration(milliseconds: 200),
+        );
+        break;
+      default:
+        break;
+    }
+  }
+
+  void _showMoodPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cInk,
+      shape: const RoundedRectangleBorder(),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'OVERRIDE MOOD',
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 10,
+                color: cGold,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: StoryMood.values.map((mood) {
+                final active = _currentMood == mood;
+                return LoreTap(
+                  onTap: () {
+                    _setMoodManual(mood);
+                    Navigator.pop(ctx);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: active ? cGold : cAsh),
+                      color: active
+                          ? cGold.withValues(alpha: 0.1)
+                          : Colors.transparent,
+                    ),
+                    child: Text(
+                      MoodEngine.moodLabel(mood).toUpperCase(),
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 9,
+                        color: active ? cGold : cSmoke,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   final _fs = FirestoreService();
   final _auth = AuthService();
@@ -857,7 +1071,8 @@ try {
   Timer? _statsSaveDebounce;
   final List<WorldEntry> _importedWorlds = [];
   final List<CharacterEntry> _importedCharacters = [];
-  List<CharacterEntry> get _switcherCharacters => _importedCharacters.isNotEmpty ? _importedCharacters : _sandboxCharacters;
+  List<CharacterEntry> get _switcherCharacters =>
+      _importedCharacters.isNotEmpty ? _importedCharacters : _sandboxCharacters;
   List<WorldEntry> _sandboxWorlds = [];
   List<CharacterEntry> _sandboxCharacters = [];
 
@@ -928,6 +1143,14 @@ try {
       duration: const Duration(seconds: 10),
     )..repeat();
 
+    _pulseCtrl =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 350),
+        )..addListener(() {
+          if (!mounted) return;
+          setState(() => _pulseValue = 1.0 - _pulseCtrl.value);
+        });
     _loadMoodShader();
     _initParticles();
     _loadDraft();
@@ -943,6 +1166,8 @@ try {
 
   @override
   void dispose() {
+    _moodHapticTimer?.cancel();
+    _pulseCtrl.dispose();
     if (RPRoomScreen.openSessionId == widget.sessionId) {
       RPRoomScreen.openSessionId = null;
     }
@@ -1011,7 +1236,7 @@ try {
           // Jump 0.1 pixels and back to force the engine to calculate the text height
           _scrollCtrl.jumpTo(_scrollCtrl.position.pixels + 0.1);
           _scrollCtrl.jumpTo(_scrollCtrl.position.pixels - 0.1);
-          
+
           // Then do the normal auto-scroll if enabled
           if (wasAtBottom && appSettings.autoScroll) {
             _scrollCtrl.animateTo(
@@ -1148,6 +1373,11 @@ try {
   void _onSettingsChanged() {
     if (!mounted) return;
     setState(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _posts.isNotEmpty) {
+          setState(() {});
+        }
+      });
       _aiMoodEnabled = appSettings.aiMood;
       _displayMode = RPDisplayMode.values.firstWhere(
         (m) => m.name == appSettings.rpDisplayMode,
@@ -1262,6 +1492,10 @@ try {
       StoryMood.dark => 14,
       StoryMood.warm => 22,
       StoryMood.neutral => 0,
+      StoryMood.romantic => 18,
+      StoryMood.spicy => 20,
+      StoryMood.sad => 10,
+      StoryMood.triumphant => 22,
     };
     final count = (base * (0.4 + _moodIntensity * 1.2)).round();
     for (int i = 0; i < count; i++) {
@@ -1305,6 +1539,7 @@ try {
         meta: {'mood': mood.name},
       );
     }
+    _updateMoodHaptics(mood);
   }
 
   void _setMoodManual(StoryMood mood) {
@@ -1816,7 +2051,9 @@ try {
               !HardwareKeyboard.instance.isControlPressed &&
               !HardwareKeyboard.instance.isMetaPressed &&
               !HardwareKeyboard.instance.isAltPressed) {
-            if (_editorFocus.hasFocus || _oocFocus.hasFocus || _oocFocus2.hasFocus) {
+            if (_editorFocus.hasFocus ||
+                _oocFocus.hasFocus ||
+                _oocFocus2.hasFocus) {
               return KeyEventResult.ignored;
             }
             final primary = FocusManager.instance.primaryFocus;
@@ -1846,6 +2083,24 @@ try {
     if (appSettings.rpMoodOverride == 'fixed') return appSettings.rpBgColor;
     if (appSettings.rpMoodOverride == 'tint') {
       return Color.lerp(moodColor, appSettings.rpBgColor, 0.5) ?? moodColor;
+    }
+    if (_pulseValue > 0 && appSettings.moodHaptics) {
+      final pulseStrength = switch (_currentMood) {
+        StoryMood.romantic => 0.18,
+        StoryMood.battle => 0.28,
+        StoryMood.spicy => 0.22,
+        StoryMood.sad => 0.15,
+        StoryMood.tense => 0.18,
+        _ => 0.0,
+      };
+      if (pulseStrength > 0) {
+        return Color.lerp(
+              moodColor,
+              Colors.white,
+              _pulseValue * pulseStrength,
+            ) ??
+            moodColor;
+      }
     }
     return moodColor;
   }
@@ -1888,7 +2143,6 @@ try {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Left Sidebar (Session Log)
                           if (appSettings.rpShowLogSidebar &&
                               !_desktopLogCollapsed)
                             SizedBox(
@@ -1906,8 +2160,6 @@ try {
                                 ),
                               ),
                             ),
-
-                          // Center (Posts + Editor)
                           Expanded(
                             child: Center(
                               child: ConstrainedBox(
@@ -1916,15 +2168,20 @@ try {
                                 ),
                                 child: Column(
                                   children: [
-                                    Expanded(child: _buildPostList()),
+                                    Expanded(
+                                      child: AnimatedSwitcher(
+                                        duration: const Duration(
+                                          milliseconds: 300,
+                                        ),
+                                        child: _buildPostList(),
+                                      ),
+                                    ),
                                     _buildFullEditor(),
                                   ],
                                 ),
                               ),
                             ),
                           ),
-
-                          // Right Sidebar (Tools + OOC)
                           if (appSettings.rpShowToolsSidebar &&
                               !_desktopToolsCollapsed)
                             SizedBox(
@@ -2096,7 +2353,10 @@ try {
                                                           letterSpacing: 4,
                                                         ),
                                                       ),
-                                                      if (_oocUnread > 0 && !_desktopFocusMode && appSettings.rpOocBadgeOn)
+                                                      if (_oocUnread > 0 &&
+                                                          !_desktopFocusMode &&
+                                                          appSettings
+                                                              .rpOocBadgeOn)
                                                         _OocBadge(
                                                           count: _oocUnread,
                                                         ),
@@ -2131,8 +2391,6 @@ try {
                   ],
                 ),
               ),
-
-              // Bottom selection pill
               if (!kIsWeb &&
                   _selectedText.isNotEmpty &&
                   !_desktopOOCExpanded &&
@@ -2143,8 +2401,6 @@ try {
                   bottom: 100,
                   child: _buildSelectionPill(),
                 ),
-
-              // Settings Overlay
               if (_settingsOpen)
                 Positioned(
                   right: 0,
@@ -2168,7 +2424,6 @@ try {
           backgroundColor: cVoid,
           body: Stack(
             children: [
-              // ── BACKGROUND: Shader + Particles ──
               Positioned.fill(
                 child: LayoutBuilder(
                   builder: (_, constraints) {
@@ -2176,7 +2431,6 @@ try {
                       constraints.maxWidth,
                       constraints.maxHeight,
                     );
-
                     return AnimatedBuilder(
                       animation: _shaderTimeCtrl,
                       builder: (_, _) {
@@ -2211,13 +2465,16 @@ try {
                   },
                 ),
               ),
-
-              // ── FOREGROUND: The actual room UI ──
               SafeArea(
                 child: Column(
                   children: [
                     _buildTopBar(),
-                    Expanded(child: _buildPostList()),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: _buildPostList(),
+                      ),
+                    ),
                     if (_editorExpanded)
                       _buildFullEditor()
                     else
@@ -2225,8 +2482,6 @@ try {
                   ],
                 ),
               ),
-
-              // ── OVERLAYS (OOC, Settings, Selection) ──
               if (!_oocOpen && appSettings.rpShowOoc)
                 Positioned(
                   right: 16,
@@ -2256,7 +2511,9 @@ try {
                             size: 20,
                           ),
                         ),
-                        if (_oocUnread > 0 && !_desktopFocusMode && appSettings.rpOocBadgeOn)
+                        if (_oocUnread > 0 &&
+                            !_desktopFocusMode &&
+                            appSettings.rpOocBadgeOn)
                           Positioned(
                             top: -4,
                             right: -4,
@@ -2395,7 +2652,7 @@ try {
               const SizedBox(width: 8),
               if (_aiMoodEnabled)
                 LoreTap(
-                  onTap: _moodLockedByUser ? _unlockMood : null,
+                  onTap: () => _showMoodPicker(),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -2561,6 +2818,17 @@ try {
         ),
       );
     }
+    if (_posts.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollCtrl.hasClients &&
+            _scrollCtrl.position.pixels ==
+                _scrollCtrl.position.maxScrollExtent) {
+          // If we are at the bottom, force a tiny scroll to trigger the layout
+          _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent + 1);
+          _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+        }
+      });
+    }
     if (_posts.isEmpty) {
       return Center(
         child: Padding(
@@ -2613,7 +2881,6 @@ try {
           key: ValueKey('posts_${_posts.length}'), // <--- ADD THIS
           controller: _scrollCtrl,
           padding: EdgeInsets.fromLTRB(
-            
             MediaQuery.of(context).size.width > 900 ? 8 : 12,
             MediaQuery.of(context).size.width > 900 ? 8 : 12,
             MediaQuery.of(context).size.width > 900 ? 8 : 12,
@@ -4209,7 +4476,9 @@ try {
                       letterSpacing: 4,
                     ),
                   ),
-                  if (_oocUnread > 0 && !_desktopFocusMode && appSettings.rpOocBadgeOn)
+                  if (_oocUnread > 0 &&
+                      !_desktopFocusMode &&
+                      appSettings.rpOocBadgeOn)
                     Padding(
                       padding: const EdgeInsets.only(left: 8),
                       child: _OocBadge(count: _oocUnread),
@@ -4492,6 +4761,15 @@ try {
                 ),
               ),
               const Divider(color: cAsh, height: 1),
+              _settingToggle('Mood haptics', appSettings.moodHaptics, (v) {
+                appSettings.setMoodHaptics(v);
+                if (!v) {
+                  _moodHapticTimer?.cancel();
+                  _pulseValue = 0.0;
+                } else {
+                  _updateMoodHaptics(_currentMood);
+                }
+              }),
               _settingToggle('Scene Mood', _aiMoodEnabled, (v) {
                 appSettings.setAiMood(v);
               }),

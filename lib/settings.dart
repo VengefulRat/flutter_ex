@@ -81,6 +81,7 @@ class BlockStyle {
 // ════════════════════════════════════════
 class AppSettings extends ChangeNotifier {
   static const _kCardBorder = 'as_card_border';
+  static const _kMoodHaptics = 'moodHaptics';
   static const _kParchment = 'as_parchment';
   static const _kTextSize = 'as_text_size';
   static const _kOrientation = 'as_orientation';
@@ -335,6 +336,7 @@ class AppSettings extends ChangeNotifier {
 
   // ── State ──
   bool _cardBorderEffects = true;
+  bool _moodHaptics = true;
   bool _parchmentMode = false;
   String _textSize = 'Medium';
   String _orientation = 'Both';
@@ -495,6 +497,7 @@ class AppSettings extends ChangeNotifier {
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
     _cardBorderEffects = p.getBool(_kCardBorder) ?? true;
+    _moodHaptics = p.getBool(_kMoodHaptics) ?? true;
     _parchmentMode = p.getBool(_kParchment) ?? false;
     _textSize = p.getString(_kTextSize) ?? 'Medium';
     _orientation = p.getString(_kOrientation) ?? 'Both';
@@ -1142,6 +1145,7 @@ class AppSettings extends ChangeNotifier {
   // GETTERS
   // ════════════════════════════════════════
   bool get cardBorderEffects => _cardBorderEffects;
+  bool get moodHaptics => _moodHaptics;
   bool get parchmentMode => _parchmentMode;
   String get textSize => _textSize;
   String get orientation => _orientation;
@@ -1239,6 +1243,13 @@ class AppSettings extends ChangeNotifier {
     _touch();
     notifyListeners();
   }
+
+  Future<void> setMoodHaptics(bool v) async {
+  _moodHaptics = v;
+  (await SharedPreferences.getInstance()).setBool(_kMoodHaptics, v);
+  _touch();
+  notifyListeners();
+}
 
   Future<void> setParchmentMode(bool v) async {
     _parchmentMode = v;
