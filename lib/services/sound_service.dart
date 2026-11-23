@@ -2,6 +2,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+
 // ════════════════════════════════════════
 // SOUND KEYS
 // ════════════════════════════════════════
@@ -14,6 +15,7 @@ class SoundKey {
   static const moodSwitch    = 'sound_mood_switch';
   static const masterMute    = 'sound_master_mute';
   static const notificationVolume = 'sound_notification_volume';
+  
 
   static const all = [
     rpPost,
@@ -133,6 +135,64 @@ await player.setVolume(notificationVolume * masterVolume);
     await _prefs?.setDouble('sound_master_volume', v);
   }
 
+    // ── Mood one-shot ──
+  final AudioPlayer _moodPlayer = AudioPlayer();
+  String? _lastMoodSound;
+
+  Future<void> playMoodSound(String mood) async {
+    await init();
+    if (masterMute) return;
+
+    // Respect Master Volume + Notification Volume, same as your other sounds
+    // If either is 0, stay silent
+    final double vol = notificationVolume * masterVolume;
+    if (vol <= 0.01) return;
+
+    // Only on change
+    if (_lastMoodSound == mood) return;
+    _lastMoodSound = mood;
+
+    try {
+      await _moodPlayer.stop();
+      await _moodPlayer.setVolume(vol * 0.5); // keep it under the RP
+      await _moodPlayer.setAudioContext(AudioContext(
+        android: AudioContextAndroid(
+          contentType: AndroidContentType.sonification,
+          usageType: AndroidUsageType.game,
+          audioFocus: AndroidAudioFocus.none,
+        ),
+        iOS: AudioContextIOS(
+          category: AVAudioSessionCategory.ambient,
+        ),
+      ));
+      await _moodPlayer.play(AssetSource('sounds/mood/${_moodFile(mood)}.mp3'));
+    } catch (e) {
+      debugPrint('[SoundService] mood sound failed ($mood): $e');
+    }
+  }
+
+  String _moodFile(String mood) {
+    switch (mood.toLowerCase()) {
+      case 'romantic':
+        return 'romantic_heartbeat';
+      case 'battle':
+      case 'fight':
+        return 'battle_bass';
+      case 'sad':
+        return 'sad_thud';
+      case 'tense':
+        return 'tense_flicker';
+      case 'spicy':
+        return 'spicy_warm';
+      default:
+        return 'romantic_heartbeat';
+    }
+  }
+
+  void resetMoodSound() {
+    _lastMoodSound = null;
+  }
+
   void dispose() {
     // No long-lived players anymore — each play() creates and
     // disposes its own. Nothing to clean up.
@@ -141,3 +201,4 @@ await player.setVolume(notificationVolume * masterVolume);
 
 // Global shorthand
 final sounds = SoundService.instance;
+

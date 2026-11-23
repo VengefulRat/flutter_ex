@@ -1516,36 +1516,37 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   void _setMood(StoryMood mood, {String? reason}) {
-    if (!mounted) return;
-    if (mood == _currentMood) return;
-    setState(() {
-      _fromColor = _bgAnim.value ?? _fromColor;
-      _currentMood = mood;
-      final toColor = MoodEngine.bgColor(mood);
-      _bgAnim = ColorTween(
-        begin: _fromColor,
-        end: toColor,
-      ).animate(CurvedAnimation(parent: _moodCtrl, curve: Curves.easeInOut));
-      _moodCtrl.forward(from: 0);
-      _initParticles();
-    });
-    _particleTick.value++;
+  if (!mounted) return;
+  if (mood == _currentMood) return;
+  setState(() {
+    _fromColor = _bgAnim.value ?? _fromColor;
+    _currentMood = mood;
+    final toColor = MoodEngine.bgColor(mood);
+    _bgAnim = ColorTween(
+      begin: _fromColor,
+      end: toColor,
+    ).animate(CurvedAnimation(parent: _moodCtrl, curve: Curves.easeInOut));
+    _moodCtrl.forward(from: 0);
+    _initParticles();
+  });
+  _particleTick.value++;
 
-    if (widget.sessionId.isNotEmpty && reason != 'silent') {
-      _log.addEvent(
-        title: 'Mood · ${MoodEngine.moodLabel(mood)}',
-        body: 'The room shifted to ${MoodEngine.moodLabel(mood)}.',
-        source: 'mood',
-        meta: {'mood': mood.name},
-      );
-    }
-    _updateMoodHaptics(mood);
+  // One-shot mood sound — once per mood change, manual + auto
+  if (AppSettings().moodHaptics) {
+    sounds.playMoodSound(mood.name);
   }
+
+  if (widget.sessionId.isNotEmpty && reason != 'silent') {
+    _log.addEvent(
+  title: 'Mood - ${MoodEngine.moodLabel(mood)}',
+  body: reason ?? 'Mood changed to ${MoodEngine.moodLabel(mood)}',
+);
+  }
+}
 
   void _setMoodManual(StoryMood mood) {
     if (!mounted) return;
     setState(() => _moodLockedByUser = true);
-    sounds.play(SoundKey.moodSwitch);
     _setMood(mood);
   }
 
