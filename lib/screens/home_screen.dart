@@ -33,8 +33,8 @@ import 'diary_screen.dart';
 import 'settings_screen.dart';
 import 'card_discovery_screen.dart';
 import '../main.dart' show LandingScreen;
-import 'dart:io' show Platform;
-import 'dart:ffi' show Abi;
+import 'friends_screen.dart';
+
 // ════════════════════════════════════════
 // HOME SCREEN
 // ════════════════════════════════════════
@@ -164,15 +164,15 @@ class _HomeScreenState extends State<HomeScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state == AppLifecycleState.paused) {
       await _auth.saveBackgroundTimestamp();
+      await _auth.updatePresence('away'); // <--- ADDED
     } else if (state == AppLifecycleState.resumed) {
+      await _auth.updatePresence('online'); // <--- ADDED
+
       // Session version check — signed in elsewhere?
       final valid = await _auth.verifySessionVersion();
       if (!valid && mounted) {
         await _handleSessionKicked();
       }
-      // No re-lock on resume. The PIN is only required on cold start
-      // when the encryption keys need loading. Once they're in memory
-      // they stay for the session.
     }
   }
 
@@ -876,8 +876,9 @@ class _HomeScreenState extends State<HomeScreen>
                                                   const SandboxScreen(),
                                                 ),
                                               );
-                                              if (mounted)
+                                              if (mounted) {
                                                 await _refreshProfile();
+                                              }
                                             },
                                             child: Container(
                                               padding:
@@ -1141,35 +1142,84 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                       ),
                       const SizedBox(height: 12),
-// Find Partners (desktop right rail - same destination as mobile)
-Tooltip(
-message: 'Find Partners',
-child: LoreTap(
-onTap: () => Navigator.of(context).push(fadeRoute(const CardDiscoveryScreen())),
-child: Container(
-width: 56,
-height: 56,
-decoration: BoxDecoration(
-color: appSettings.surfaceColor,
-border: Border.all(color: cGold.withValues(alpha: 0.5), width: 1.5),
-borderRadius: BorderRadius.circular(14),
-boxShadow: [
-BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 12, offset: const Offset(0, 6)),
-],
-),
-child: const Column(
-mainAxisAlignment: MainAxisAlignment.center,
-children: [
-Icon(Icons.explore_outlined, size: 20, color: cGold),
-SizedBox(height: 4),
-Text('Partners', style: TextStyle(fontFamily: 'monospace', fontSize: 8, color: cGold, letterSpacing: 1)),
-],
-),
-),
-),
-),
-const SizedBox(height: 12),
-// Diary
+                      // Find Partners (desktop right rail - same destination as mobile)
+                      Tooltip(
+                        message: 'Find Partners',
+                        child: LoreTap(
+                          onTap: () => Navigator.of(
+                            context,
+                          ).push(fadeRoute(const CardDiscoveryScreen())),
+                          child: Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: appSettings.surfaceColor,
+                              border: Border.all(
+                                color: cGold.withValues(alpha: 0.5),
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.6),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.explore_outlined,
+                                  size: 20,
+                                  color: cGold,
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Partners',
+                                  style: TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 8,
+                                    color: cGold,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                                            const SizedBox(height: 12),
+                      // Friends
+                      Tooltip(
+                        message: 'Friends',
+                        child: LoreTap(
+                          onTap: () => Navigator.of(context).push(fadeRoute(FriendsScreen(rps: [..._roleplays, ..._brainstorms].map((e) => {'partner': e.partner, 'partnerCode': e.partnerCode, 'posts': e.posts}).toList()))),
+                          child: Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: appSettings.surfaceColor,
+                              border: Border.all(color: cIce.withValues(alpha: 0.5), width: 1.5),
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withValues(alpha: 0.6), blurRadius: 12, offset: const Offset(0, 6)),
+                              ],
+                            ),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.people_outline, size: 20, color: cIce),
+                                SizedBox(height: 4),
+                                Text('Friends', style: TextStyle(fontFamily: 'monospace', fontSize: 8, color: cIce, letterSpacing: 1)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Diary
                       Tooltip(
                         message: 'Diary',
                         child: LoreTap(
@@ -1304,19 +1354,46 @@ const SizedBox(height: 12),
               const Expanded(
                 child: Text(
                   'CONTINUE',
-                  style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: cGold, letterSpacing: 3),
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 9,
+                    color: cGold,
+                    letterSpacing: 3,
+                  ),
                 ),
               ),
               LoreTap(
                 onTap: () {
                   setState(() {
-                    _desktopContinueSort = _desktopContinueSort == 'last' ? 'posts' : _desktopContinueSort == 'posts' ? 'az' : 'last';
+                    _desktopContinueSort = _desktopContinueSort == 'last'
+                        ? 'posts'
+                        : _desktopContinueSort == 'posts'
+                        ? 'az'
+                        : 'last';
                   });
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(border: Border.all(color: cGold.withValues(alpha: 0.5)), borderRadius: BorderRadius.circular(10)),
-                  child: Text(_desktopContinueSort == 'posts' ? 'MOST POSTS' : _desktopContinueSort == 'az' ? 'A-Z' : 'LAST USED', style: const TextStyle(fontFamily: 'monospace', fontSize: 8, color: cGold, letterSpacing: 1)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: cGold.withValues(alpha: 0.5)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    _desktopContinueSort == 'posts'
+                        ? 'MOST POSTS'
+                        : _desktopContinueSort == 'az'
+                        ? 'A-Z'
+                        : 'LAST USED',
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 8,
+                      color: cGold,
+                      letterSpacing: 1,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -1622,7 +1699,16 @@ const SizedBox(height: 12),
             : _roleplays.where((r) => !r.isArchived).length,
         onTap: _openRoleplays,
         onLongPress: () =>
-            BlockStyleSheet.show(context, AppSettings.blockRoleplays),
+            BlockStyleSheet.show(context, AppSettings.blockRoleplays),    
+      ),
+            FloatingMenuItem(
+        blockKey: 'friends', // A custom key
+        label: 'Friends',
+        icon: Icons.people_outline,
+        accent: cIce,
+        badge: null,
+        onTap: () => Navigator.of(context).push(fadeRoute(FriendsScreen(rps: [..._roleplays, ..._brainstorms].map((e) => {'partner': e.partner, 'partnerCode': e.partnerCode, 'posts': e.posts}).toList()))),
+        onLongPress: null, // No styling for friends list
       ),
       FloatingMenuItem(
         blockKey: AppSettings.blockBrainstorms,
@@ -1736,15 +1822,39 @@ const SizedBox(height: 12),
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: cAsh),
-                        color: cVoid.withValues(alpha: 0.4),
-                      ),
-                      child: const Icon(Icons.person, color: cSmoke, size: 20),
+                    Stack(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: cAsh),
+                            color: cVoid.withValues(alpha: 0.4),
+                          ),
+                          child: const Icon(
+                            Icons.person,
+                            color: cSmoke,
+                            size: 20,
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: () => _showStatusPicker(context),
+                            child: Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: cVine, // Green for online
+                                shape: BoxShape.circle,
+                                border: Border.all(color: cInk, width: 2),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -1795,6 +1905,88 @@ const SizedBox(height: 12),
             _railTile('preludes', Icons.lightbulb_outline, 'Preludes'),
             _railTile('card', Icons.credit_card_outlined, 'Request Card'),
             _railTile('settings', Icons.tune, 'Settings'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showStatusPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cInk,
+      shape: const RoundedRectangleBorder(),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'SET STATUS',
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 10,
+                color: cGold,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _statusTile('Online', 'Available to write', cVine, 'online'),
+            _statusTile('Away', 'Stepped away for a moment', cGold, 'away'),
+            _statusTile(
+              'Do Not Disturb',
+              'Busy, but I will reply later',
+              cEmber,
+              'dnd',
+            ),
+            _statusTile(
+              'Offline',
+              'Appear offline to others',
+              cSmoke,
+              'offline',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statusTile(String title, String subtitle, Color color, String value) {
+    return LoreTap(
+      onTap: () {
+        AuthService().updatePresence(value);
+        Navigator.pop(context);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(border: Border.all(color: cAsh)),
+        child: Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 14, color: cParchment),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: cSmoke,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -2020,22 +2212,14 @@ const SizedBox(height: 12),
   }
 
   void _showDownloadDialog(BuildContext context) {
-  // Check which chip the phone has
-  String abiSuffix = 'arm64-v8a'; // Default for 95% of phones
-  if (Platform.isAndroid) {
-    if (Abi.current() == Abi.androidArm) {
-      abiSuffix = 'armeabi-v7a';
-    } else if (Abi.current() == Abi.androidX64) {
-      abiSuffix = 'x86_64';
-    }
-  }
+    // Default to the 64-bit version (what 95% of phones use)
+    String abiSuffix = 'arm64-v8a';
 
-  // Dynamically build the URL
-  final String apkUrl =
-      'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.7/app-$abiSuffix-release.apk';
-      
-  final String windowsUrl =
-      'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.7/LoreEx-Setup.exe';
+    final String apkUrl =
+        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.7/app-$abiSuffix-release.apk';
+
+    final String windowsUrl =
+        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.7/LoreEx-Setup.exe';
 
     showDialog(
       context: context,
@@ -2346,6 +2530,88 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
   late List<_RPData> _items;
   bool _showArchived = false;
 
+  void _showDeckSheet(List<_RPData> rps) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cInk,
+      shape: const RoundedRectangleBorder(),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 32,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: cAsh,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'STORIES WITH ${rps.first.partner.toUpperCase()}',
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 10,
+                color: cGold,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...rps.map(
+              (rp) => LoreTap(
+                onTap: () {
+                  Navigator.pop(ctx);
+                  widget.onEnter(rp);
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(border: Border.all(color: cAsh)),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              rp.hasTitle ? rp.title : rp.genre,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                color: cParchment,
+                                fontStyle: FontStyle.italic,
+                                fontWeight: FontWeight.w300,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${rp.posts} posts · ${rp.genre}',
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 9,
+                                color: cSmoke,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, size: 16, color: cSmoke),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -2354,6 +2620,13 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
 
   List<_RPData> get _visible =>
       _items.where((r) => _showArchived || !r.isArchived).toList();
+  List<List<_RPData>> get _groupedItems {
+    final grouped = <String, List<_RPData>>{};
+    for (final rp in _visible) {
+      grouped.putIfAbsent(rp.partnerCode, () => []).add(rp);
+    }
+    return grouped.values.toList();
+  }
 
   int get _archivedCount => _items.where((r) => r.isArchived).length;
 
@@ -2778,7 +3051,7 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
             ),
           )
         else
-          // THE NEW GRID
+          // THE NEW GROUPED GRID
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -2788,13 +3061,24 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
             ),
-            itemCount: items.length,
+            itemCount: _groupedItems.length,
             itemBuilder: (context, index) {
-              final rp = items[index];
-              return _RPSelectionCard(
-                rp: rp,
-                onTap: () => widget.onEnter(rp),
-                onLongPress: () => _openMenu(rp),
+              final group = _groupedItems[index];
+
+              // If only 1 RP, show the normal card
+              if (group.length == 1) {
+                final rp = group.first;
+                return _RPSelectionCard(
+                  rp: rp,
+                  onTap: () => widget.onEnter(rp),
+                  onLongPress: () => _openMenu(rp),
+                );
+              }
+
+              // If multiple, show the DECK card
+              return _RPDeckCard(
+                rps: group,
+                onTap: () => _showDeckSheet(group),
               );
             },
           ),
@@ -6024,15 +6308,78 @@ class _ContinuePrefsSheetState extends State<_ContinuePrefsSheet> {
   }
 }
 
+class _RPDeckCard extends StatelessWidget {
+  final List<_RPData> rps;
+  final VoidCallback onTap;
+
+  const _RPDeckCard({required this.rps, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryRp = rps.first;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        children: [
+          // Background card 2 (offset)
+          Positioned(
+            top: 8,
+            left: 8,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                color: cInk.withValues(alpha: 0.5),
+                border: Border.all(color: cAsh),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+          // Background card 1 (offset)
+          Positioned(
+            top: 4,
+            left: 4,
+            right: 4,
+            bottom: 4,
+            child: Container(
+              decoration: BoxDecoration(
+                color: cInk.withValues(alpha: 0.8),
+                border: Border.all(color: cAsh),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+          // Main card
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 8,
+            bottom: 8,
+            child: _RPSelectionCard(
+              rp: primaryRp,
+              onTap: onTap,
+              onLongPress: onTap, // Long press also opens the deck
+              overrideBadge: rps.length, // We'll add this parameter next
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _RPSelectionCard extends StatelessWidget {
   final _RPData rp;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final int? overrideBadge;
 
   const _RPSelectionCard({
     required this.rp,
     required this.onTap,
     required this.onLongPress,
+    this.overrideBadge,
   });
 
   @override
@@ -6100,6 +6447,32 @@ class _RPSelectionCard extends StatelessWidget {
                                 Icons.broken_image_outlined,
                                 color: cAsh,
                                 size: 24,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                      // ADD THIS BADGE
+                      if (overrideBadge != null && overrideBadge! > 1)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: cGold,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              'x$overrideBadge',
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 10,
+                                color: cVoid,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),

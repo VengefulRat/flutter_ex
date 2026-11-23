@@ -10,7 +10,6 @@ import 'crypto_service.dart';
 import '../models/world.dart';
 import '../settings.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'sandbox_sync.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -34,10 +33,6 @@ class AuthService {
   static const _biometricsKey = 'lore_biometrics_enabled';
   static const _deviceKey = 'lore_device_id';
 
-  /// Stable per-install device ID. Phone and PC each get their own,
-  /// so they get their own entry in sessionVersions and never kick
-  /// each other. Survives app updates, changes only on reinstall /
-  /// sign-out wipe (which also removes the cloud entry).
   Future<String> _deviceId() async {
     final prefs = await SharedPreferences.getInstance();
     var id = prefs.getString(_deviceKey);
@@ -51,7 +46,6 @@ class AuthService {
     return id;
   }
 
-  // ── PIN policy ──
   static const int pinMinLength = 6;
   static const int maxPinAttempts = 5;
   static const Duration lockoutDuration = Duration(minutes: 5);
@@ -71,7 +65,6 @@ class AuthService {
     bits: 256,
   );
 
-  // ── Code generation ──
   String _generateCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     final rand = Random.secure();
@@ -85,9 +78,7 @@ class AuthService {
     return List<int>.generate(length, (_) => rnd.nextInt(256));
   }
 
-  // ── PIN hashing ──
-  String _hashPinSha256(String pin) =>
-      sha256.convert(utf8.encode(pin)).toString();
+  String _hashPinSha256(String pin) => sha256.convert(utf8.encode(pin)).toString();
 
   Future<String> _hashPinPbkdf2(String pin, List<int> salt) async {
     final key = await _pbkdf2.deriveKey(
@@ -98,7 +89,6 @@ class AuthService {
     return base64.encode(bytes);
   }
 
-  // ── Display name availability ──
   Future<bool> isNameAvailable(String name) async {
     final query = await _db
         .collection('users')
@@ -108,23 +98,14 @@ class AuthService {
     return query.docs.isEmpty;
   }
 
-  // ════════════════════════════════════════
-  // REGISTER
-  // ════════════════════════════════════════
   Future<RegisterResult> register(String displayName) async {
     try {
       final name = displayName.trim();
       if (name.isEmpty) return RegisterResult.error('Name cannot be empty.');
-      if (name.length < 2 || name.length > 24) {
-        return RegisterResult.error('Name must be 2–24 characters.');
-      }
-      if (!RegExp(r'^[a-zA-Z0-9_\-]+$').hasMatch(name)) {
-        return RegisterResult.error('Letters, numbers, _ and - only.');
-      }
+      if (name.length < 2 || name.length > 24) return RegisterResult.error('Name must be 2–24 characters.');
+      if (!RegExp(r'^[a-zA-Z0-9_\-]+$').hasMatch(name)) return RegisterResult.error('Letters, numbers, _ and - only.');
 
-      if (_auth.currentUser == null) {
-        await _auth.signInAnonymously();
-      }
+      if (_auth.currentUser == null) await _auth.signInAnonymously();
 
       final available = await isNameAvailable(name);
       if (!available) return RegisterResult.error('That name is already taken.');
@@ -137,27 +118,33 @@ class AuthService {
         final doc = await _db.collection('users').doc(code).get();
         codeExists = doc.exists;
         attempts++;
-        if (attempts > 10) {
-          return RegisterResult.error('Could not generate a unique code. Try again.');
-        }
+        if (attempts > 10) return RegisterResult.error('Could not generate a unique code.');
       } while (codeExists);
 
       final uid = _auth.currentUser!.uid;
+      final v = DateTime.now().millisecondsSinceEpoch;
 
+      // 1. Public Data
       await _db.collection('users').doc(code).set({
         'code': code,
+        'uid': uid, // Needed for write permissions
         'displayName': name.toLowerCase().trim(),
         'displayNameOriginal': name,
-        'uid': uid,
         'createdAt': FieldValue.serverTimestamp(),
         'lastSeen': FieldValue.serverTimestamp(),
         'isDiscoverable': true,
-        'deviceLocked': true,
-        'sessionVersion': DateTime.now().millisecondsSinceEpoch,
         'genres': [],
         'bio': '',
         'writingStyle': '',
         'postFrequency': '',
+      });
+
+      // 2. Private Data
+      await _db.collection('user_secrets').doc(code).set({
+        'uid': uid,
+        'deviceLocked': true,
+        'sessionVersions': {await _deviceId(): v},
+        'pinAttempts': 0,
       });
 
       await _saveLocal(code, name);
@@ -170,43 +157,56 @@ class AuthService {
     }
   }
 
-  // ════════════════════════════════════════
-  // LOGIN
-  // ════════════════════════════════════════
-    Future<LoginResult> login(String code) async {
+  Future<LoginResult> login(String code) async {
     try {
       final clean = code.trim().toUpperCase();
-      if (clean.isEmpty) {
-        return LoginResult.error('Please enter your code.');
-      }
-
-      if (_auth.currentUser == null) {
-        await _auth.signInAnonymously();
-      }
+      if (clean.isEmpty) return LoginResult.error('Please enter your code.');
+      if (_auth.currentUser == null) await _auth.signInAnonymously();
 
       final doc = await _db.collection('users').doc(clean).get();
-      if (!doc.exists) {
-        return LoginResult.error('Code not found. Check and try again.');
-      }
+      if (!doc.exists) return LoginResult.error('Code not found. Check and try again.');
 
       final data = doc.data() ?? {};
-      final locked = data['deviceLocked'] as bool? ?? false;
-      final transferPending = data['transferRequestedAt'] != null;
-
-      if (locked || transferPending) {
-        return LoginResult.deviceLocked();
+      final uid = _auth.currentUser!.uid;
+      
+      // --- MIGRATION LOGIC ---
+      final secretDoc = await _db.collection('user_secrets').doc(clean).get();
+      if (!secretDoc.exists) {
+        // Migrate existing user to new collection
+        await _db.collection('user_secrets').doc(clean).set({
+          'uid': uid,
+          'deviceLocked': data['deviceLocked'] ?? false,
+          'transferRequestedAt': data['transferRequestedAt'],
+          'sessionVersions': data['sessionVersions'] ?? {},
+          'pinHash': data['pinHash'],
+          'pinSalt': data['pinSalt'],
+          'pinHashVersion': data['pinHashVersion'],
+          'pinLength': data['pinLength'],
+          'pinAttempts': data['pinAttempts'] ?? 0,
+          'pinLockedUntil': data['pinLockedUntil'],
+          'encryptedPrivateKey': data['encryptedPrivateKey'],
+          'privateKeySalt': data['privateKeySalt'],
+          'privateKeyIv': data['privateKeyIv'],
+        });
+      } else {
+        // Ensure the UID is updated so this device has write access
+        await _db.collection('user_secrets').doc(clean).update({'uid': uid});
       }
 
-      // Multi-device: only register THIS device. Never touch other
-      // devices entries, never bump the legacy mobile/web slots.
+      final secrets = (await _db.collection('user_secrets').doc(clean).get()).data() ?? {};
+      final locked = secrets['deviceLocked'] as bool? ?? false;
+      final transferPending = secrets['transferRequestedAt'] != null;
+
+      if (locked || transferPending) return LoginResult.deviceLocked();
+
       final newVersion = DateTime.now().millisecondsSinceEpoch;
       final deviceId = await _deviceId();
 
-      await _db.collection('users').doc(clean).update({
-        'lastSeen': FieldValue.serverTimestamp(),
+      await _db.collection('user_secrets').doc(clean).update({
         'deviceLocked': true,
         'sessionVersions.$deviceId': newVersion,
       });
+      await _db.collection('users').doc(clean).update({'lastSeen': FieldValue.serverTimestamp()});
 
       final name = data['displayNameOriginal'] as String? ?? '';
       await _saveLocal(clean, name);
@@ -223,33 +223,50 @@ class AuthService {
   Future<LoginResult> loginWeb(String code) async {
     try {
       final clean = code.trim().toUpperCase();
-      if (_auth.currentUser == null) {
-        await _auth.signInAnonymously();
-      }
+      if (_auth.currentUser == null) await _auth.signInAnonymously();
 
       final doc = await _db.collection('users').doc(clean).get();
-      if (!doc.exists) {
-        return LoginResult.error('Code not found. Check and try again.');
+      if (!doc.exists) return LoginResult.error('Code not found. Check and try again.');
+
+      final uid = _auth.currentUser!.uid;
+      
+      // --- MIGRATION LOGIC (Same as above) ---
+      final secretDoc = await _db.collection('user_secrets').doc(clean).get();
+      if (!secretDoc.exists) {
+        final data = doc.data() ?? {};
+        await _db.collection('user_secrets').doc(clean).set({
+          'uid': uid,
+          'deviceLocked': data['deviceLocked'] ?? false,
+          'transferRequestedAt': data['transferRequestedAt'],
+          'sessionVersions': data['sessionVersions'] ?? {},
+          'pinHash': data['pinHash'],
+          'pinSalt': data['pinSalt'],
+          'pinHashVersion': data['pinHashVersion'],
+          'pinLength': data['pinLength'],
+          'pinAttempts': data['pinAttempts'] ?? 0,
+          'pinLockedUntil': data['pinLockedUntil'],
+          'encryptedPrivateKey': data['encryptedPrivateKey'],
+          'privateKeySalt': data['privateKeySalt'],
+          'privateKeyIv': data['privateKeyIv'],
+        });
+      } else {
+        await _db.collection('user_secrets').doc(clean).update({'uid': uid});
       }
 
-            final data = doc.data() ?? {};
-      final locked = data['deviceLocked'] as bool? ?? false;
-      final transferPending = data['transferRequestedAt'] != null;
+      final secrets = (await _db.collection('user_secrets').doc(clean).get()).data() ?? {};
+      final locked = secrets['deviceLocked'] as bool? ?? false;
+      final transferPending = secrets['transferRequestedAt'] != null;
 
-      if (locked || transferPending) {
-        return LoginResult.deviceLocked();
-      }
+      if (locked || transferPending) return LoginResult.deviceLocked();
 
-      final name = data['displayNameOriginal'] as String? ?? '';
-
-      // Multi-device: only register THIS device.
+      final name = doc.data()?['displayNameOriginal'] as String? ?? '';
       final newVersion = DateTime.now().millisecondsSinceEpoch;
       final deviceId = await _deviceId();
 
-      await _db.collection('users').doc(clean).update({
+      await _db.collection('user_secrets').doc(clean).update({
         'sessionVersions.$deviceId': newVersion,
-        'lastSeen': FieldValue.serverTimestamp(),
       });
+      await _db.collection('users').doc(clean).update({'lastSeen': FieldValue.serverTimestamp()});
       
       await _saveLocal(clean, name);
       await _saveSessionVersion(newVersion);
@@ -262,17 +279,7 @@ class AuthService {
     }
   }
 
-  // ── Restore session from local storage ──
-
-  // ════════════════════════════════════════
-  // RESTORE / SIGN OUT
-  // ════════════════════════════════════════
-
-    // ════════════════════════════════════════
-  // SESSION VERSION (remote sign-out)
-  // ════════════════════════════════════════
-
-    Future<void> _saveSessionVersion(int? version) async {
+  Future<void> _saveSessionVersion(int? version) async {
     if (version == null) return;
     final prefs = await SharedPreferences.getInstance();
     if (kIsWeb) {
@@ -286,7 +293,7 @@ class AuthService {
     final code = _cachedCode;
     if (code == null) return true;
     try {
-      final doc = await _db.collection('users').doc(code).get();
+      final doc = await _db.collection('user_secrets').doc(code).get();
       if (!doc.exists) return true;
       final data = doc.data()!;
 
@@ -294,67 +301,40 @@ class AuthService {
       final localKey = kIsWeb ? _webSessionKey : _mobileSessionKey;
       final local = prefs.getInt(localKey);
 
-      // New model: per-device map. If the map exists, it is authoritative.
       final rawMap = data['sessionVersions'];
       if (rawMap is Map) {
         final deviceId = await _deviceId();
         final cloud = rawMap[deviceId];
-if (cloud == null) {
-  // #1: new device, not a kick. Adopt it: give it its own version,
-  // register it in the map, and let it in. Previously this returned
-  // false, so every first login on a second device kicked instantly.
-  final v = DateTime.now().millisecondsSinceEpoch;
-  try {
-    await _db.collection('users').doc(code).update({
-      'sessionVersions.$deviceId': v,
-    });
-  } catch (_) {}
-  await prefs.setInt(localKey, v);
-  return true;
-}
+        if (cloud == null) {
+          final v = DateTime.now().millisecondsSinceEpoch;
+          try {
+            await _db.collection('user_secrets').doc(code).update({
+              'sessionVersions.$deviceId': v,
+            });
+          } catch (_) {}
+          await prefs.setInt(localKey, v);
+          return true;
+        }
         if (local == null) {
           await prefs.setInt(localKey, cloud as int);
           return true;
         }
         return local == cloud;
       }
-
-      // Legacy fallback: no map yet.
-      if (kIsWeb) {
-        final cloudWeb = data['webSessionVersion'] as int?;
-        if (cloudWeb == null) return true;
-        if (local == null) {
-          await prefs.setInt(localKey, cloudWeb);
-          return true;
-        }
-        return local == cloudWeb;
-      } else {
-        final cloudMobile = data['mobileSessionVersion'] as int?;
-        if (cloudMobile == null) return true;
-        if (local == null) {
-          await prefs.setInt(localKey, cloudMobile);
-          return true;
-        }
-        return local == cloudMobile;
-      }
+      return true;
     } catch (_) {
-      return true; // Fail open if offline
+      return true;
     }
   }
 
-  /// Rotates the session version. The current device adopts the new
-  /// value so it stays signed in; every other device fails the next
-  /// verifySessionVersion() and is returned to Landing.
-    Future<void> signOutOtherDevices() async {
+  Future<void> signOutOtherDevices() async {
     final code = _cachedCode;
     if (code == null) return;
     final v = DateTime.now().millisecondsSinceEpoch;
-    
     final deviceId = await _deviceId();
-    await _db.collection('users').doc(code).update({
+    
+    await _db.collection('user_secrets').doc(code).update({
       'sessionVersions': {deviceId: v},
-      'mobileSessionVersion': v,
-      'webSessionVersion': v,
     });
     
     final prefs = await SharedPreferences.getInstance();
@@ -369,9 +349,7 @@ if (cloud == null) {
     final prefs = await SharedPreferences.getInstance();
     final code = prefs.getString(_codeKey);
     final name = prefs.getString(_nameKey);
-
     if (code == null || name == null) return false;
-
     if (_auth.currentUser == null) {
       try {
         await _auth.signInAnonymously();
@@ -379,11 +357,24 @@ if (cloud == null) {
         return false;
       }
     }
-
     _cachedCode = code;
     _cachedName = name;
     saveFcmToken();
     return true;
+  }
+
+    Future<void> updatePresence(String status) async {
+    final code = _cachedCode;
+    if (code == null) return;
+    try {
+      // We save this in the public 'users' collection because everyone needs to see it
+      await _db.collection('users').doc(code).update({
+        'presence': status,
+        'lastSeen': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('[Presence] update failed: $e');
+    }
   }
 
   Future<bool> unlockWithPin(String pin) async {
@@ -409,95 +400,52 @@ if (cloud == null) {
     await prefs.remove(_lockAttemptsKey);
     await prefs.remove(_lockAttemptsTsKey);
 
-        final code = _cachedCode;
+    final code = _cachedCode;
     if (code != null) {
       try {
         final deviceId = await _deviceId();
-        final doc =
-            await _db.collection('users').doc(code).get();
+        final doc = await _db.collection('user_secrets').doc(code).get();
         final rawMap = doc.data()?['sessionVersions'];
-        final remaining =
-            rawMap is Map ? rawMap.length - 1 : 0;
+        final remaining = rawMap is Map ? rawMap.length - 1 : 0;
         final update = <String, dynamic>{
           'sessionVersions.$deviceId': FieldValue.delete(),
         };
         if (remaining <= 0) {
           update['deviceLocked'] = false;
-          update['mobileSessionVersion'] = FieldValue.delete();
-          update['webSessionVersion'] = FieldValue.delete();
         }
-        await _db.collection('users').doc(code).update(update);
-      } catch (_) {
-      }
+        await _db.collection('user_secrets').doc(code).update(update);
+      } catch (_) {}
     }
-        _cachedCode = null;
+    _cachedCode = null;
     _cachedName = null;
     CryptoService().lock();
-
-    // Flush any pending debounced writes to the cloud BEFORE wiping local
-    // storage. Otherwise, a timer could fire after the next user logs in
-    // and push the old user's data to the new user's account.
-    await SandboxSync.flush();
-    await appSettings.flushToCloud();
-
-    // Wipe local sandbox and preferences so the next account on this
-    // device doesn't inherit anything from the one signing out.
     await SandboxStorage.clear();
     await appSettings.resetForSignOut();
-
     await _auth.signOut();
   }
 
-  // ════════════════════════════════════════
-  // PIN — local (fast, used by lock screen)
-  // ════════════════════════════════════════
-
   Future<void> savePin(String pin) async {
-    // ── 1. Validate format (no writes yet) ──
-    if (pin.length < pinMinLength) {
-      throw ArgumentError('PIN must be at least $pinMinLength digits.');
-    }
-    if (!RegExp(r'^\d+$').hasMatch(pin)) {
-      throw ArgumentError('PIN must contain digits only.');
-    }
+    if (pin.length < pinMinLength) throw ArgumentError('PIN must be at least $pinMinLength digits.');
+    if (!RegExp(r'^\d+$').hasMatch(pin)) throw ArgumentError('PIN must contain digits only.');
 
     final salt = _randomBytes(32);
     final hash = await _hashPinPbkdf2(pin, salt);
     final saltB64 = base64.encode(salt);
-
     final code = _cachedCode;
 
     if (code != null) {
       final crypto = CryptoService();
       if (crypto.isUnlocked) {
-        // Key is in memory — safe to re-encrypt with the new PIN.
-        await crypto.reEncryptPrivateKeyWithNewPin(
-          userCode: code,
-          newPin: pin,
-        );
+        await crypto.reEncryptPrivateKeyWithNewPin(userCode: code, newPin: pin);
       } else {
-        // Key not in memory. Check Firestore to decide what to do.
-        final doc = await _db.collection('users').doc(code).get();
-        final hasExistingKey =
-            doc.data()?['encryptedPrivateKey'] != null;
-
+        final doc = await _db.collection('user_secrets').doc(code).get();
+        final hasExistingKey = doc.data()?['encryptedPrivateKey'] != null;
         if (!hasExistingKey) {
-          // Fresh account — safe to generate a new keypair.
-          await crypto.generateAndSaveKeypair(
-            userCode: code,
-            pin: pin,
-          );
+          await crypto.generateAndSaveKeypair(userCode: code, pin: pin);
         } else {
-          final unlocked = await crypto.unlockPrivateKey(
-            userCode: code,
-            pin: pin,
-          );
+          final unlocked = await crypto.unlockPrivateKey(userCode: code, pin: pin);
           if (!unlocked) {
-            throw ArgumentError(
-              'This account already has encryption keys, and the PIN you '
-              'entered does not unlock them. Use your original PIN — '
-              'otherwise older content will stay locked on this device.',
-            );
+            throw ArgumentError('This account already has encryption keys, and the PIN you entered does not unlock them.');
           }
         }
       }
@@ -510,7 +458,7 @@ if (cloud == null) {
     await prefs.setInt(_pinLengthKey, pin.length);
 
     if (code != null) {
-      await _db.collection('users').doc(code).update({
+      await _db.collection('user_secrets').doc(code).update({
         'pinHash': hash,
         'pinSalt': saltB64,
         'pinHashVersion': 'pbkdf2',
@@ -521,16 +469,12 @@ if (cloud == null) {
     }
   }
 
-  /// Local PIN check. Handles legacy sha256 hashes and current pbkdf2.
   Future<bool> verifyPin(String pin) async {
     final prefs = await SharedPreferences.getInstance();
     final stored = prefs.getString(_pinHashKey);
     if (stored == null) return false;
-
     final version = prefs.getString(_pinVersionKey) ?? 'sha256';
-    if (version == 'sha256') {
-      return _hashPinSha256(pin) == stored;
-    }
+    if (version == 'sha256') return _hashPinSha256(pin) == stored;
     final saltB64 = prefs.getString(_pinSaltKey);
     if (saltB64 == null) return false;
     final candidate = await _hashPinPbkdf2(pin, base64.decode(saltB64));
@@ -555,7 +499,7 @@ if (cloud == null) {
     await prefs.remove(_pinLengthKey);
     final code = _cachedCode;
     if (code != null) {
-      await _db.collection('users').doc(code).update({
+      await _db.collection('user_secrets').doc(code).update({
         'pinHash': FieldValue.delete(),
         'pinSalt': FieldValue.delete(),
         'pinHashVersion': FieldValue.delete(),
@@ -565,108 +509,58 @@ if (cloud == null) {
     }
   }
 
-  // ════════════════════════════════════════
-  // PIN — remote (used by login / transfer)
-  // ════════════════════════════════════════
-
-  /// Verifies a PIN against the server. Manages attempt counting, lockout,
-  /// legacy hash upgrade, and security notifications.
   Future<PinVerifyResult> verifyPinRemote(String code, String pin) async {
-    if (_auth.currentUser == null) {
-      await _auth.signInAnonymously();
-    }
+    if (_auth.currentUser == null) await _auth.signInAnonymously();
 
-    final doc = await _db.collection('users').doc(code).get();
-    if (!doc.exists) {
-      return PinVerifyResult(success: false, error: 'Account not found.');
-    }
+    final doc = await _db.collection('user_secrets').doc(code).get();
+    if (!doc.exists) return PinVerifyResult(success: false, error: 'Account not found.');
     final data = doc.data()!;
 
-    // Lock check
     final lockedUntilRaw = data['pinLockedUntil'];
     if (lockedUntilRaw is Timestamp) {
       final lockedUntil = lockedUntilRaw.toDate();
       if (lockedUntil.isAfter(DateTime.now())) {
-        return PinVerifyResult(
-          success: false,
-          isLocked: true,
-          lockedUntil: lockedUntil,
-          attemptsRemaining: 0,
-          error: 'Account locked.',
-        );
+        return PinVerifyResult(success: false, isLocked: true, lockedUntil: lockedUntil, attemptsRemaining: 0, error: 'Account locked.');
       }
     }
 
     final storedHash = data['pinHash'] as String?;
-    if (storedHash == null) {
-      return PinVerifyResult(
-          success: false, error: 'No PIN set on this account.');
-    }
+    if (storedHash == null) return PinVerifyResult(success: false, error: 'No PIN set on this account.');
     final version = data['pinHashVersion'] as String? ?? 'sha256';
     final saltB64 = data['pinSalt'] as String?;
 
-    // Compute candidate hash
     String candidateHash;
     if (version == 'pbkdf2') {
-      if (saltB64 == null) {
-        return PinVerifyResult(
-            success: false, error: 'Corrupt PIN data on server.');
-      }
+      if (saltB64 == null) return PinVerifyResult(success: false, error: 'Corrupt PIN data.');
       candidateHash = await _hashPinPbkdf2(pin, base64.decode(saltB64));
     } else {
       candidateHash = _hashPinSha256(pin);
     }
 
-    // ── Failure path ──
     if (candidateHash != storedHash) {
       final prevAttempts = (data['pinAttempts'] as int?) ?? 0;
       final newAttempts = prevAttempts + 1;
       final willLock = newAttempts >= maxPinAttempts;
-
-      final update = <String, dynamic>{
-        'pinAttempts': willLock ? 0 : newAttempts,
-      };
+      final update = <String, dynamic>{'pinAttempts': willLock ? 0 : newAttempts};
+      
       if (willLock) {
         final lockUntil = DateTime.now().add(lockoutDuration);
         update['pinLockedUntil'] = Timestamp.fromDate(lockUntil);
-        await _notifySecurity(
-          code,
-          'Account locked after failed PIN attempts',
-          'Someone tried to access your account with the wrong PIN $maxPinAttempts times. '
-              'It has been locked for ${lockoutDuration.inMinutes} minutes. '
-              'If this wasn\'t you, someone may have your unique code.',
-        );
+        await _notifySecurity(code, 'Account locked after failed PIN attempts', 'Someone tried to access your account with the wrong PIN $maxPinAttempts times.');
       } else if (newAttempts >= 3) {
-        await _notifySecurity(
-          code,
-          'Failed PIN attempts on your account',
-          '$newAttempts failed attempts. The account locks after $maxPinAttempts.',
-        );
+        await _notifySecurity(code, 'Failed PIN attempts on your account', '$newAttempts failed attempts. The account locks after $maxPinAttempts.');
       }
 
       try {
-        await _db.collection('users').doc(code).update(update);
+        await _db.collection('user_secrets').doc(code).update(update);
       } catch (e) {
         print('[verifyPinRemote] attempt-write failed: $e');
       }
 
-      return PinVerifyResult(
-        success: false,
-        attemptsRemaining: willLock ? 0 : maxPinAttempts - newAttempts,
-        error: willLock
-            ? 'Account locked for ${lockoutDuration.inMinutes} minutes.'
-            : 'Incorrect PIN.',
-      );
+      return PinVerifyResult(success: false, attemptsRemaining: willLock ? 0 : maxPinAttempts - newAttempts, error: willLock ? 'Account locked.' : 'Incorrect PIN.');
     }
 
-    // ── Success path ──
-    final update = <String, dynamic>{
-      'pinAttempts': 0,
-      'pinLockedUntil': FieldValue.delete(),
-    };
-
-    // Silent upgrade of legacy sha256 hash to pbkdf2. We have the plaintext
-    // PIN right here, so this is a free opportunity to migrate.
+    final update = <String, dynamic>{'pinAttempts': 0, 'pinLockedUntil': FieldValue.delete()};
     if (version != 'pbkdf2') {
       final newSalt = _randomBytes(32);
       final newHash = await _hashPinPbkdf2(pin, newSalt);
@@ -674,60 +568,41 @@ if (cloud == null) {
       update['pinSalt'] = base64.encode(newSalt);
       update['pinHashVersion'] = 'pbkdf2';
     }
-
     try {
-      await _db.collection('users').doc(code).update(update);
+      await _db.collection('user_secrets').doc(code).update(update);
     } catch (e) {
       print('[verifyPinRemote] success-write failed: $e');
     }
-
     return PinVerifyResult(success: true, attemptsRemaining: maxPinAttempts);
   }
 
-  /// Completes a login after the user has verified their PIN. This is the
-  /// "transfer account" path — code + PIN, then we claim the device.
-  Future<LoginResult> completeLoginWithPin({
-    required String code,
-    required String pin,
-  }) async {
+  Future<LoginResult> completeLoginWithPin({required String code, required String pin}) async {
     try {
-      if (_auth.currentUser == null) {
-        await _auth.signInAnonymously();
-      }
-
+      if (_auth.currentUser == null) await _auth.signInAnonymously();
       final clean = code.trim().toUpperCase();
       final verification = await verifyPinRemote(clean, pin);
 
-      if (verification.isLocked) {
-        return LoginResult.error(
-            verification.error ?? 'Account locked. Try again later.');
-      }
+      if (verification.isLocked) return LoginResult.error(verification.error ?? 'Account locked.');
       if (!verification.success) {
         final remaining = verification.attemptsRemaining;
         final base = verification.error ?? 'Incorrect PIN.';
-        final msg = remaining > 0
-            ? '$base $remaining attempt${remaining == 1 ? '' : 's'} remaining.'
-            : base;
-        return LoginResult.error(msg);
+        return LoginResult.error(remaining > 0 ? '$base $remaining attempt${remaining == 1 ? '' : 's'} remaining.' : base);
       }
 
-      // Rotate the session version on transfer. This tells every other
-      // device signed in to the account — including the one that
-      // requested the transfer — that its session is no longer valid.
+      final uid = _auth.currentUser!.uid;
       final newVersion = DateTime.now().millisecondsSinceEpoch;
-      // Multi-device transfer: ADD this device to the map. Other
-      // devices stay signed in. Only Sign out other devices kicks them.
       final deviceId = await _deviceId();
-      await _db.collection('users').doc(clean).update({
+      
+      await _db.collection('user_secrets').doc(clean).update({
+        'uid': uid,
         'deviceLocked': true,
         'transferRequestedAt': FieldValue.delete(),
-        'lastSeen': FieldValue.serverTimestamp(),
         'sessionVersions.$deviceId': newVersion,
       });
+      await _db.collection('users').doc(clean).update({'lastSeen': FieldValue.serverTimestamp()});
 
       final doc = await _db.collection('users').doc(clean).get();
-            final data = doc.data() ?? {};
-      final name = data['displayNameOriginal'] as String? ?? '';
+      final name = doc.data()?['displayNameOriginal'] as String? ?? '';
 
       await _saveLocal(clean, name);
       await _saveSessionVersion(newVersion);
@@ -740,65 +615,35 @@ if (cloud == null) {
     }
   }
 
-  // ════════════════════════════════════════
-  // LOCK SCREEN ATTEMPTS (local + notify)
-  // ════════════════════════════════════════
-  //
-  // The lock screen verifies PINs locally, so it needs its own attempt
-  // tracking. Counts are stored in SharedPreferences and reset on a
-  // successful unlock. Notifications are still fired via Firestore so
-  // the user sees them the next time they're signed in — even if the
-  // device is lost or wiped.
   static const _lockAttemptsKey = 'lore_lockscreen_attempts';
   static const _lockAttemptsTsKey = 'lore_lockscreen_last_attempt';
   static const _lockAttemptsWindow = Duration(hours: 1);
 
-  /// Records a failed lock screen attempt. Fires a security notification
-  /// at 3, 5, and 10 attempts within the rolling window.
   Future<void> recordFailedLockScreenAttempt() async {
     final code = _cachedCode;
     if (code == null) return;
-
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now().millisecondsSinceEpoch;
     final lastTs = prefs.getInt(_lockAttemptsTsKey);
-
     int attempts = 0;
-    if (lastTs != null &&
-        now - lastTs < _lockAttemptsWindow.inMilliseconds) {
+    if (lastTs != null && now - lastTs < _lockAttemptsWindow.inMilliseconds) {
       attempts = prefs.getInt(_lockAttemptsKey) ?? 0;
     }
-
     attempts++;
     await prefs.setInt(_lockAttemptsKey, attempts);
     await prefs.setInt(_lockAttemptsTsKey, now);
-
     if (attempts == 3 || attempts == 5 || attempts == 10) {
-      await _notifySecurity(
-        code,
-        'Failed lock screen attempts',
-        '$attempts failed attempts on your device. '
-            'If this isn\'t you, someone may have your phone.',
-      );
+      await _notifySecurity(code, 'Failed lock screen attempts', '$attempts failed attempts on your device. If this isn\'t you, someone may have your phone.');
     }
   }
 
-  /// Clears the lock screen attempt counter — called on successful unlock.
   Future<void> clearLockScreenAttempts() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_lockAttemptsKey);
     await prefs.remove(_lockAttemptsTsKey);
   }
 
-
-  // ════════════════════════════════════════
-  // SECURITY NOTIFICATIONS
-  // ════════════════════════════════════════
-  Future<void> _notifySecurity(
-    String code,
-    String title,
-    String subtitle,
-  ) async {
+  Future<void> _notifySecurity(String code, String title, String subtitle) async {
     try {
       await _db.collection('notifications').add({
         'toCode': code,
@@ -814,24 +659,21 @@ if (cloud == null) {
     }
   }
 
-  // ════════════════════════════════════════
-  // LOCK SETTINGS
-  // ════════════════════════════════════════
-    Future<void> setBiometricsEnabled(bool enabled) async {
-  final prefs = await SharedPreferences.getInstance();
-  final code = _cachedCode;
-  if (code == null) return;
-  await prefs.setBool('${_biometricsKey}_$code', enabled);
-}
+  Future<void> setBiometricsEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    final code = _cachedCode;
+    if (code == null) return;
+    await prefs.setBool('${_biometricsKey}_$code', enabled);
+  }
 
-Future<bool> isBiometricsEnabled() async {
-  final code = _cachedCode;       
-  if (code == null) return false;
-  final prefs = await SharedPreferences.getInstance();
-  return prefs.getBool('${_biometricsKey}_$code') ?? false;
-}
+  Future<bool> isBiometricsEnabled() async {
+    final code = _cachedCode;       
+    if (code == null) return false;
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('${_biometricsKey}_$code') ?? false;
+  }
 
-    Future<bool> silentUnlock() async {
+  Future<bool> silentUnlock() async {
     final code = _cachedCode;
     if (code == null) return false;
     return CryptoService().silentUnlock(code);
@@ -875,21 +717,15 @@ Future<bool> isBiometricsEnabled() async {
     return elapsed > 5 * 60 * 1000;
   }
 
-  // ════════════════════════════════════════
-  // DEVICE TRANSFER
-  // ════════════════════════════════════════
   Future<void> releaseDeviceLock() async {
     final code = _cachedCode;
     if (code == null) return;
-    await _db.collection('users').doc(code).update({
+    await _db.collection('user_secrets').doc(code).update({
       'deviceLocked': false,
       'transferRequestedAt': FieldValue.serverTimestamp(),
     });
   }
 
-  // ════════════════════════════════════════
-  // LOCAL STORAGE
-  // ════════════════════════════════════════
   Future<void> _saveLocal(String code, String name) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_codeKey, code);
@@ -906,10 +742,10 @@ Future<bool> isBiometricsEnabled() async {
       await messaging.requestPermission(alert: true, badge: true, sound: true);
       final token = await messaging.getToken();
       if (token != null) {
-        await _db.collection('users').doc(code).update({'fcmToken': token});
+        await _db.collection('user_secrets').doc(code).update({'fcmToken': token});
       }
       messaging.onTokenRefresh.listen((newToken) {
-        _db.collection('users').doc(code).update({'fcmToken': newToken});
+        _db.collection('user_secrets').doc(code).update({'fcmToken': newToken});
       });
     } catch (e) {
       print('[FCM] token save failed: $e');
@@ -917,20 +753,14 @@ Future<bool> isBiometricsEnabled() async {
   }
 }
 
-// ════════════════════════════════════════
-// RESULT TYPES
-// ════════════════════════════════════════
 class RegisterResult {
   final bool success;
   final String? code;
   final String? name;
   final String? errorMessage;
-
   RegisterResult._({required this.success, this.code, this.name, this.errorMessage});
-  factory RegisterResult.success(String code, String name) =>
-      RegisterResult._(success: true, code: code, name: name);
-  factory RegisterResult.error(String message) =>
-      RegisterResult._(success: false, errorMessage: message);
+  factory RegisterResult.success(String code, String name) => RegisterResult._(success: true, code: code, name: name);
+  factory RegisterResult.error(String message) => RegisterResult._(success: false, errorMessage: message);
 }
 
 class LoginResult {
@@ -939,14 +769,10 @@ class LoginResult {
   final String? code;
   final String? name;
   final String? errorMessage;
-
   LoginResult._({required this.success, this.isDeviceLocked = false, this.code, this.name, this.errorMessage});
-  factory LoginResult.success(String code, String name) =>
-      LoginResult._(success: true, code: code, name: name);
-  factory LoginResult.deviceLocked() =>
-      LoginResult._(success: false, isDeviceLocked: true);
-  factory LoginResult.error(String message) =>
-      LoginResult._(success: false, errorMessage: message);
+  factory LoginResult.success(String code, String name) => LoginResult._(success: true, code: code, name: name);
+  factory LoginResult.deviceLocked() => LoginResult._(success: false, isDeviceLocked: true);
+  factory LoginResult.error(String message) => LoginResult._(success: false, errorMessage: message);
 }
 
 class PinVerifyResult {
@@ -955,11 +781,5 @@ class PinVerifyResult {
   final DateTime? lockedUntil;
   final int attemptsRemaining;
   final String? error;
-  const PinVerifyResult({
-    required this.success,
-    this.isLocked = false,
-    this.lockedUntil,
-    this.attemptsRemaining = 5,
-    this.error,
-  });
+  const PinVerifyResult({required this.success, this.isLocked = false, this.lockedUntil, this.attemptsRemaining = 5, this.error});
 }

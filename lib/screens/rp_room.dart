@@ -2604,8 +2604,10 @@ try {
       child: ScrollConfiguration(
         behavior: NoGlowBehavior(),
         child: ListView.builder(
+          key: ValueKey('posts_${_posts.length}'), // <--- ADD THIS
           controller: _scrollCtrl,
           padding: EdgeInsets.fromLTRB(
+            
             MediaQuery.of(context).size.width > 900 ? 8 : 12,
             MediaQuery.of(context).size.width > 900 ? 8 : 12,
             MediaQuery.of(context).size.width > 900 ? 8 : 12,
@@ -2654,6 +2656,7 @@ try {
       child: ScrollConfiguration(
         behavior: NoGlowBehavior(),
         child: ListView.builder(
+          key: ValueKey('posts_${_posts.length}'),
           controller: _scrollCtrl,
           padding: EdgeInsets.fromLTRB(
             12,
@@ -2870,6 +2873,7 @@ try {
       child: ScrollConfiguration(
         behavior: NoGlowBehavior(),
         child: ListView.builder(
+          key: ValueKey('posts_${_posts.length}'),
           controller: _scrollCtrl,
           padding: EdgeInsets.fromLTRB(
             MediaQuery.of(context).size.width > 900 ? 16 : 24,
