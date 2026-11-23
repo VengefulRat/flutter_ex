@@ -1196,7 +1196,10 @@ class _HomeScreenState extends State<HomeScreen>
                       Tooltip(
                         message: 'Friends',
                         child: LoreTap(
-                          onTap: () => Navigator.of(context).push(fadeRoute(FriendsScreen(rps: [..._roleplays, ..._brainstorms].map((e) => {'partner': e.partner, 'partnerCode': e.partnerCode, 'posts': e.posts}).toList()))),
+                          onTap: () => Navigator.of(context).push(fadeRoute(FriendsScreen(rps: [
+  ..._roleplays.map((e) => {'partner': e.partner, 'partnerCode': e.partnerCode, 'posts': e.posts, 'sessionId': e.id, 'title': e.title, 'genre': e.genre, 'status': e.status}),
+  ..._brainstorms.map((e) => {'partner': e.partner, 'partnerCode': e.partnerCode, 'posts': e.posts, 'sessionId': e.id, 'title': e.title, 'genre': e.genre, 'status': e.status})
+]))),
                           child: Container(
                             width: 56,
                             height: 56,
@@ -1707,7 +1710,10 @@ class _HomeScreenState extends State<HomeScreen>
         icon: Icons.people_outline,
         accent: cIce,
         badge: null,
-        onTap: () => Navigator.of(context).push(fadeRoute(FriendsScreen(rps: [..._roleplays, ..._brainstorms].map((e) => {'partner': e.partner, 'partnerCode': e.partnerCode, 'posts': e.posts}).toList()))),
+        onTap: () => Navigator.of(context).push(fadeRoute(FriendsScreen(rps: [
+  ..._roleplays.map((e) => {'partner': e.partner, 'partnerCode': e.partnerCode, 'posts': e.posts, 'sessionId': e.id, 'title': e.title, 'genre': e.genre, 'status': e.status}),
+  ..._brainstorms.map((e) => {'partner': e.partner, 'partnerCode': e.partnerCode, 'posts': e.posts, 'sessionId': e.id, 'title': e.title, 'genre': e.genre, 'status': e.status})
+]))),
         onLongPress: null, // No styling for friends list
       ),
       FloatingMenuItem(
@@ -2216,10 +2222,10 @@ class _HomeScreenState extends State<HomeScreen>
     String abiSuffix = 'arm64-v8a';
 
     final String apkUrl =
-        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.9/app-$abiSuffix-release.apk';
+        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.10/app-$abiSuffix-release.apk';
 
     final String windowsUrl =
-        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.9/LoreEx-Setup.exe';
+        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.10/LoreEx-Setup.exe';
 
     showDialog(
       context: context,

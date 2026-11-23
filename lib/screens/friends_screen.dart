@@ -5,6 +5,9 @@ import '../widgets/shared.dart';
 import '../widgets/holo_card_v2.dart';
 import '../services/auth_service.dart';
 import '../settings.dart';
+import '../services/firestore_service.dart';
+import 'rp_room.dart';
+import 'brainstorm_room.dart';
 
 class FriendsScreen extends StatefulWidget {
   final List<Map<String, dynamic>> rps; // We'll pass the raw data from HomeScreen
@@ -20,6 +23,7 @@ class _FriendData {
   int totalPosts;
   String presence = 'offline'; // Default value
   String avatarUrl = '';       // Default value
+  List<Map<String, dynamic>> sessions = [];
   
   _FriendData({
     required this.code,
@@ -52,12 +56,14 @@ class _FriendsScreenState extends State<FriendsScreen> {
       
       if (grouped.containsKey(code)) {
         grouped[code]!.totalPosts += posts;
+        grouped[code]!.sessions.add(rp);
       } else {
         grouped[code] = _FriendData(
           code: code,
           name: name,
           totalPosts: posts,
         );
+        grouped[code]!.sessions.add(rp);
       }
     }
 
@@ -148,11 +154,13 @@ class _FriendsScreenState extends State<FriendsScreen> {
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: _friends.length,
-                        itemBuilder: (context, index) {
+                          itemBuilder: (context, index) {
                           final f = _friends[index];
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: HoloCardV2(
+                          return GestureDetector(
+                            onLongPress: () => _showFriendActions(f),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: HoloCardV2(
                               accent: _presenceColor(f.presence),
                               intensity: 0.2,
                               seed: f.code.hashCode,
@@ -216,6 +224,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                                 ),
                               ),
                             ),
+                            )
                           );
                         },
                       ),
@@ -240,6 +249,163 @@ class _FriendsScreenState extends State<FriendsScreen> {
         child: Text(
           label,
           style: TextStyle(fontFamily: 'monospace', fontSize: 9, color: active ? cGold : cSmoke),
+        ),
+      ),
+    );
+  }
+    void _showFriendActions(_FriendData friend) {
+    final fs = FirestoreService();
+    final myCode = AuthService().currentCode ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cInk,
+      shape: const RoundedRectangleBorder(),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 32, height: 3,
+                decoration: BoxDecoration(color: cAsh, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              friend.name.toUpperCase(),
+              style: const TextStyle(fontSize: 18, color: cParchment, fontStyle: FontStyle.italic, fontWeight: FontWeight.w300),
+            ),
+            const SizedBox(height: 16),
+            
+            _actionTile(Icons.menu_book, 'Open Stories', cGold, () {
+              Navigator.pop(ctx);
+              _showStoriesSheet(friend);
+            }),
+            
+            _actionTile(Icons.archive_outlined, 'Archive all stories', cMist, () async {
+              Navigator.pop(ctx);
+              for (final s in friend.sessions) {
+                if (s['status'] != 'archived') {
+                  await fs.updateSessionStatus(s['sessionId'], 'archived');
+                }
+              }
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(backgroundColor: cInk, content: Text('All stories archived.', style: TextStyle(color: cParchment))),
+                );
+                _loadFriends(); // Refresh the list
+              }
+            }),
+
+            _actionTile(Icons.block, 'Block User', cEmber, () async {
+              Navigator.pop(ctx);
+              await fs.blockUser(myCode: myCode, blockedCode: friend.code, archiveSessions: true);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(backgroundColor: cInk, content: Text('User blocked.', style: TextStyle(color: cEmber))),
+                );
+                _loadFriends(); // Refresh the list
+              }
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _actionTile(IconData icon, String title, Color color, VoidCallback onTap) {
+    return LoreTap(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: cAsh)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 16),
+            Text(title, style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.w300)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showStoriesSheet(_FriendData friend) {
+    final activeStories = friend.sessions.where((s) => s['status'] != 'archived').toList();
+    
+    if (activeStories.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(backgroundColor: cInk, content: Text('No active stories with this user.', style: TextStyle(color: cParchment))),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cInk,
+      shape: const RoundedRectangleBorder(),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('SELECT STORY', style: TextStyle(fontFamily: 'monospace', fontSize: 10, color: cGold, letterSpacing: 2)),
+            const SizedBox(height: 16),
+            ...activeStories.map((s) {
+              final isBrainstorm = s['status'] == 'brainstorm';
+              final title = (s['title'] as String?)?.isNotEmpty == true ? s['title'] : s['genre'];
+              
+              return LoreTap(
+                onTap: () {
+                  Navigator.pop(ctx); // Close sheet
+                  Navigator.pop(context); // Close friends screen
+                  
+                  if (isBrainstorm) {
+                    Navigator.of(context).push(fadeRoute(BrainstormRoomScreen(
+                      partnerName: friend.name,
+                      partnerCode: friend.code,
+                      genre: s['genre'] ?? '',
+                      sessionId: s['sessionId'],
+                    )));
+                  } else {
+                    Navigator.of(context).push(fadeRoute(RPRoomScreen(
+                      partnerName: friend.name,
+                      partnerCode: friend.code,
+                      genre: s['genre'] ?? '',
+                      sessionId: s['sessionId'],
+                      title: s['title'] ?? '',
+                    )));
+                  }
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(border: Border.all(color: cAsh)),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title, style: const TextStyle(fontSize: 15, color: cParchment, fontStyle: FontStyle.italic)),
+                            const SizedBox(height: 4),
+                            Text('${s['posts']} posts · ${isBrainstorm ? "Prelude" : "Roleplay"}', style: const TextStyle(fontFamily: 'monospace', fontSize: 9, color: cSmoke)),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, size: 16, color: cSmoke),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
         ),
       ),
     );

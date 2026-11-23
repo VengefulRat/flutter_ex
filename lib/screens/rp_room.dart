@@ -1005,17 +1005,23 @@ try {
         _loadingPosts = false;
       });
 
-      if (wasAtBottom && appSettings.autoScroll) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollCtrl.hasClients) {
+      // 🚨 THE RENDER FIX: Force a layout pass by doing a microscopic jump
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollCtrl.hasClients) {
+          // Jump 0.1 pixels and back to force the engine to calculate the text height
+          _scrollCtrl.jumpTo(_scrollCtrl.position.pixels + 0.1);
+          _scrollCtrl.jumpTo(_scrollCtrl.position.pixels - 0.1);
+          
+          // Then do the normal auto-scroll if enabled
+          if (wasAtBottom && appSettings.autoScroll) {
             _scrollCtrl.animateTo(
               _scrollCtrl.position.maxScrollExtent,
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOut,
             );
           }
-        });
-      }
+        }
+      });
     }, onError: _handleStreamError);
 
     _oocSub = _fs.oocMessages(widget.sessionId).listen((data) {
