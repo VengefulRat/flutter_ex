@@ -1,7 +1,7 @@
 name: lore
 description: "A private, intimate roleplay platform."
 publish_to: 'none'
-version: 8.4.10+24
+version: 8.4.11+25
 
 environment:
   sdk: ^3.11.1
@@ -92,3 +92,4 @@ flutter:
     - assets/sounds/page_turn.mp3
     - assets/sounds/stamp.mp3
     - assets/sounds/writing_on_parchment.mp3
+    - assets/sounds/mood/

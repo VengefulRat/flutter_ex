@@ -34,6 +34,7 @@ import 'settings_screen.dart';
 import 'card_discovery_screen.dart';
 import '../main.dart' show LandingScreen;
 import 'friends_screen.dart';
+import '../utils/abi_suffix.dart';
 
 // ════════════════════════════════════════
 // HOME SCREEN
@@ -2217,20 +2218,21 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  void _showDownloadDialog(BuildContext context) {
-    // Default to the 64-bit version (what 95% of phones use)
-    String abiSuffix = 'arm64-v8a';
+String _getAbiSuffix() => getAbiSuffix();
 
-    final String apkUrl =
-        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.10/app-$abiSuffix-release.apk';
+void _showDownloadDialog(BuildContext context) {
+  final String abiSuffix = _getAbiSuffix();
 
-    final String windowsUrl =
-        'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.10/LoreEx-Setup.exe';
+  final String apkUrl =
+      'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.11/app-$abiSuffix-release.apk';
 
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: cInk,
+  final String windowsUrl =
+      'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.11/LoreEx-Setup.exe';
+
+  showDialog(
+    context: context,
+    builder: (ctx) => Dialog(
+      backgroundColor: cInk,
         shape: const RoundedRectangleBorder(),
         child: SingleChildScrollView(
           child: Padding(

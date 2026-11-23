@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../settings.dart';
 import '../services/firestore_service.dart';
+import 'package:flutter/services.dart';
 
 class LoreTopBar extends StatelessWidget {
   final VoidCallback onLogoTap;
@@ -222,8 +223,6 @@ class _LoreTapState extends State<LoreTap> {
 
   @override
   Widget build(BuildContext context) {
-    // If there is no onTap and no onLongPress, it's not clickable.
-    // Don't show the pointer cursor or the hover effect.
     final isClickable = widget.onTap != null || widget.onLongPress != null;
 
     return MouseRegion(
@@ -240,8 +239,18 @@ class _LoreTapState extends State<LoreTap> {
         onTapDown: isClickable ? (_) => setState(() => _isTapped = true) : null,
         onTapUp: isClickable ? (_) => setState(() => _isTapped = false) : null,
         onTapCancel: isClickable ? () => setState(() => _isTapped = false) : null,
-        onTap: widget.onTap,
-        onLongPress: widget.onLongPress,
+        onTap: isClickable
+            ? () {
+                HapticFeedback.lightImpact();
+                widget.onTap?.call();
+              }
+            : null,
+        onLongPress: isClickable
+            ? () {
+                HapticFeedback.heavyImpact();
+                widget.onLongPress?.call();
+              }
+            : null,
         child: AnimatedOpacity(
           duration: const Duration(milliseconds: 150),
           // Tapped gets dimmest (0.6), Hovered gets slightly dimmed (0.85), Default is 1.0

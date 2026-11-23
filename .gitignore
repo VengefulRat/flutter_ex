@@ -75,3 +75,5 @@ lib/firebase_options.dart
 lore-windows.zip
 installer-output/
 build/
+
+*.bak
