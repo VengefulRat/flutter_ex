@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:super_editor/super_editor.dart';
 
+
+
 class EditorRun {
   final String text;
   final bool bold;
@@ -348,7 +350,30 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.white12),
           ),
-          child: SuperEditor(editor: _editor, focusNode: _focus),
+          child: SuperEditor(
+  editor: _editor,
+  focusNode: _focus,
+  stylesheet: defaultStylesheet.copyWith(
+    inlineTextStyler: (attributions, existingStyle) {
+      TextStyle style = defaultInlineTextStyler(
+        attributions,
+        existingStyle,
+      );
+
+      // Base/default colour: white.
+      style = style.copyWith(color: Colors.white);
+
+      // Let an explicit colour attribution override the default.
+      for (final attribution in attributions) {
+        if (attribution is ColorAttribution) {
+          style = style.copyWith(color: attribution.color);
+        }
+      }
+
+      return style;
+    },
+  ),
+),
         ),
       ],
     );
