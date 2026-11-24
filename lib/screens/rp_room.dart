@@ -1097,6 +1097,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   final _oocFocus = FocusNode();
   final _oocFocus2 = FocusNode();
   final _oocScrollCtrl = ScrollController();
+  final _oocScrollCtrlDesktop = ScrollController();
 
   bool _settingsOpen = false;
   late String _sessionTitle;
@@ -1228,6 +1229,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     _oocFocus2.dispose();
     _oocCtrl.dispose();
     _oocScrollCtrl.dispose();
+    _oocScrollCtrlDesktop.dispose();
     super.dispose();
   }
 
@@ -1452,12 +1454,23 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   void _scrollOocToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_oocScrollCtrl.hasClients) {
-        _oocScrollCtrl.animateTo(
-          _oocScrollCtrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+      for (final c in [_oocScrollCtrl, _oocScrollCtrlDesktop]) {
+        if (c.hasClients) {
+          c.animateTo(
+            c.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      }
+    });
+    // Second try after layout settles - OOC panel may have just opened
+    Future.delayed(const Duration(milliseconds: 150), () {
+      if (!mounted) return;
+      for (final c in [_oocScrollCtrl, _oocScrollCtrlDesktop]) {
+        if (c.hasClients) {
+          c.jumpTo(c.position.maxScrollExtent);
+        }
       }
     });
   }
@@ -1566,9 +1579,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   // One-shot mood sound â€” once per mood change, manual + auto
   // FIX: use appSettings (the real singleton), NOT AppSettings() which is always default-off.
   // On PC there is no vibrate, so the sound is the only heartbeat you hear.
-  if (appSettings.moodHaptics) {
-    sounds.playMoodSound(mood.name);
-  }
+  // Mood sounds are separate from haptics - off / once / loop
+  // Turn page sound (moodSwitch) still plays separately, untouched.
+  sounds.playMoodSound(mood.name, mode: appSettings.moodSoundMode);
 
   if (widget.sessionId.isNotEmpty && reason != 'silent') {
     _log.addEvent(
@@ -2720,9 +2733,10 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                             ),
                           ),
                         ] else ...[
-                          const Text(
-                            'âœ¦',
-                            style: TextStyle(fontSize: 9, color: cMagic),
+                          const Icon(
+                            Icons.auto_awesome,
+                            size: 9,
+                            color: cMagic,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -4860,6 +4874,62 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   _updateMoodHaptics(_currentMood);
                 }
               }),
+              // Mood sounds: Off / Once / Loop - separate from haptics
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
+                child: Text(
+                  'MOOD SOUNDS',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 9,
+                    color: cSmoke,
+                    letterSpacing: 3,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                child: Row(
+                  children: [
+                    for (final mode in ['off', 'once', 'loop'])
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            appSettings.setMoodSoundMode(mode);
+                            if (mode == 'off') {
+                              sounds.stopMoodSound();
+                            } else {
+                              // Preview: play current mood in chosen mode
+                              sounds.playMoodSound(_currentMood.name, mode: mode);
+                            }
+                            setState(() {});
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: appSettings.moodSoundMode == mode
+                                  ? cGold.withValues(alpha: 0.2)
+                                  : Colors.transparent,
+                              border: Border.all(
+                                color: appSettings.moodSoundMode == mode ? cGold : cAsh,
+                              ),
+                            ),
+                            child: Text(
+                              mode == 'off' ? 'OFF' : mode == 'once' ? 'ONCE' : 'LOOP',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 9,
+                                color: appSettings.moodSoundMode == mode ? cGold : cSmoke,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
               _settingToggle('Scene Mood', _aiMoodEnabled, (v) {
                 appSettings.setAiMood(v);
               }),
@@ -5479,7 +5549,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           child: ScrollConfiguration(
             behavior: NoGlowBehavior(),
             child: ListView.builder(
-              controller: _oocScrollCtrl,
+              controller: _oocScrollCtrlDesktop,
               padding: const EdgeInsets.all(16),
               itemCount: _oocMessages.length,
               itemBuilder: (_, i) {
@@ -6228,6 +6298,8 @@ class _PostCardState extends State<_PostCard>
       },
       child: GestureDetector(
         onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
+        behavior: HitTestBehavior.opaque,
         child: Container(
           margin: EdgeInsets.only(bottom: isDesktop ? 6 : 10),
           decoration: BoxDecoration(

@@ -82,6 +82,7 @@ class BlockStyle {
 class AppSettings extends ChangeNotifier {
   static const _kCardBorder = 'as_card_border';
   static const _kMoodHaptics = 'moodHaptics';
+  static const _kMoodSoundMode = 'moodSoundMode';
   static const _kParchment = 'as_parchment';
   static const _kTextSize = 'as_text_size';
   static const _kOrientation = 'as_orientation';
@@ -337,6 +338,7 @@ class AppSettings extends ChangeNotifier {
   // ── State ──
   bool _cardBorderEffects = true;
   bool _moodHaptics = true;
+  String _moodSoundMode = 'once'; // off / once / loop
   bool _parchmentMode = false;
   String _textSize = 'Medium';
   String _orientation = 'Both';
@@ -498,6 +500,7 @@ class AppSettings extends ChangeNotifier {
     final p = await SharedPreferences.getInstance();
     _cardBorderEffects = p.getBool(_kCardBorder) ?? true;
     _moodHaptics = p.getBool(_kMoodHaptics) ?? true;
+      _moodSoundMode = p.getString(_kMoodSoundMode) ?? 'once';
     _parchmentMode = p.getBool(_kParchment) ?? false;
     _textSize = p.getString(_kTextSize) ?? 'Medium';
     _orientation = p.getString(_kOrientation) ?? 'Both';
@@ -1146,6 +1149,7 @@ class AppSettings extends ChangeNotifier {
   // ════════════════════════════════════════
   bool get cardBorderEffects => _cardBorderEffects;
   bool get moodHaptics => _moodHaptics;
+  String get moodSoundMode => _moodSoundMode;
   bool get parchmentMode => _parchmentMode;
   String get textSize => _textSize;
   String get orientation => _orientation;
@@ -1250,6 +1254,13 @@ class AppSettings extends ChangeNotifier {
   _touch();
   notifyListeners();
 }
+
+  Future<void> setMoodSoundMode(String v) async {
+    if (v != 'off' && v != 'once' && v != 'loop') return;
+    _moodSoundMode = v;
+    (await SharedPreferences.getInstance()).setString(_kMoodSoundMode, v);
+    notifyListeners();
+  }
 
   Future<void> setParchmentMode(bool v) async {
     _parchmentMode = v;

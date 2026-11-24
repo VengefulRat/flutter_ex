@@ -139,9 +139,13 @@ await player.setVolume(notificationVolume * masterVolume);
   final AudioPlayer _moodPlayer = AudioPlayer();
   String? _lastMoodSound;
 
-  Future<void> playMoodSound(String mood) async {
+  Future<void> playMoodSound(String mood, {String mode = 'once'}) async {
     await init();
     if (masterMute) return;
+    if (mode == 'off') {
+      await stopMoodSound();
+      return;
+    }
 
     // Respect Master Volume + Notification Volume, same as your other sounds
     // If either is 0, stay silent
@@ -155,6 +159,11 @@ await player.setVolume(notificationVolume * masterVolume);
     try {
       await _moodPlayer.stop();
       await _moodPlayer.setVolume(vol * 0.5); // keep it under the RP
+      if (mode == 'loop') {
+        await _moodPlayer.setReleaseMode(ReleaseMode.loop);
+      } else {
+        await _moodPlayer.setReleaseMode(ReleaseMode.release);
+      }
       await _moodPlayer.setAudioContext(AudioContext(
         android: AudioContextAndroid(
           contentType: AndroidContentType.sonification,
@@ -184,9 +193,30 @@ await player.setVolume(notificationVolume * masterVolume);
         return 'tense_flicker';
       case 'spicy':
         return 'spicy_warm';
+      case 'neutral':
+        return 'neutral_calm';
+      case 'dark':
+        return 'dark_drone';
+      case 'warm':
+        return 'warm_glow';
+      case 'eerie':
+        return 'eerie_whisper';
+      case 'rain':
+        return 'rain_loop';
+      case 'snow':
+        return 'snow_soft';
+      case 'triumphant':
+        return 'triumphant_horn';
       default:
-        return 'romantic_heartbeat';
+        return 'neutral_calm';
     }
+  }
+
+  Future<void> stopMoodSound() async {
+    try {
+      await _moodPlayer.stop();
+    } catch (_) {}
+    _lastMoodSound = null;
   }
 
   void resetMoodSound() {

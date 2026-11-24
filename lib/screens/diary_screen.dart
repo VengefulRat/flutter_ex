@@ -2245,7 +2245,7 @@ class _ChapterEditorState extends State<_ChapterEditor> {
                   TextStyle(
                     fontSize: appSettings.diaryReadingSize == 'S' ? appSettings.baseFontSize - 2 : appSettings.diaryReadingSize == 'L' ? appSettings.baseFontSize + 2 : appSettings.baseFontSize,
                     color: cParchment,
-                    fontStyle: FontStyle.italic,
+                    fontStyle: FontStyle.normal,
                     height: appSettings.diaryLineHeight == 'compact' ? 1.4 : appSettings.diaryLineHeight == 'spacious' ? 2.2 : 1.8,
                   ),
                   const HorizontalSpacing(0, 0),

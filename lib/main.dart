@@ -403,7 +403,7 @@ class _LandingScreenState extends State<LandingScreen>
 void showDownloadDialog(BuildContext context) {
   // âš ï¸ REPLACE THIS URL WITH YOUR ACTUAL GITHUB RELEASE APK LINK! âš ï¸
   const String apkUrl =
-      'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.12/flutter_ex-releases.apk';
+      'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.13/flutter_ex-releases.apk';
 
   showDialog(
     context: context,
