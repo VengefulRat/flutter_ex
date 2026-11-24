@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -27,14 +27,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// ─────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // DISPLAY MODE
-// ─────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 enum RPDisplayMode { cards, bubbles, classical }
 
-// ─────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // DATA MODELS
-// ─────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class RPPost {
   final String id;
   final String author;
@@ -86,9 +86,9 @@ class OOCMessage {
   });
 }
 
-// ─────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // MOOD ENGINE
-// ─────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 enum StoryMood {
   neutral,
   dark,
@@ -408,9 +408,9 @@ class MoodEngine {
   }
 }
 
-// ─────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // PARTICLES
-// ─────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class Particle {
   double x, y, vx, vy, size, opacity;
   final StoryMood type;
@@ -576,9 +576,9 @@ class MoodParticlePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter old) => true;
 }
 
-// ─────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // SHARED: selectable post text
-// ─────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Widget _selectablePostText({
   required String text,
   required TextStyle style,
@@ -588,9 +588,9 @@ Widget _selectablePostText({
   return Text(text, style: style);
 }
 
-// ─────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // SCREEN
-// ─────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 double _rpPostScale() => appSettings.rpPostSize == 'S'
     ? 0.85
     : appSettings.rpPostSize == 'L'
@@ -1024,6 +1024,43 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   final _editorCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+
+  // Cheap paint nudge: SelectionArea / Windows paint bug laat die lys leeg bly
+  // tot 'n scroll hom force om te repaint. Ons doen 'n onsigbare 1px nudge
+  // een keer per RP oopmaak - jumpTo(1) dan terug na 0. Geen flicker, geen sigbare scroll.
+  String _paintNudgedFor = '';
+
+  // â”€â”€ CHAPTERS â”€â”€
+  List<String> _chapters = ['Chapter 1'];
+  String _selectedChapter = 'Chapter 1';
+  Map<String, String> _postChapter = {}; // postId -> chapterName
+  bool _chaptersLoaded = false;
+
+
+  void _schedulePaintNudge() {
+    if (_posts.isEmpty) return;
+    if (_paintNudgedFor == widget.sessionId) return;
+    _paintNudgedFor = widget.sessionId;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      if (!_scrollCtrl.hasClients) return;
+      try {
+        final max = _scrollCtrl.position.maxScrollExtent;
+        if (max <= 0) return;
+        // 1px af, wag 1 frame, dan na die ONDERKANT - dis waar 'n RP moet oopmaak
+        // (nuutste post), nie bo by post 1 nie.
+        _scrollCtrl.jumpTo(1);
+        await Future.delayed(const Duration(milliseconds: 50));
+        if (!mounted || !_scrollCtrl.hasClients) return;
+        _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+      } catch (_) {
+        // As die controller nog nie attached is nie, ignore - volgende open sal retry
+        // omdat _paintNudgedFor net geset word as ons regtig probeer het? Nee -
+        // ons reset hom sodat 'n volgende open weer probeer.
+        _paintNudgedFor = '';
+      }
+    });
+  }
   final _editorFocus = FocusNode();
   bool _editorExpanded = false;
 
@@ -1108,6 +1145,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   void initState() {
     RPRoomScreen.openSessionId = widget.sessionId;
     super.initState();
+    _loadChapters().then((_) { if (mounted) setState(() {}); });
     _sessionTitle = widget.title;
     _aiMoodEnabled = appSettings.aiMood;
     _displayMode = RPDisplayMode.values.firstWhere(
@@ -1229,22 +1267,21 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           ..addAll(posts);
         _loadingPosts = false;
       });
-
-      // 🚨 THE RENDER FIX: Force a layout pass by doing a microscopic jump
+      // One clean rebuild after first load so the list measures with real content.
+      // No jumpTo, no animateTo here - just let it lay out once.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollCtrl.hasClients) {
-          // Jump 0.1 pixels and back to force the engine to calculate the text height
-          _scrollCtrl.jumpTo(_scrollCtrl.position.pixels + 0.1);
-          _scrollCtrl.jumpTo(_scrollCtrl.position.pixels - 0.1);
+        if (mounted) setState(() {});
+      });
 
-          // Then do the normal auto-scroll if enabled
-          if (wasAtBottom && appSettings.autoScroll) {
-            _scrollCtrl.animateTo(
-              _scrollCtrl.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
-          }
+      // Auto-scroll only - no jumpTo hack. The list lays itself out.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_scrollCtrl.hasClients) return;
+        if (wasAtBottom && appSettings.autoScroll) {
+          _scrollCtrl.animateTo(
+            _scrollCtrl.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
         }
       });
     }, onError: _handleStreamError);
@@ -1373,11 +1410,6 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   void _onSettingsChanged() {
     if (!mounted) return;
     setState(() {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _posts.isNotEmpty) {
-          setState(() {});
-        }
-      });
       _aiMoodEnabled = appSettings.aiMood;
       _displayMode = RPDisplayMode.values.firstWhere(
         (m) => m.name == appSettings.rpDisplayMode,
@@ -1531,8 +1563,10 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   });
   _particleTick.value++;
 
-  // One-shot mood sound — once per mood change, manual + auto
-  if (AppSettings().moodHaptics) {
+  // One-shot mood sound â€” once per mood change, manual + auto
+  // FIX: use appSettings (the real singleton), NOT AppSettings() which is always default-off.
+  // On PC there is no vibrate, so the sound is the only heartbeat you hear.
+  if (appSettings.moodHaptics) {
     sounds.playMoodSound(mood.name);
   }
 
@@ -1651,8 +1685,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
     if (widget.sessionId.isNotEmpty) {
       try {
-        await _fs.addPost(
+        final newFirestoreId = await _fs.addPost(
           sessionId: widget.sessionId,
+          chapter: _selectedChapter,
           content: text,
           quotedContent: quotedPost?.content.substring(
             0,
@@ -1665,6 +1700,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           locationName: _activeLocation,
           textColor: _activeCharacter?.accentColor ?? _fontColor,
         );
+        if (newFirestoreId != null) _assignPostToCurrentChapter(newFirestoreId);
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1697,10 +1733,11 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       final postColor = _activeCharacter != null
           ? _activeCharacter!.accentColor
           : _fontColor;
+      final newPostId = DateTime.now().millisecondsSinceEpoch.toString();
       setState(() {
         _posts.add(
           RPPost(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            id: newPostId,
             author: displayName,
             isUser: true,
             content: text,
@@ -1718,6 +1755,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             locationName: _activeLocation,
           ),
         );
+        _assignPostToCurrentChapter(newPostId);
         _editorCtrl.text = '';
         _quotingPostId = null;
         _editorExpanded = false;
@@ -1971,7 +2009,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   Widget _buildSelectionPill() {
     final preview = _selectedText.length > 40
-        ? '${_selectedText.substring(0, 40)}…'
+        ? '${_selectedText.substring(0, 40)}â€¦'
         : _selectedText;
     return Material(
       color: Colors.transparent,
@@ -2162,25 +2200,28 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                               ),
                             ),
                           Expanded(
-                            child: Center(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 960,
-                                ),
-                                child: Column(
-                                  children: [
-                                    Expanded(
-                                      child: AnimatedSwitcher(
-                                        duration: const Duration(
-                                          milliseconds: 300,
+                            child: LayoutBuilder(
+                              builder: (_, constraints) {
+                                // Bounded height from the Row itself - no Center / Align / infinity.
+                                final w = constraints.maxWidth > 960
+                                    ? 960.0
+                                    : constraints.maxWidth;
+                                return Center(
+                                  child: SizedBox(
+                                    width: w,
+                                    height: constraints.maxHeight,
+                                    child: Column(
+                                      children: [
+                                        _buildChapterStrip(),
+                                        Expanded(
+                                          child: _buildPostList(),
                                         ),
-                                        child: _buildPostList(),
-                                      ),
+                                        _buildFullEditor(),
+                                      ],
                                     ),
-                                    _buildFullEditor(),
-                                  ],
-                                ),
-                              ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                           if (appSettings.rpShowToolsSidebar &&
@@ -2470,11 +2511,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                 child: Column(
                   children: [
                     _buildTopBar(),
+                    _buildChapterStrip(),
                     Expanded(
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: _buildPostList(),
-                      ),
+                      child: _buildPostList(),
                     ),
                     if (_editorExpanded)
                       _buildFullEditor()
@@ -2577,13 +2616,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         : appSettings.rpHeaderSize == 'L'
         ? 16.0
         : 12.0;
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(
-          sigmaX: 8,
-          sigmaY: 8,
-        ), // <-- The frosted glass blur
-        child: Container(
+    return Container(
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: vPad),
           decoration: BoxDecoration(
             color: cInk.withValues(alpha: 0.65), // More transparent
@@ -2635,7 +2668,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                         ),
                       Text(
                         _sessionTitle.isNotEmpty
-                            ? '${widget.partnerName} · ${widget.genre}'
+                            ? '${widget.partnerName} Â· ${widget.genre}'
                             : widget.genre,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -2688,7 +2721,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                           ),
                         ] else ...[
                           const Text(
-                            '✦',
+                            'âœ¦',
                             style: TextStyle(fontSize: 9, color: cMagic),
                           ),
                           const SizedBox(width: 4),
@@ -2804,12 +2837,139 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               ),
             ],
           ),
-        ),
+    );
+  }
+
+
+  Widget _buildChapterStrip() {
+    if (!_chaptersLoaded) return const SizedBox.shrink();
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: cAsh.withOpacity(0.5),
+        border: Border(bottom: BorderSide(color: cSmoke.withOpacity(0.3))),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _chapters.length,
+              itemBuilder: (_, i) {
+                final name = _chapters[i];
+                final sel = name == _selectedChapter;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: ChoiceChip(
+                    label: Text(name, style: TextStyle(fontSize: 12, color: sel ? Colors.black : cMist)),
+                    selected: sel,
+                    selectedColor: cGold,
+                    backgroundColor: cAsh,
+                    onSelected: (_) => _selectChapter(name),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 6),
+          InkWell(
+            onTap: _addChapter,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(color: cGold, borderRadius: BorderRadius.circular(16)),
+              child: const Text('+ Chapter', style: TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
       ),
     );
   }
 
+  // â”€â”€ CHAPTERS helpers â”€â”€
+  List<dynamic> get _visiblePosts {
+    if (!_chaptersLoaded) return _posts;
+    return _posts.where((p) {
+      final ch = _postChapter[p.id] ?? 'Chapter 1';
+      return ch == _selectedChapter;
+    }).toList();
+  }
+
+  Future<void> _loadChapters() async {
+    try {
+      // Session doc het: chapters: [names], postChapters: {postId: chapter}
+      final doc = await FirebaseFirestore.instance
+          .collection('sessions')
+          .doc(widget.sessionId)
+          .get();
+      if (!doc.exists) return;
+      final data = doc.data() ?? {};
+      final ch = (data['chapters'] as List?)?.map((e) => e.toString()).toList();
+      if (ch != null && ch.isNotEmpty) _chapters = ch;
+      final pc = data['postChapters'] as Map?;
+      if (pc != null) {
+        _postChapter = pc.map((k, v) => MapEntry(k.toString(), v.toString()));
+      }
+      // Altyd nuutste chapter oopmaak
+      _selectedChapter = _chapters.last;
+      _chaptersLoaded = true;
+    } catch (_) {
+      // As Firestore nie chapters het nie, bly ons op Chapter 1 - niks breek nie
+      _chaptersLoaded = true;
+    }
+  }
+
+  Future<void> _saveChapters() async {
+    try {
+      await FirebaseFirestore.instance.collection('sessions').doc(widget.sessionId).set({
+        'chapters': _chapters,
+        'postChapters': _postChapter,
+      }, SetOptions(merge: true));
+    } catch (_) {}
+  }
+
+  Future<void> _addChapter() async {
+    final ctrl = TextEditingController(text: 'Chapter ${_chapters.length + 1}');
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('New chapter'),
+        content: TextField(controller: ctrl, autofocus: true),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: const Text('Add')),
+        ],
+      ),
+    );
+    if (name == null || name.isEmpty) return;
+    if (_chapters.contains(name)) return;
+    setState(() {
+      _chapters.add(name);
+      _selectedChapter = name;
+      _paintNudgedFor = ''; // force nudge weer, sodat nuwe (leÃ«) chapter paint
+    });
+    await _saveChapters();
+  }
+
+  void _selectChapter(String name) {
+    if (name == _selectedChapter) return;
+    setState(() {
+      _selectedChapter = name;
+      _paintNudgedFor = ''; // force nudge weer vir die nuwe chapter
+    });
+  }
+
+  // Roep hierdie as 'n nuwe post gestuur word - assign hom aan huidige chapter
+  void _assignPostToCurrentChapter(String postId) {
+    _postChapter[postId] = _selectedChapter;
+    _saveChapters();
+  }
+
   Widget _buildPostList() {
+    debugPrint('[RP-LIST] build posts=${_posts.length} visible=${_visiblePosts.length} chapter=$_selectedChapter loading=$_loadingPosts');
+    // Trigger die 1px paint nudge sodra posts daar is - cheap, onsigbaar, werk.
+    if (_posts.isNotEmpty && !_loadingPosts) _schedulePaintNudge();
     if (_loadingPosts && widget.sessionId.isNotEmpty) {
       return const Center(
         child: SizedBox(
@@ -2819,17 +2979,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         ),
       );
     }
-    if (_posts.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollCtrl.hasClients &&
-            _scrollCtrl.position.pixels ==
-                _scrollCtrl.position.maxScrollExtent) {
-          // If we are at the bottom, force a tiny scroll to trigger the layout
-          _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent + 1);
-          _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
-        }
-      });
-    }
+    // No scroll jumps here - jumping during build causes the flicker.
     if (_posts.isEmpty) {
       return Center(
         child: Padding(
@@ -2858,89 +3008,56 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   Widget _buildCardsView() {
-    return SelectionArea(
-      onSelectionChanged: (value) =>
-          _onSelectionChanged(value?.plainText ?? ''),
-      contextMenuBuilder: (context, state) {
-        return AdaptiveTextSelectionToolbar.buttonItems(
-          anchors: state.contextMenuAnchors,
-          buttonItems: [
-            ...state.contextMenuButtonItems,
-            ContextMenuButtonItem(
-              label: 'Add to log',
-              onPressed: () {
-                state.hideToolbar();
-                _addSelectionToLog();
-              },
-            ),
-          ],
-        );
-      },
-      child: ScrollConfiguration(
+    return ScrollConfiguration(
         behavior: NoGlowBehavior(),
         child: ListView.builder(
-          key: ValueKey('posts_${_posts.length}'), // <--- ADD THIS
+          key: const ValueKey('rp_cards_list'),
           controller: _scrollCtrl,
+          physics: const AlwaysScrollableScrollPhysics(),
+          cacheExtent: 1000,
           padding: EdgeInsets.fromLTRB(
             MediaQuery.of(context).size.width > 900 ? 8 : 12,
             MediaQuery.of(context).size.width > 900 ? 8 : 12,
             MediaQuery.of(context).size.width > 900 ? 8 : 12,
             8,
           ),
-          itemCount: _posts.length,
+          itemCount: _visiblePosts.length,
           itemBuilder: (_, i) => _PostCard(
-            post: _posts[i],
-            isExpanded: _expandedPostId == _posts[i].id,
+            post: _visiblePosts[i],
+            isExpanded: _expandedPostId == _visiblePosts[i].id,
             onTap: () => setState(
-              () => _expandedPostId = _expandedPostId == _posts[i].id
+              () => _expandedPostId = _expandedPostId == _visiblePosts[i].id
                   ? null
-                  : _posts[i].id,
+                  : _visiblePosts[i].id,
             ),
-            onLongPress: () => _showPostActions(_posts[i]),
-            onQuote: () => _quotePost(_posts[i].id),
-            onEdit: _posts[i].isUser ? () => _editPost(_posts[i]) : null,
-            onMore: () => _showPostActions(_posts[i]),
+            onLongPress: () => _showPostActions(_visiblePosts[i]),
+            onQuote: () => _quotePost(_visiblePosts[i].id),
+            onEdit: _visiblePosts[i].isUser ? () => _editPost(_visiblePosts[i]) : null,
+            onMore: () => _showPostActions(_visiblePosts[i]),
             onAddToLog: _addToLogFromText,
             onSelectionChanged: _onSelectionChanged,
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildBubblesView() {
-    return SelectionArea(
-      onSelectionChanged: (value) =>
-          _onSelectionChanged(value?.plainText ?? ''),
-      contextMenuBuilder: (context, state) {
-        return AdaptiveTextSelectionToolbar.buttonItems(
-          anchors: state.contextMenuAnchors,
-          buttonItems: [
-            ...state.contextMenuButtonItems,
-            ContextMenuButtonItem(
-              label: 'Add to log',
-              onPressed: () {
-                state.hideToolbar();
-                _addSelectionToLog();
-              },
-            ),
-          ],
-        );
-      },
-      child: ScrollConfiguration(
+    return ScrollConfiguration(
         behavior: NoGlowBehavior(),
         child: ListView.builder(
-          key: ValueKey('posts_${_posts.length}'),
+          key: const ValueKey('rp_bubbles_list'),
           controller: _scrollCtrl,
+          physics: const AlwaysScrollableScrollPhysics(),
+          cacheExtent: 1000,
           padding: EdgeInsets.fromLTRB(
             12,
             MediaQuery.of(context).size.width > 900 ? 10 : 16,
             12,
             8,
           ),
-          itemCount: _posts.length,
+          itemCount: _visiblePosts.length,
           itemBuilder: (_, i) {
-            final post = _posts[i];
+            final post = _visiblePosts[i];
             final isUser = post.isUser;
             return Padding(
               padding: EdgeInsets.only(
@@ -3019,7 +3136,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                   ),
                                   if (post.locationName != null) ...[
                                     const Text(
-                                      ' · ',
+                                      ' Â· ',
                                       style: TextStyle(
                                         fontFamily: 'monospace',
                                         fontSize: 9,
@@ -3121,43 +3238,26 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             );
           },
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildClassicalView() {
-    return SelectionArea(
-      onSelectionChanged: (value) =>
-          _onSelectionChanged(value?.plainText ?? ''),
-      contextMenuBuilder: (context, state) {
-        return AdaptiveTextSelectionToolbar.buttonItems(
-          anchors: state.contextMenuAnchors,
-          buttonItems: [
-            ...state.contextMenuButtonItems,
-            ContextMenuButtonItem(
-              label: 'Add to log',
-              onPressed: () {
-                state.hideToolbar();
-                _addSelectionToLog();
-              },
-            ),
-          ],
-        );
-      },
-      child: ScrollConfiguration(
+    return ScrollConfiguration(
         behavior: NoGlowBehavior(),
         child: ListView.builder(
-          key: ValueKey('posts_${_posts.length}'),
+          key: const ValueKey('rp_classical_list'),
           controller: _scrollCtrl,
+          physics: const AlwaysScrollableScrollPhysics(),
+          cacheExtent: 1000,
           padding: EdgeInsets.fromLTRB(
             MediaQuery.of(context).size.width > 900 ? 16 : 24,
             MediaQuery.of(context).size.width > 900 ? 16 : 24,
             MediaQuery.of(context).size.width > 900 ? 16 : 24,
             8,
           ),
-          itemCount: _posts.length,
+          itemCount: _visiblePosts.length,
           itemBuilder: (_, i) {
-            final post = _posts[i];
+            final post = _visiblePosts[i];
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).size.width > 900 ? 18 : 28,
@@ -3189,7 +3289,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                         ),
                         if (post.locationName != null) ...[
                           const Text(
-                            '  ·  ',
+                            '  Â·  ',
                             style: TextStyle(
                               fontFamily: 'monospace',
                               fontSize: 10,
@@ -3274,8 +3374,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             );
           },
         ),
-      ),
-    );
+      );
   }
 
   void _openToolsPanel() {
@@ -3704,7 +3803,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             ),
             const SizedBox(height: 16),
 
-            // ── THE CARD DECK ──
+            // â”€â”€ THE CARD DECK â”€â”€
             Expanded(
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
@@ -3734,7 +3833,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   return _CharacterSwitcherCard(
                     isSelected: isSelected,
                     name: c.name,
-                    pronouns: '${c.pronouns} · ${c.age}',
+                    pronouns: '${c.pronouns} Â· ${c.age}',
                     avatarUrl: c.avatarUrl,
                     accent: c.accentColor,
                     onTap: () {
@@ -3774,10 +3873,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   Widget _buildCollapsedEditor() {
     final charColor = _activeCharacter?.accentColor ?? cGold;
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
+    return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: 0.4),
@@ -3839,18 +3935,13 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 
   Widget _buildFullEditor() {
     final charColor = _activeCharacter?.accentColor ?? _fontColor;
     final displayName = _activeCharacter?.name ?? 'You';
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
+    return Container(
           decoration: BoxDecoration(
             color: Colors.black.withValues(
               alpha: 0.6,
@@ -4013,7 +4104,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                     setState(() => _activeLocation = loc);
                                     if (widget.sessionId.isNotEmpty) {
                                       _log.addEvent(
-                                        title: 'Location · $loc',
+                                        title: 'Location Â· $loc',
                                         body: 'The scene moved to $loc.',
                                         source: 'location',
                                         meta: {'locationName': loc},
@@ -4239,8 +4330,6 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 
@@ -4851,7 +4940,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                '✦',
+                                'âœ¦',
                                 style: TextStyle(
                                   fontSize: 9,
                                   color: !_moodLockedByUser ? cMagic : cSmoke,
@@ -4909,7 +4998,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                     child: GestureDetector(
                       onTap: _unlockMood,
                       child: const Text(
-                        '← return control to AI',
+                        'â† return control to AI',
                         style: TextStyle(
                           fontFamily: 'monospace',
                           fontSize: 9,
@@ -5825,7 +5914,7 @@ class _OocMediaPreviewState extends State<_OocMediaPreview> {
     }
   }
 
-  // ── NEW: Full Screen Image Viewer ──
+  // â”€â”€ NEW: Full Screen Image Viewer â”€â”€
   void _openFullScreen(BuildContext context, ImageProvider imageProvider) {
     showDialog(
       context: context,
@@ -5855,7 +5944,7 @@ class _OocMediaPreviewState extends State<_OocMediaPreview> {
       ),
     );
   }
-  // ───────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @override
   Widget build(BuildContext context) {
@@ -6190,7 +6279,7 @@ class _PostCardState extends State<_PostCard>
                       ),
                       if (post.locationName != null) ...[
                         const Text(
-                          ' · ',
+                          ' Â· ',
                           style: TextStyle(
                             fontFamily: 'monospace',
                             fontSize: 10,

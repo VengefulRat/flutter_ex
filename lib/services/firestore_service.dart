@@ -338,9 +338,10 @@ class FirestoreService {
         });
   }
 
-  Future<void> addPost({
+  Future<String?> addPost({
     required String sessionId,
     required String content,
+    String? chapter,
     String? quotedPostId,
     String? quotedContent,
     String? quotedAuthor,
@@ -352,7 +353,7 @@ class FirestoreService {
     final name = _auth.currentName;
     if (code == null || name == null) {
       print('[addPost] ERROR: currentCode or currentName is null');
-      return;
+      return null;
     }
     print('[addPost] Writing post to session $sessionId by $code');
 
@@ -391,6 +392,7 @@ class FirestoreService {
         'quotedContentIv': storedQuotedIv,
         'quotedAuthor': quotedAuthor,
         'encrypted': true,
+        'chapter': chapter ?? 'Chapter 1',
         'createdAt': FieldValue.serverTimestamp(),
         'edited': false,
       });
@@ -403,7 +405,7 @@ class FirestoreService {
       });
 
       await batch.commit();
-      print('[addPost] Success');
+      print('[addPost] Success id=${postRef.id} chapter=${chapter ?? 'Chapter 1'}');
 
       final partnerCode = await _getPartnerCode(sessionId, code);
       if (partnerCode != null) {
@@ -420,6 +422,7 @@ class FirestoreService {
           data: {'sessionId': sessionId},
         );
       }
+      return postRef.id;
     } catch (e) {
       print('[addPost] FAILED: $e');
       rethrow;

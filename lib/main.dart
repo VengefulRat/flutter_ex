@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -91,9 +91,9 @@ class _LoreAppState extends State<LoreApp> {
   );
 }
 
-// ════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // SPLASH
-// ════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
   @override
@@ -233,9 +233,9 @@ class _SplashScreenState extends State<SplashScreen>
   );
 }
 
-// ════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // LANDING
-// ════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
   @override
@@ -316,7 +316,7 @@ class _LandingScreenState extends State<LandingScreen>
                         ),
                         const SizedBox(height: 24),
                         const Text(
-                          'Every story begins the same way —\nwith a blank page and a decision.\nThis is yours. Write it.',
+                          'Every story begins the same way â€”\nwith a blank page and a decision.\nThis is yours. Write it.',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w300,
@@ -352,7 +352,7 @@ class _LandingScreenState extends State<LandingScreen>
 
                         const SizedBox(height: 32),
 
-                        // ── DOWNLOAD ANDROID APP BUTTON ──
+                        // â”€â”€ DOWNLOAD ANDROID APP BUTTON â”€â”€
                         LoreTap(
                           onTap: () => showDownloadDialog(context),
                           child: Container(
@@ -397,11 +397,11 @@ class _LandingScreenState extends State<LandingScreen>
   );
 }
 
-// ════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // GLOBAL DOWNLOAD DIALOG
-// ════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 void showDownloadDialog(BuildContext context) {
-  // ⚠️ REPLACE THIS URL WITH YOUR ACTUAL GITHUB RELEASE APK LINK! ⚠️
+  // âš ï¸ REPLACE THIS URL WITH YOUR ACTUAL GITHUB RELEASE APK LINK! âš ï¸
   const String apkUrl =
       'https://github.com/VengefulRat/flutter_ex/releases/download/v8.4.6/flutter_ex-releases.apk';
 

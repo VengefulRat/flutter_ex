@@ -2542,11 +2542,12 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
     showModalBottomSheet(
       context: context,
       backgroundColor: cInk,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(),
       builder: (ctx) => Container(
+        height: MediaQuery.of(ctx).size.height * 0.8,
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
@@ -2570,48 +2571,28 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
               ),
             ),
             const SizedBox(height: 16),
-            ...rps.map(
-              (rp) => LoreTap(
-                onTap: () {
-                  Navigator.pop(ctx);
-                  widget.onEnter(rp);
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(border: Border.all(color: cAsh)),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              rp.hasTitle ? rp.title : rp.genre,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                color: cParchment,
-                                fontStyle: FontStyle.italic,
-                                fontWeight: FontWeight.w300,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${rp.posts} posts · ${rp.genre}',
-                              style: const TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 9,
-                                color: cSmoke,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right, size: 16, color: cSmoke),
-                    ],
-                  ),
+            // DIE FIX: wys die VOLLE cards, nie 'n lys van titels nie.
+            // Dieselfde _RPSelectionCard as die main grid - picture + titel + summary.
+            Expanded(
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 200,
+                  childAspectRatio: 0.7,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
                 ),
+                itemCount: rps.length,
+                itemBuilder: (context, index) {
+                  final rp = rps[index];
+                  return _RPSelectionCard(
+                    rp: rp,
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      widget.onEnter(rp);
+                    },
+                    onLongPress: () => _openMenu(rp),
+                  );
+                },
               ),
             ),
           ],
