@@ -75,7 +75,7 @@ class _LoreAppState extends State<LoreApp> {
       GlobalMaterialLocalizations.delegate,
       GlobalCupertinoLocalizations.delegate,
       GlobalWidgetsLocalizations.delegate,
-      FlutterQuillLocalizations.delegate,
+      ...FlutterQuillLocalizations.localizationsDelegates,
     ],
     supportedLocales: const [Locale('en')],
     theme: ThemeData(
@@ -91,9 +91,7 @@ class _LoreAppState extends State<LoreApp> {
   );
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // SPLASH
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
   @override

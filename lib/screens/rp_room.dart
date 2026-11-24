@@ -1,9 +1,11 @@
-﻿import 'dart:async';
+import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dart_sentiment/dart_sentiment.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/super_editor_box.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -48,6 +50,7 @@ class RPPost {
   final double fontSize;
   final bool bold;
   final bool italic;
+  final List<Map<String, dynamic>> runs;
   final String? characterName;
   final String? locationName;
 
@@ -63,6 +66,7 @@ class RPPost {
     this.fontSize = 15,
     this.bold = false,
     this.italic = true,
+    this.runs = const [],
     this.characterName,
     this.locationName,
   }) : wordCount = content.trim().split(RegExp(r'\s+')).length;
@@ -584,8 +588,41 @@ Widget _selectablePostText({
   required TextStyle style,
   required void Function(String) onAddToLog,
   void Function(String)? onSelectionChanged,
+  List<Map<String, dynamic>>? runs,
 }) {
-  return Text(text, style: style);
+  if (runs == null || runs.isEmpty) {
+    return Text(text, style: style);
+  }
+  final spans = <TextSpan>[];
+  for (final r in runs) {
+    final runText = r['text'] as String? ?? '';
+    if (runText.isEmpty) continue;
+    final runBold = r['bold'] == true;
+    final runItalic = r['italic'] == true;
+    final runUnderline = r['underline'] == true;
+    final runColorRaw = r['color'];
+    final runSizeRaw = r['size'];
+    spans.add(
+      TextSpan(
+        text: runText,
+        style: style.copyWith(
+          fontWeight: runBold ? FontWeight.bold : style.fontWeight,
+          fontStyle: runItalic ? FontStyle.italic : style.fontStyle,
+          decoration: runUnderline
+              ? TextDecoration.underline
+              : style.decoration,
+          color: runColorRaw is int ? Color(runColorRaw) : style.color,
+          fontSize: runSizeRaw is num ? runSizeRaw.toDouble() : style.fontSize,
+        ),
+      ),
+    );
+  }
+  if (spans.isEmpty) {
+    return Text(text, style: style);
+  }
+  return RichText(
+    text: TextSpan(children: spans, style: style),
+  );
 }
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1023,6 +1060,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   bool _loadingPosts = true;
 
   final _editorCtrl = TextEditingController();
+  Key _boxKey = UniqueKey();
+  List<EditorRun>? _pendingRuns;
+  String _pendingPlain = '';
   final _scrollCtrl = ScrollController();
 
   // Cheap paint nudge: SelectionArea / Windows paint bug laat die lys leeg bly
@@ -1035,7 +1075,6 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   String _selectedChapter = 'Chapter 1';
   Map<String, String> _postChapter = {}; // postId -> chapterName
   bool _chaptersLoaded = false;
-
 
   void _schedulePaintNudge() {
     if (_posts.isEmpty) return;
@@ -1061,13 +1100,14 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       }
     });
   }
+
   final _editorFocus = FocusNode();
   bool _editorExpanded = false;
 
   bool _bold = false;
   bool _italic = true;
   double _fontSize = 15;
-  Color _fontColor = cParchment;
+  Color _fontColor = Colors.white;
 
   bool _aiMoodEnabled = true;
   double _moodIntensity = 0.5;
@@ -1146,7 +1186,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   void initState() {
     RPRoomScreen.openSessionId = widget.sessionId;
     super.initState();
-    _loadChapters().then((_) { if (mounted) setState(() {}); });
+    _loadChapters().then((_) {
+      if (mounted) setState(() {});
+    });
     _sessionTitle = widget.title;
     _aiMoodEnabled = appSettings.aiMood;
     _displayMode = RPDisplayMode.values.firstWhere(
@@ -1233,6 +1275,20 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     super.dispose();
   }
 
+  static List<Map<String, dynamic>> _parseRuns(String? raw) {
+    if (raw == null || raw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        return decoded
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+    } catch (_) {}
+    return const [];
+  }
+
   void _subscribeToFirestore() {
     _postsSub = _fs.sessionPosts(widget.sessionId).listen((data) {
       final myCode = _auth.currentCode ?? '';
@@ -1259,6 +1315,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           textColor: d['textColor'] != null
               ? Color(d['textColor'] as int)
               : cParchment,
+          runs: _parseRuns(d['contentRuns'] as String?),
         );
       }).toList();
 
@@ -1561,35 +1618,35 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   void _setMood(StoryMood mood, {String? reason}) {
-  if (!mounted) return;
-  if (mood == _currentMood) return;
-  setState(() {
-    _fromColor = _bgAnim.value ?? _fromColor;
-    _currentMood = mood;
-    final toColor = MoodEngine.bgColor(mood);
-    _bgAnim = ColorTween(
-      begin: _fromColor,
-      end: toColor,
-    ).animate(CurvedAnimation(parent: _moodCtrl, curve: Curves.easeInOut));
-    _moodCtrl.forward(from: 0);
-    _initParticles();
-  });
-  _particleTick.value++;
+    if (!mounted) return;
+    if (mood == _currentMood) return;
+    setState(() {
+      _fromColor = _bgAnim.value ?? _fromColor;
+      _currentMood = mood;
+      final toColor = MoodEngine.bgColor(mood);
+      _bgAnim = ColorTween(
+        begin: _fromColor,
+        end: toColor,
+      ).animate(CurvedAnimation(parent: _moodCtrl, curve: Curves.easeInOut));
+      _moodCtrl.forward(from: 0);
+      _initParticles();
+    });
+    _particleTick.value++;
 
-  // One-shot mood sound â€” once per mood change, manual + auto
-  // FIX: use appSettings (the real singleton), NOT AppSettings() which is always default-off.
-  // On PC there is no vibrate, so the sound is the only heartbeat you hear.
-  // Mood sounds are separate from haptics - off / once / loop
-  // Turn page sound (moodSwitch) still plays separately, untouched.
-  sounds.playMoodSound(mood.name, mode: appSettings.moodSoundMode);
+    // One-shot mood sound â€” once per mood change, manual + auto
+    // FIX: use appSettings (the real singleton), NOT AppSettings() which is always default-off.
+    // On PC there is no vibrate, so the sound is the only heartbeat you hear.
+    // Mood sounds are separate from haptics - off / once / loop
+    // Turn page sound (moodSwitch) still plays separately, untouched.
+    sounds.playMoodSound(mood.name, mode: appSettings.moodSoundMode);
 
-  if (widget.sessionId.isNotEmpty && reason != 'silent') {
-    _log.addEvent(
-  title: 'Mood - ${MoodEngine.moodLabel(mood)}',
-  body: reason ?? 'Mood changed to ${MoodEngine.moodLabel(mood)}',
-);
+    if (widget.sessionId.isNotEmpty && reason != 'silent') {
+      _log.addEvent(
+        title: 'Mood - ${MoodEngine.moodLabel(mood)}',
+        body: reason ?? 'Mood changed to ${MoodEngine.moodLabel(mood)}',
+      );
+    }
   }
-}
 
   void _setMoodManual(StoryMood mood) {
     if (!mounted) return;
@@ -1623,8 +1680,26 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   bool _sending = false;
 
-  Future<void> _submitPost() async {
-    final text = _editorCtrl.text.trim();
+  Future<void> _submitFromBox() async {
+    final runs = _pendingRuns;
+    final plain = _pendingPlain.trim();
+    if (plain.isEmpty) return;
+    await _submitPost(runs: runs, plainOverride: plain);
+    // Clear box after successful post by resetting key
+    if (mounted) {
+      setState(() {
+        _pendingRuns = null;
+        _pendingPlain = '';
+        _boxKey = UniqueKey();
+      });
+    }
+  }
+
+  Future<void> _submitPost({
+    List<EditorRun>? runs,
+    String? plainOverride,
+  }) async {
+    final text = (plainOverride ?? _editorCtrl.text).trim();
     if (text.isEmpty) return;
     if (_sending) return;
     if (mounted) setState(() => _sending = true);
@@ -1637,6 +1712,22 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             sessionId: widget.sessionId,
             postId: postId,
             newContent: text,
+            contentRuns: runs == null
+                ? null
+                : jsonEncode(
+                    runs
+                        .map(
+                          (r) => {
+                            'text': r.text,
+                            'bold': r.bold,
+                            'italic': r.italic,
+                            'underline': r.underline,
+                            'color': r.color,
+                            'size': r.size,
+                          },
+                        )
+                        .toList(),
+                  ),
             textColor: _activeCharacter?.accentColor ?? _fontColor,
           );
         } catch (e) {
@@ -1664,6 +1755,20 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             author: _posts[i].author,
             isUser: _posts[i].isUser,
             content: text,
+            runs: runs == null
+                ? _posts[i].runs
+                : runs
+                      .map(
+                        (r) => {
+                          'text': r.text,
+                          'bold': r.bold,
+                          'italic': r.italic,
+                          'underline': r.underline,
+                          'color': r.color,
+                          'size': r.size,
+                        },
+                      )
+                      .toList(),
             timestamp: _posts[i].timestamp,
             quotedContent: _posts[i].quotedContent,
             quotedAuthor: _posts[i].quotedAuthor,
@@ -1702,6 +1807,22 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           sessionId: widget.sessionId,
           chapter: _selectedChapter,
           content: text,
+          contentRuns: runs == null
+              ? null
+              : jsonEncode(
+                  runs
+                      .map(
+                        (r) => {
+                          'text': r.text,
+                          'bold': r.bold,
+                          'italic': r.italic,
+                          'underline': r.underline,
+                          'color': r.color,
+                          'size': r.size,
+                        },
+                      )
+                      .toList(),
+                ),
           quotedContent: quotedPost?.content.substring(
             0,
             min(100, quotedPost.content.length),
@@ -1817,10 +1938,25 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   void _editPost(RPPost post) {
     if (!mounted) return;
     _editorCtrl.text = post.content;
+    // Convert saved run maps back to EditorRun so colours/sizes survive edit
+    _pendingPlain = post.content;
+    _pendingRuns = post.runs
+        .map(
+          (m) => EditorRun(
+            text: (m['text'] as String?) ?? '',
+            bold: (m['bold'] as bool?) ?? false,
+            italic: (m['italic'] as bool?) ?? false,
+            underline: (m['underline'] as bool?) ?? false,
+            color: (m['color'] as int?) ?? _fontColor.toARGB32(),
+            size: ((m['size'] as num?) ?? 16).toDouble(),
+          ),
+        )
+        .toList();
     setState(() {
       _editingPostId = post.id;
       _quotingPostId = null;
       _editorExpanded = true;
+      _boxKey = UniqueKey(); // force SuperEditorBox to rebuild with new initial text/runs
     });
     _editorFocus.requestFocus();
   }
@@ -2096,37 +2232,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.sizeOf(context).width >= 900;
     if (isDesktop) {
-      return Focus(
-        onKeyEvent: (node, event) {
-          if (event is KeyDownEvent &&
-              event.logicalKey == LogicalKeyboardKey.keyF &&
-              !HardwareKeyboard.instance.isControlPressed &&
-              !HardwareKeyboard.instance.isMetaPressed &&
-              !HardwareKeyboard.instance.isAltPressed) {
-            if (_editorFocus.hasFocus ||
-                _oocFocus.hasFocus ||
-                _oocFocus2.hasFocus) {
-              return KeyEventResult.ignored;
-            }
-            final primary = FocusManager.instance.primaryFocus;
-            if (primary != null && primary.context?.widget is EditableText) {
-              return KeyEventResult.ignored;
-            }
-            setState(() {
-              if (_desktopFocusMode) {
-                _desktopLogCollapsed = false;
-                _desktopToolsCollapsed = false;
-              } else {
-                _desktopLogCollapsed = true;
-                _desktopToolsCollapsed = true;
-              }
-            });
-            return KeyEventResult.handled;
-          }
-          return KeyEventResult.ignored;
-        },
-        child: _buildDesktopLayout(),
-      );
+      return _buildDesktopLayout();
     }
     return _buildMobileLayout();
   }
@@ -2226,9 +2332,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                     child: Column(
                                       children: [
                                         _buildChapterStrip(),
-                                        Expanded(
-                                          child: _buildPostList(),
-                                        ),
+                                        Expanded(child: _buildPostList()),
                                         _buildFullEditor(),
                                       ],
                                     ),
@@ -2525,9 +2629,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   children: [
                     _buildTopBar(),
                     _buildChapterStrip(),
-                    Expanded(
-                      child: _buildPostList(),
-                    ),
+                    Expanded(child: _buildPostList()),
                     if (_editorExpanded)
                       _buildFullEditor()
                     else
@@ -2630,230 +2732,207 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         ? 16.0
         : 12.0;
     return Container(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: vPad),
-          decoration: BoxDecoration(
-            color: cInk.withValues(alpha: 0.65), // More transparent
-            border: Border(
-              bottom: BorderSide(color: appSettings.rpHeaderAccent),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: vPad),
+      decoration: BoxDecoration(
+        color: cInk.withValues(alpha: 0.65), // More transparent
+        border: Border(bottom: BorderSide(color: appSettings.rpHeaderAccent)),
+      ),
+      child: Row(
+        children: [
+          LoreTap(
+            onTap: () => Navigator.of(context).pop(),
+            child: const Icon(Icons.arrow_back_ios, color: cSmoke, size: 16),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: LoreTap(
+              onTap: _editSessionTitle,
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_sessionTitle.isNotEmpty)
+                    Text(
+                      _sessionTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: titleSize,
+                        fontWeight: FontWeight.w300,
+                        fontStyle: FontStyle.italic,
+                        color: cParchment,
+                      ),
+                    )
+                  else
+                    Text(
+                      widget.partnerName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: titleSize,
+                        fontWeight: FontWeight.w300,
+                        fontStyle: FontStyle.italic,
+                        color: cParchment,
+                      ),
+                    ),
+                  Text(
+                    _sessionTitle.isNotEmpty
+                        ? '${widget.partnerName} Â· ${widget.genre}'
+                        : widget.genre,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: subSize,
+                      color: cSmoke,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          child: Row(
-            children: [
-              LoreTap(
-                onTap: () => Navigator.of(context).pop(),
-                child: const Icon(
-                  Icons.arrow_back_ios,
-                  color: cSmoke,
-                  size: 16,
+          const SizedBox(width: 8),
+          if (_aiMoodEnabled)
+            LoreTap(
+              onTap: () => _showMoodPicker(),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: _moodLockedByUser
+                        ? cSmoke
+                        : cMagic.withValues(alpha: 0.5),
+                  ),
+                  color: Colors.black.withValues(alpha: 0.3),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: LoreTap(
-                  onTap: _editSessionTitle,
-                  behavior: HitTestBehavior.opaque,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_sessionTitle.isNotEmpty)
-                        Text(
-                          _sessionTitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: titleSize,
-                            fontWeight: FontWeight.w300,
-                            fontStyle: FontStyle.italic,
-                            color: cParchment,
-                          ),
-                        )
-                      else
-                        Text(
-                          widget.partnerName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: titleSize,
-                            fontWeight: FontWeight.w300,
-                            fontStyle: FontStyle.italic,
-                            color: cParchment,
-                          ),
-                        ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_moodLockedByUser) ...[
+                      const Icon(Icons.lock_outline, size: 9, color: cSmoke),
+                      const SizedBox(width: 4),
                       Text(
-                        _sessionTitle.isNotEmpty
-                            ? '${widget.partnerName} Â· ${widget.genre}'
-                            : widget.genre,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        MoodEngine.moodLabel(_currentMood),
+                        style: const TextStyle(
                           fontFamily: 'monospace',
-                          fontSize: subSize,
+                          fontSize: 9,
                           color: cSmoke,
                           letterSpacing: 2,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              if (_aiMoodEnabled)
-                LoreTap(
-                  onTap: () => _showMoodPicker(),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: _moodLockedByUser
-                            ? cSmoke
-                            : cMagic.withValues(alpha: 0.5),
-                      ),
-                      color: Colors.black.withValues(alpha: 0.3),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_moodLockedByUser) ...[
-                          const Icon(
-                            Icons.lock_outline,
-                            size: 9,
-                            color: cSmoke,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            MoodEngine.moodLabel(_currentMood),
-                            style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 9,
-                              color: cSmoke,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                        ] else ...[
-                          const Icon(
-                            Icons.auto_awesome,
-                            size: 9,
-                            color: cMagic,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            MoodEngine.moodLabel(_currentMood).toUpperCase(),
-                            style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 9,
-                              color: cMagic,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              const SizedBox(width: 8),
-              Tooltip(
-                message: MediaQuery.sizeOf(context).width >= 900
-                    ? 'Log (Ctrl+B)'
-                    : 'Log',
-                child: LoreTap(
-                  onTap: () {
-                    final isDesktop = MediaQuery.sizeOf(context).width >= 900;
-                    if (isDesktop) {
-                      setState(
-                        () => _desktopLogCollapsed = !_desktopLogCollapsed,
-                      );
-                    } else {
-                      _openLog();
-                    }
-                  },
-                  child: Icon(
-                    _desktopLogCollapsed
-                        ? Icons.menu_book_outlined
-                        : Icons.menu_book,
-                    color: _desktopLogCollapsed ? cSmoke : cGold,
-                    size: MediaQuery.sizeOf(context).width >= 900 ? 16 : 18,
-                  ),
-                ),
-              ),
-              SizedBox(width: MediaQuery.sizeOf(context).width >= 900 ? 8 : 12),
-              Tooltip(
-                message: MediaQuery.sizeOf(context).width >= 900
-                    ? 'Tools (Ctrl+T)'
-                    : 'Tools',
-                child: LoreTap(
-                  onTap: () {
-                    final isDesktop = MediaQuery.sizeOf(context).width >= 900;
-                    if (isDesktop) {
-                      setState(
-                        () => _desktopToolsCollapsed = !_desktopToolsCollapsed,
-                      );
-                    } else {
-                      _openToolsPanel();
-                    }
-                  },
-                  child: Icon(
-                    _desktopToolsCollapsed
-                        ? Icons.construction_outlined
-                        : Icons.construction,
-                    color: _desktopToolsCollapsed ? cSmoke : cGold,
-                    size: MediaQuery.sizeOf(context).width >= 900 ? 16 : 18,
-                  ),
-                ),
-              ),
-              SizedBox(width: MediaQuery.sizeOf(context).width >= 900 ? 8 : 12),
-              // Desktop only: Focus mode - collapse both, tap again to restore.
-              if (MediaQuery.sizeOf(context).width >= 900)
-                Tooltip(
-                  message: 'Focus (F)',
-                  child: LoreTap(
-                    onTap: () => setState(() {
-                      if (_desktopFocusMode) {
-                        _desktopLogCollapsed = false;
-                        _desktopToolsCollapsed = false;
-                      } else {
-                        _desktopLogCollapsed = true;
-                        _desktopToolsCollapsed = true;
-                      }
-                    }),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: _desktopFocusMode ? cGold : cAsh,
-                        ),
-                        color: _desktopFocusMode
-                            ? cGold.withValues(alpha: 0.12)
-                            : Colors.transparent,
-                      ),
-                      child: Text(
-                        _desktopFocusMode ? 'EXIT FOCUS' : 'FOCUS',
-                        style: TextStyle(
+                    ] else ...[
+                      const Icon(Icons.auto_awesome, size: 9, color: cMagic),
+                      const SizedBox(width: 4),
+                      Text(
+                        MoodEngine.moodLabel(_currentMood).toUpperCase(),
+                        style: const TextStyle(
                           fontFamily: 'monospace',
                           fontSize: 9,
-                          color: _desktopFocusMode ? cGold : cSmoke,
+                          color: cMagic,
                           letterSpacing: 2,
                         ),
                       ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(width: 8),
+          Tooltip(
+            message: MediaQuery.sizeOf(context).width >= 900
+                ? 'Log (Ctrl+B)'
+                : 'Log',
+            child: LoreTap(
+              onTap: () {
+                final isDesktop = MediaQuery.sizeOf(context).width >= 900;
+                if (isDesktop) {
+                  setState(() => _desktopLogCollapsed = !_desktopLogCollapsed);
+                } else {
+                  _openLog();
+                }
+              },
+              child: Icon(
+                _desktopLogCollapsed
+                    ? Icons.menu_book_outlined
+                    : Icons.menu_book,
+                color: _desktopLogCollapsed ? cSmoke : cGold,
+                size: MediaQuery.sizeOf(context).width >= 900 ? 16 : 18,
+              ),
+            ),
+          ),
+          SizedBox(width: MediaQuery.sizeOf(context).width >= 900 ? 8 : 12),
+          Tooltip(
+            message: MediaQuery.sizeOf(context).width >= 900
+                ? 'Tools (Ctrl+T)'
+                : 'Tools',
+            child: LoreTap(
+              onTap: () {
+                final isDesktop = MediaQuery.sizeOf(context).width >= 900;
+                if (isDesktop) {
+                  setState(
+                    () => _desktopToolsCollapsed = !_desktopToolsCollapsed,
+                  );
+                } else {
+                  _openToolsPanel();
+                }
+              },
+              child: Icon(
+                _desktopToolsCollapsed
+                    ? Icons.construction_outlined
+                    : Icons.construction,
+                color: _desktopToolsCollapsed ? cSmoke : cGold,
+                size: MediaQuery.sizeOf(context).width >= 900 ? 16 : 18,
+              ),
+            ),
+          ),
+          SizedBox(width: MediaQuery.sizeOf(context).width >= 900 ? 8 : 12),
+          // Desktop only: Focus mode - collapse both, tap again to restore.
+          if (MediaQuery.sizeOf(context).width >= 900)
+            Tooltip(
+              message: 'Focus (F)',
+              child: LoreTap(
+                onTap: () => setState(() {
+                  if (_desktopFocusMode) {
+                    _desktopLogCollapsed = false;
+                    _desktopToolsCollapsed = false;
+                  } else {
+                    _desktopLogCollapsed = true;
+                    _desktopToolsCollapsed = true;
+                  }
+                }),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: _desktopFocusMode ? cGold : cAsh),
+                    color: _desktopFocusMode
+                        ? cGold.withValues(alpha: 0.12)
+                        : Colors.transparent,
+                  ),
+                  child: Text(
+                    _desktopFocusMode ? 'EXIT FOCUS' : 'FOCUS',
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 9,
+                      color: _desktopFocusMode ? cGold : cSmoke,
+                      letterSpacing: 2,
                     ),
                   ),
                 ),
-              if (MediaQuery.sizeOf(context).width >= 900)
-                const SizedBox(width: 8),
-              LoreTap(
-                onTap: () => setState(() => _settingsOpen = !_settingsOpen),
-                child: const Icon(Icons.tune, color: cSmoke, size: 18),
               ),
-            ],
+            ),
+          if (MediaQuery.sizeOf(context).width >= 900) const SizedBox(width: 8),
+          LoreTap(
+            onTap: () => setState(() => _settingsOpen = !_settingsOpen),
+            child: const Icon(Icons.tune, color: cSmoke, size: 18),
           ),
+        ],
+      ),
     );
   }
-
 
   Widget _buildChapterStrip() {
     if (!_chaptersLoaded) return const SizedBox.shrink();
@@ -2876,7 +2955,13 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                 return Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: ChoiceChip(
-                    label: Text(name, style: TextStyle(fontSize: 12, color: sel ? Colors.black : cMist)),
+                    label: Text(
+                      name,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: sel ? Colors.black : cMist,
+                      ),
+                    ),
                     selected: sel,
                     selectedColor: cGold,
                     backgroundColor: cAsh,
@@ -2892,8 +2977,18 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             borderRadius: BorderRadius.circular(16),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(color: cGold, borderRadius: BorderRadius.circular(16)),
-              child: const Text('+ Chapter', style: TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.bold)),
+              decoration: BoxDecoration(
+                color: cGold,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Text(
+                '+ Chapter',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ],
@@ -2936,10 +3031,13 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   Future<void> _saveChapters() async {
     try {
-      await FirebaseFirestore.instance.collection('sessions').doc(widget.sessionId).set({
-        'chapters': _chapters,
-        'postChapters': _postChapter,
-      }, SetOptions(merge: true));
+      await FirebaseFirestore.instance
+          .collection('sessions')
+          .doc(widget.sessionId)
+          .set({
+            'chapters': _chapters,
+            'postChapters': _postChapter,
+          }, SetOptions(merge: true));
     } catch (_) {}
   }
 
@@ -2951,8 +3049,14 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         title: const Text('New chapter'),
         content: TextField(controller: ctrl, autofocus: true),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: const Text('Add')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: const Text('Add'),
+          ),
         ],
       ),
     );
@@ -2981,7 +3085,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   Widget _buildPostList() {
-    debugPrint('[RP-LIST] build posts=${_posts.length} visible=${_visiblePosts.length} chapter=$_selectedChapter loading=$_loadingPosts');
+    debugPrint(
+      '[RP-LIST] build posts=${_posts.length} visible=${_visiblePosts.length} chapter=$_selectedChapter loading=$_loadingPosts',
+    );
     // Trigger die 1px paint nudge sodra posts daar is - cheap, onsigbaar, werk.
     if (_posts.isNotEmpty && !_loadingPosts) _schedulePaintNudge();
     if (_loadingPosts && widget.sessionId.isNotEmpty) {
@@ -3023,372 +3129,374 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   Widget _buildCardsView() {
     return ScrollConfiguration(
-        behavior: NoGlowBehavior(),
-        child: ListView.builder(
-          key: const ValueKey('rp_cards_list'),
-          controller: _scrollCtrl,
-          physics: const AlwaysScrollableScrollPhysics(),
-          cacheExtent: 1000,
-          padding: EdgeInsets.fromLTRB(
-            MediaQuery.of(context).size.width > 900 ? 8 : 12,
-            MediaQuery.of(context).size.width > 900 ? 8 : 12,
-            MediaQuery.of(context).size.width > 900 ? 8 : 12,
-            8,
-          ),
-          itemCount: _visiblePosts.length,
-          itemBuilder: (_, i) => _PostCard(
-            post: _visiblePosts[i],
-            isExpanded: _expandedPostId == _visiblePosts[i].id,
-            onTap: () => setState(
-              () => _expandedPostId = _expandedPostId == _visiblePosts[i].id
-                  ? null
-                  : _visiblePosts[i].id,
-            ),
-            onLongPress: () => _showPostActions(_visiblePosts[i]),
-            onQuote: () => _quotePost(_visiblePosts[i].id),
-            onEdit: _visiblePosts[i].isUser ? () => _editPost(_visiblePosts[i]) : null,
-            onMore: () => _showPostActions(_visiblePosts[i]),
-            onAddToLog: _addToLogFromText,
-            onSelectionChanged: _onSelectionChanged,
-          ),
+      behavior: NoGlowBehavior(),
+      child: ListView.builder(
+        key: const ValueKey('rp_cards_list'),
+        controller: _scrollCtrl,
+        physics: const AlwaysScrollableScrollPhysics(),
+        cacheExtent: 1000,
+        padding: EdgeInsets.fromLTRB(
+          MediaQuery.of(context).size.width > 900 ? 8 : 12,
+          MediaQuery.of(context).size.width > 900 ? 8 : 12,
+          MediaQuery.of(context).size.width > 900 ? 8 : 12,
+          8,
         ),
-      );
+        itemCount: _visiblePosts.length,
+        itemBuilder: (_, i) => _PostCard(
+          post: _visiblePosts[i],
+          isExpanded: _expandedPostId == _visiblePosts[i].id,
+          onTap: () => setState(
+            () => _expandedPostId = _expandedPostId == _visiblePosts[i].id
+                ? null
+                : _visiblePosts[i].id,
+          ),
+          onLongPress: () => _showPostActions(_visiblePosts[i]),
+          onQuote: () => _quotePost(_visiblePosts[i].id),
+          onEdit: _visiblePosts[i].isUser
+              ? () => _editPost(_visiblePosts[i])
+              : null,
+          onMore: () => _showPostActions(_visiblePosts[i]),
+          onAddToLog: _addToLogFromText,
+          onSelectionChanged: _onSelectionChanged,
+        ),
+      ),
+    );
   }
 
   Widget _buildBubblesView() {
     return ScrollConfiguration(
-        behavior: NoGlowBehavior(),
-        child: ListView.builder(
-          key: const ValueKey('rp_bubbles_list'),
-          controller: _scrollCtrl,
-          physics: const AlwaysScrollableScrollPhysics(),
-          cacheExtent: 1000,
-          padding: EdgeInsets.fromLTRB(
-            12,
-            MediaQuery.of(context).size.width > 900 ? 10 : 16,
-            12,
-            8,
-          ),
-          itemCount: _visiblePosts.length,
-          itemBuilder: (_, i) {
-            final post = _visiblePosts[i];
-            final isUser = post.isUser;
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).size.width > 900 ? 10 : 16,
-              ),
-              child: Row(
-                mainAxisAlignment: isUser
-                    ? MainAxisAlignment.end
-                    : MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!isUser) ...[
-                    Container(
-                      width: 28,
-                      height: 28,
-                      margin: const EdgeInsets.only(right: 8, top: 2),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: cAsh,
-                        border: Border.all(color: cSmoke),
-                      ),
-                      child: Center(
-                        child: Text(
-                          post.author.isNotEmpty
-                              ? post.author[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 11,
-                            color: cMist,
-                          ),
+      behavior: NoGlowBehavior(),
+      child: ListView.builder(
+        key: const ValueKey('rp_bubbles_list'),
+        controller: _scrollCtrl,
+        physics: const AlwaysScrollableScrollPhysics(),
+        cacheExtent: 1000,
+        padding: EdgeInsets.fromLTRB(
+          12,
+          MediaQuery.of(context).size.width > 900 ? 10 : 16,
+          12,
+          8,
+        ),
+        itemCount: _visiblePosts.length,
+        itemBuilder: (_, i) {
+          final post = _visiblePosts[i];
+          final isUser = post.isUser;
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).size.width > 900 ? 10 : 16,
+            ),
+            child: Row(
+              mainAxisAlignment: isUser
+                  ? MainAxisAlignment.end
+                  : MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!isUser) ...[
+                  Container(
+                    width: 28,
+                    height: 28,
+                    margin: const EdgeInsets.only(right: 8, top: 2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: cAsh,
+                      border: Border.all(color: cSmoke),
+                    ),
+                    child: Center(
+                      child: Text(
+                        post.author.isNotEmpty
+                            ? post.author[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 11,
+                          color: cMist,
                         ),
                       ),
                     ),
-                  ],
-                  Flexible(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width * 0.72,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: isUser
-                            ? CrossAxisAlignment.end
-                            : CrossAxisAlignment.start,
-                        children: [
-                          GestureDetector(
-                            onLongPress: () => _showPostActions(post),
-                            behavior: HitTestBehavior.opaque,
-                            child: Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: 4,
-                                left: 2,
-                                right: 2,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    post.characterName ?? post.author,
-                                    style: TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 9,
-                                      letterSpacing: 2,
-                                      color: isUser
-                                          ? (appSettings.textColourFor(
-                                                  'char_name',
-                                                ) ??
-                                                (post.textColor == cParchment
-                                                    ? cGold
-                                                    : post.textColor))
-                                          : (appSettings.textColourFor(
-                                                  'partner_name',
-                                                ) ??
-                                                cMist),
-                                    ),
-                                  ),
-                                  if (post.locationName != null) ...[
-                                    const Text(
-                                      ' Â· ',
-                                      style: TextStyle(
-                                        fontFamily: 'monospace',
-                                        fontSize: 9,
-                                        color: cSmoke,
-                                      ),
-                                    ),
-                                    Text(
-                                      post.locationName!,
-                                      style: TextStyle(
-                                        fontFamily: 'monospace',
-                                        fontSize: 9,
-                                        color:
-                                            appSettings.textColourFor(
-                                              'location_name',
-                                            ) ??
-                                            cSmoke,
-                                        letterSpacing: 1,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal:
-                                  MediaQuery.of(context).size.width > 900
-                                  ? 12
-                                  : 14,
-                              vertical: MediaQuery.of(context).size.width > 900
-                                  ? 8
-                                  : 12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isUser
-                                  ? Color.lerp(
-                                      cVoid,
-                                      cGold,
-                                      0.15,
-                                    )!.withValues(alpha: 0.85)
-                                  : const Color(
-                                      0xFF08080A,
-                                    ).withValues(alpha: 0.82),
-                              border: Border.all(
-                                color: isUser
-                                    ? cGold.withValues(alpha: 0.3)
-                                    : cAsh,
-                              ),
-                              borderRadius: BorderRadius.only(
-                                topLeft: const Radius.circular(2),
-                                topRight: const Radius.circular(2),
-                                bottomLeft: Radius.circular(isUser ? 2 : 0),
-                                bottomRight: Radius.circular(isUser ? 0 : 2),
-                              ),
-                            ),
-                            child: _selectablePostText(
-                              text: post.content,
-                              style: TextStyle(
-                                fontSize: post.fontSize * _rpPostScale(),
-                                color:
-                                    appSettings.textColourFor('post_content') ??
-                                    post.textColor,
-                                fontStyle: post.italic
-                                    ? FontStyle.italic
-                                    : FontStyle.normal,
-                                fontWeight: post.bold
-                                    ? FontWeight.bold
-                                    : FontWeight.w300,
-                                height: 1.7,
-                              ),
-                              onAddToLog: _addToLogFromText,
-                              onSelectionChanged: _onSelectionChanged,
-                            ),
-                          ),
-                          Padding(
+                  ),
+                ],
+                Flexible(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.72,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: isUser
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      children: [
+                        GestureDetector(
+                          onLongPress: () => _showPostActions(post),
+                          behavior: HitTestBehavior.opaque,
+                          child: Padding(
                             padding: const EdgeInsets.only(
-                              top: 4,
+                              bottom: 4,
                               left: 2,
                               right: 2,
                             ),
-                            child: Text(
-                              '${post.wordCount}w',
-                              style: const TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 8,
-                                color: cSmoke,
-                                letterSpacing: 1,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  post.characterName ?? post.author,
+                                  style: TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 9,
+                                    letterSpacing: 2,
+                                    color: isUser
+                                        ? (appSettings.textColourFor(
+                                                'char_name',
+                                              ) ??
+                                              (post.textColor == cParchment
+                                                  ? cGold
+                                                  : post.textColor))
+                                        : (appSettings.textColourFor(
+                                                'partner_name',
+                                              ) ??
+                                              cMist),
+                                  ),
+                                ),
+                                if (post.locationName != null) ...[
+                                  const Text(
+                                    ' Â· ',
+                                    style: TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 9,
+                                      color: cSmoke,
+                                    ),
+                                  ),
+                                  Text(
+                                    post.locationName!,
+                                    style: TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 9,
+                                      color:
+                                          appSettings.textColourFor(
+                                            'location_name',
+                                          ) ??
+                                          cSmoke,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: MediaQuery.of(context).size.width > 900
+                                ? 12
+                                : 14,
+                            vertical: MediaQuery.of(context).size.width > 900
+                                ? 8
+                                : 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isUser
+                                ? Color.lerp(
+                                    cVoid,
+                                    cGold,
+                                    0.15,
+                                  )!.withValues(alpha: 0.85)
+                                : const Color(
+                                    0xFF08080A,
+                                  ).withValues(alpha: 0.82),
+                            border: Border.all(
+                              color: isUser
+                                  ? cGold.withValues(alpha: 0.3)
+                                  : cAsh,
+                            ),
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(2),
+                              topRight: const Radius.circular(2),
+                              bottomLeft: Radius.circular(isUser ? 2 : 0),
+                              bottomRight: Radius.circular(isUser ? 0 : 2),
+                            ),
+                          ),
+                          child: _selectablePostText(
+                            text: post.content,
+                            runs: post.runs,
+                            style: TextStyle(
+                              fontSize: post.fontSize * _rpPostScale(),
+                              color:
+                                  appSettings.textColourFor('post_content') ??
+                                  post.textColor,
+                              fontStyle: post.italic
+                                  ? FontStyle.italic
+                                  : FontStyle.normal,
+                              fontWeight: post.bold
+                                  ? FontWeight.bold
+                                  : FontWeight.w300,
+                              height: 1.7,
+                            ),
+                            onAddToLog: _addToLogFromText,
+                            onSelectionChanged: _onSelectionChanged,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            top: 4,
+                            left: 2,
+                            right: 2,
+                          ),
+                          child: Text(
+                            '${post.wordCount}w',
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 8,
+                              color: cSmoke,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  if (isUser) const SizedBox(width: 8),
-                ],
-              ),
-            );
-          },
-        ),
-      );
+                ),
+                if (isUser) const SizedBox(width: 8),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Widget _buildClassicalView() {
     return ScrollConfiguration(
-        behavior: NoGlowBehavior(),
-        child: ListView.builder(
-          key: const ValueKey('rp_classical_list'),
-          controller: _scrollCtrl,
-          physics: const AlwaysScrollableScrollPhysics(),
-          cacheExtent: 1000,
-          padding: EdgeInsets.fromLTRB(
-            MediaQuery.of(context).size.width > 900 ? 16 : 24,
-            MediaQuery.of(context).size.width > 900 ? 16 : 24,
-            MediaQuery.of(context).size.width > 900 ? 16 : 24,
-            8,
-          ),
-          itemCount: _visiblePosts.length,
-          itemBuilder: (_, i) {
-            final post = _visiblePosts[i];
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).size.width > 900 ? 18 : 28,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  GestureDetector(
-                    onLongPress: () => _showPostActions(post),
-                    behavior: HitTestBehavior.opaque,
-                    child: Row(
-                      children: [
-                        Text(
-                          (post.characterName ?? post.author).toUpperCase(),
+      behavior: NoGlowBehavior(),
+      child: ListView.builder(
+        key: const ValueKey('rp_classical_list'),
+        controller: _scrollCtrl,
+        physics: const AlwaysScrollableScrollPhysics(),
+        cacheExtent: 1000,
+        padding: EdgeInsets.fromLTRB(
+          MediaQuery.of(context).size.width > 900 ? 16 : 24,
+          MediaQuery.of(context).size.width > 900 ? 16 : 24,
+          MediaQuery.of(context).size.width > 900 ? 16 : 24,
+          8,
+        ),
+        itemCount: _visiblePosts.length,
+        itemBuilder: (_, i) {
+          final post = _visiblePosts[i];
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).size.width > 900 ? 18 : 28,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onLongPress: () => _showPostActions(post),
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    children: [
+                      Text(
+                        (post.characterName ?? post.author).toUpperCase(),
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 10,
+                          letterSpacing: 4,
+                          color: post.isUser
+                              ? (appSettings.textColourFor('char_name') ??
+                                    (post.textColor == cParchment
+                                        ? cGold
+                                        : post.textColor.withValues(
+                                            alpha: 0.9,
+                                          )))
+                              : (appSettings.textColourFor('partner_name') ??
+                                    cMist),
+                        ),
+                      ),
+                      if (post.locationName != null) ...[
+                        const Text(
+                          '  Â·  ',
                           style: TextStyle(
                             fontFamily: 'monospace',
                             fontSize: 10,
-                            letterSpacing: 4,
-                            color: post.isUser
-                                ? (appSettings.textColourFor('char_name') ??
-                                      (post.textColor == cParchment
-                                          ? cGold
-                                          : post.textColor.withValues(
-                                              alpha: 0.9,
-                                            )))
-                                : (appSettings.textColourFor('partner_name') ??
-                                      cMist),
-                          ),
-                        ),
-                        if (post.locationName != null) ...[
-                          const Text(
-                            '  Â·  ',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 10,
-                              color: cSmoke,
-                            ),
-                          ),
-                          Text(
-                            post.locationName!.toUpperCase(),
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 10,
-                              letterSpacing: 2,
-                              color:
-                                  appSettings.textColourFor('location_name') ??
-                                  cSmoke,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (post.quotedContent != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: const BoxDecoration(
-                          border: Border(
-                            left: BorderSide(color: cSmoke, width: 2),
-                          ),
-                        ),
-                        child: Text(
-                          '${post.quotedAuthor ?? ""}: ${post.quotedContent}...',
-                          style: const TextStyle(
-                            fontSize: 11,
                             color: cSmoke,
-                            fontStyle: FontStyle.italic,
                           ),
                         ),
-                      ),
-                    ),
-                  _selectablePostText(
-                    text: post.content,
-                    style: TextStyle(
-                      fontSize: post.fontSize * _rpPostScale(),
-                      color:
-                          appSettings.textColourFor('post_content') ??
-                          post.textColor,
-                      fontStyle: post.italic
-                          ? FontStyle.italic
-                          : FontStyle.normal,
-                      fontWeight: post.bold ? FontWeight.bold : FontWeight.w300,
-                      height: 2.0,
-                    ),
-                    onAddToLog: _addToLogFromText,
-                    onSelectionChanged: _onSelectionChanged,
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Expanded(child: Divider(color: cAsh, height: 1)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Text(
-                          '${post.wordCount}w',
+                        Text(
+                          post.locationName!.toUpperCase(),
                           style: TextStyle(
                             fontFamily: 'monospace',
-                            fontSize: 8,
+                            fontSize: 10,
+                            letterSpacing: 2,
                             color:
-                                appSettings.textColourFor('timestamp') ??
+                                appSettings.textColourFor('location_name') ??
                                 cSmoke,
-                            letterSpacing: 1,
                           ),
                         ),
-                      ),
-                      const Expanded(child: Divider(color: cAsh, height: 1)),
+                      ],
                     ],
                   ),
-                ],
-              ),
-            );
-          },
-        ),
-      );
+                ),
+                const SizedBox(height: 8),
+                if (post.quotedContent != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          left: BorderSide(color: cSmoke, width: 2),
+                        ),
+                      ),
+                      child: Text(
+                        '${post.quotedAuthor ?? ""}: ${post.quotedContent}...',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: cSmoke,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ),
+                _selectablePostText(
+                  text: post.content,
+                  runs: post.runs,
+                  style: TextStyle(
+                    fontSize: post.fontSize * _rpPostScale(),
+                    color:
+                        appSettings.textColourFor('post_content') ??
+                        post.textColor,
+                    fontStyle: post.italic
+                        ? FontStyle.italic
+                        : FontStyle.normal,
+                    fontWeight: post.bold ? FontWeight.bold : FontWeight.w300,
+                    height: 2.0,
+                  ),
+                  onAddToLog: _addToLogFromText,
+                  onSelectionChanged: _onSelectionChanged,
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Expanded(child: Divider(color: cAsh, height: 1)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Text(
+                        '${post.wordCount}w',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 8,
+                          color:
+                              appSettings.textColourFor('timestamp') ?? cSmoke,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                    const Expanded(child: Divider(color: cAsh, height: 1)),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   void _openToolsPanel() {
@@ -3636,104 +3744,6 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                 if (confirmed == true) _deletePost(post.id);
               }, color: cEmber),
             ],
-            if (post.isUser) ...[
-              _actionTile(Icons.edit_outlined, 'Edit post', () {
-                Navigator.pop(context);
-                _editPost(post);
-              }),
-              _actionTile(Icons.delete_outline, 'Delete post', () async {
-                Navigator.pop(context);
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => Dialog(
-                    backgroundColor: cInk,
-                    shape: const RoundedRectangleBorder(),
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'DELETE POST?',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 9,
-                              color: cEmber,
-                              letterSpacing: 4,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'This cannot be undone.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: cMist,
-                              fontStyle: FontStyle.italic,
-                              height: 1.7,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () => Navigator.pop(ctx, false),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: cAsh),
-                                    ),
-                                    child: const Center(
-                                      child: Text(
-                                        'Cancel',
-                                        style: TextStyle(
-                                          fontFamily: 'monospace',
-                                          fontSize: 9,
-                                          color: cSmoke,
-                                          letterSpacing: 2,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () => Navigator.pop(ctx, true),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                    ),
-                                    color: cEmber,
-                                    child: const Center(
-                                      child: Text(
-                                        'Delete',
-                                        style: TextStyle(
-                                          fontFamily: 'monospace',
-                                          fontSize: 9,
-                                          color: cVoid,
-                                          letterSpacing: 2,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-                if (confirmed == true) _deletePost(post.id);
-              }, color: cEmber),
-            ],
-
             _actionTile(Icons.copy, 'Copy text', () {
               Clipboard.setData(ClipboardData(text: post.content));
               Navigator.pop(context);
@@ -3888,67 +3898,62 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   Widget _buildCollapsedEditor() {
     final charColor = _activeCharacter?.accentColor ?? cGold;
     return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.4),
-            border: const Border(top: BorderSide(color: cAsh)),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _editorExpanded = true),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: cAsh),
-                      color: cInk,
-                    ),
-                    child: Text(
-                      _draftSaved
-                          ? 'Draft restored...'
-                          : 'Continue the story...',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: _draftSaved
-                            ? charColor.withValues(alpha: 0.6)
-                            : cSmoke,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.4),
+        border: const Border(top: BorderSide(color: cAsh)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _editorExpanded = true),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: cAsh),
+                  color: cInk,
+                ),
+                child: Text(
+                  _draftSaved ? 'Draft restored...' : 'Continue the story...',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: _draftSaved
+                        ? charColor.withValues(alpha: 0.6)
+                        : cSmoke,
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
               ),
-              GestureDetector(
-                onTap: _showCharacterSwitcher,
-                child: Container(
-                  margin: const EdgeInsets.only(left: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: _activeCharacter != null
-                          ? charColor.withValues(alpha: 0.5)
-                          : cAsh,
-                    ),
-                    color: _activeCharacter != null
-                        ? charColor.withValues(alpha: 0.08)
-                        : Colors.transparent,
-                  ),
-                  child: Icon(
-                    Icons.person_outline,
-                    size: 16,
-                    color: _activeCharacter != null ? charColor : cSmoke,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
+          GestureDetector(
+            onTap: _showCharacterSwitcher,
+            child: Container(
+              margin: const EdgeInsets.only(left: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: _activeCharacter != null
+                      ? charColor.withValues(alpha: 0.5)
+                      : cAsh,
+                ),
+                color: _activeCharacter != null
+                    ? charColor.withValues(alpha: 0.08)
+                    : Colors.transparent,
+              ),
+              child: Icon(
+                Icons.person_outline,
+                size: 16,
+                color: _activeCharacter != null ? charColor : cSmoke,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -3956,394 +3961,373 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     final charColor = _activeCharacter?.accentColor ?? _fontColor;
     final displayName = _activeCharacter?.name ?? 'You';
     return Container(
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(
-              alpha: 0.6,
-            ), // Slightly darker for typing contrast
-            border: const Border(top: BorderSide(color: cAsh)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_editingPostId != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: cIce.withValues(alpha: 0.06),
-                    border: Border(
-                      bottom: BorderSide(color: cIce.withValues(alpha: 0.2)),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.edit_outlined, size: 12, color: cIce),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'editing post',
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 9,
-                          color: cIce,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                      const Spacer(),
-                      LoreTap(
-                        onTap: () => setState(() {
-                          _editingPostId = null;
-                          _editorCtrl.text = '';
-                        }),
-                        child: const Text(
-                          'cancel',
-                          style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 8,
-                            color: cSmoke,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (_activeCharacter != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: charColor.withValues(alpha: 0.06),
-                    border: Border(
-                      bottom: BorderSide(
-                        color: charColor.withValues(alpha: 0.2),
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: charColor,
-                        ),
-                      ),
-                      Text(
-                        displayName,
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 9,
-                          color: charColor,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () => setState(() => _activeCharacter = null),
-                        child: const Text(
-                          'exit character',
-                          style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 8,
-                            color: cSmoke,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (_availableLocations.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
-                  ),
-                  decoration: const BoxDecoration(
-                    border: Border(bottom: BorderSide(color: cAsh)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on_outlined,
-                        size: 12,
-                        color: cSmoke,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              GestureDetector(
-                                onTap: () =>
-                                    setState(() => _activeLocation = null),
-                                child: Container(
-                                  margin: const EdgeInsets.only(right: 6),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: _activeLocation == null
-                                        ? cSmoke.withValues(alpha: 0.2)
-                                        : Colors.transparent,
-                                    border: Border.all(
-                                      color: _activeLocation == null
-                                          ? cSmoke
-                                          : cAsh,
-                                    ),
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                  child: const Text(
-                                    'none',
-                                    style: TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 8,
-                                      color: cSmoke,
-                                      letterSpacing: 1,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              ..._availableLocations.map(
-                                (loc) => GestureDetector(
-                                  onTap: () {
-                                    setState(() => _activeLocation = loc);
-                                    if (widget.sessionId.isNotEmpty) {
-                                      _log.addEvent(
-                                        title: 'Location Â· $loc',
-                                        body: 'The scene moved to $loc.',
-                                        source: 'location',
-                                        meta: {'locationName': loc},
-                                      );
-                                    }
-                                  },
-                                  child: Container(
-                                    margin: const EdgeInsets.only(right: 6),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _activeLocation == loc
-                                          ? cGold.withValues(alpha: 0.15)
-                                          : Colors.transparent,
-                                      border: Border.all(
-                                        color: _activeLocation == loc
-                                            ? cGold.withValues(alpha: 0.5)
-                                            : cAsh,
-                                      ),
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                    child: Text(
-                                      loc,
-                                      style: TextStyle(
-                                        fontFamily: 'monospace',
-                                        fontSize: 8,
-                                        color: _activeLocation == loc
-                                            ? cGold
-                                            : cSmoke,
-                                        letterSpacing: 1,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (_quotingPostId != null) _buildQuotePreview(),
-              _buildFormattingBar(),
-              Container(
-                constraints: const BoxConstraints(maxHeight: 180),
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: ScrollConfiguration(
-                  behavior: NoGlowBehavior(),
-                  child: Focus(
-                    onKeyEvent: (node, event) {
-                      final isDesktop =
-                          MediaQuery.sizeOf(context).width >= 900 || kIsWeb;
-                      if (!isDesktop) return KeyEventResult.ignored;
-                      if (event is KeyDownEvent) {
-                        final isCtrl =
-                            HardwareKeyboard.instance.isControlPressed ||
-                            HardwareKeyboard.instance.isMetaPressed;
-                        if (isCtrl &&
-                            event.logicalKey == LogicalKeyboardKey.keyB) {
-                          if (MediaQuery.sizeOf(context).width >= 900) {
-                            setState(
-                              () =>
-                                  _desktopLogCollapsed = !_desktopLogCollapsed,
-                            );
-                          } else {
-                            _openLog();
-                          }
-                          return KeyEventResult.handled;
-                        }
-                        if (isCtrl &&
-                            event.logicalKey == LogicalKeyboardKey.keyT) {
-                          if (MediaQuery.sizeOf(context).width >= 900) {
-                            setState(
-                              () => _desktopToolsCollapsed =
-                                  !_desktopToolsCollapsed,
-                            );
-                          } else {
-                            _openToolsPanel();
-                          }
-                          return KeyEventResult.handled;
-                        }
-                        final isEnter =
-                            event.logicalKey == LogicalKeyboardKey.enter ||
-                            event.logicalKey == LogicalKeyboardKey.numpadEnter;
-                        final isShift =
-                            HardwareKeyboard.instance.isShiftPressed;
-
-                        if (isEnter) {
-                          if (appSettings.enterToSend && !isShift) {
-                            _submitPost();
-                            return KeyEventResult.handled;
-                          } else if (!appSettings.enterToSend && isShift) {
-                            _submitPost();
-                            return KeyEventResult.handled;
-                          }
-                        }
-                      }
-                      return KeyEventResult.ignored;
-                    },
-                    child: TextField(
-                      controller: _editorCtrl,
-                      focusNode: _editorFocus,
-                      maxLines: null,
-                      autofocus: true,
-                      style: TextStyle(
-                        fontSize: _fontSize * _rpEditorScale(),
-                        color: _activeCharacter != null
-                            ? charColor
-                            : _fontColor,
-                        fontStyle: _italic
-                            ? FontStyle.italic
-                            : FontStyle.normal,
-                        fontWeight: _bold ? FontWeight.bold : FontWeight.w300,
-                        height: 1.8,
-                      ),
-                      decoration: const InputDecoration(
-                        hintText: 'Write your post...',
-                        hintStyle: TextStyle(
-                          fontSize: 14,
-                          color: cSmoke,
-                          fontStyle: FontStyle.italic,
-                        ),
-                        border: InputBorder.none,
-                      ),
-                      cursorColor: cGold,
-                    ),
-                  ),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(
+          alpha: 0.6,
+        ), // Slightly darker for typing contrast
+        border: const Border(top: BorderSide(color: cAsh)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_editingPostId != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: BoxDecoration(
+                color: cIce.withValues(alpha: 0.06),
+                border: Border(
+                  bottom: BorderSide(color: cIce.withValues(alpha: 0.2)),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
-                child: Row(
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          '$_wordCount words',
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 10,
-                            color: cSmoke,
-                            letterSpacing: 1,
+              child: Row(
+                children: [
+                  const Icon(Icons.edit_outlined, size: 12, color: cIce),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'editing post',
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 9,
+                      color: cIce,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const Spacer(),
+                  LoreTap(
+                    onTap: () => setState(() {
+                      _editingPostId = null;
+                      _editorCtrl.text = '';
+                    }),
+                    child: const Text(
+                      'cancel',
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 8,
+                        color: cSmoke,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (_activeCharacter != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: BoxDecoration(
+                color: charColor.withValues(alpha: 0.06),
+                border: Border(
+                  bottom: BorderSide(color: charColor.withValues(alpha: 0.2)),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: charColor,
+                    ),
+                  ),
+                  Text(
+                    displayName,
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 9,
+                      color: charColor,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => setState(() => _activeCharacter = null),
+                    child: const Text(
+                      'exit character',
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 8,
+                        color: cSmoke,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (_availableLocations.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: cAsh)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.location_on_outlined,
+                    size: 12,
+                    color: cSmoke,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () => setState(() => _activeLocation = null),
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _activeLocation == null
+                                    ? cSmoke.withValues(alpha: 0.2)
+                                    : Colors.transparent,
+                                border: Border.all(
+                                  color: _activeLocation == null
+                                      ? cSmoke
+                                      : cAsh,
+                                ),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                              child: const Text(
+                                'none',
+                                style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 8,
+                                  color: cSmoke,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                        if (_draftSaved && _editorCtrl.text.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          const Icon(Icons.circle, size: 5, color: cVine),
-                          const SizedBox(width: 4),
-                          const Text(
-                            'saved',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 8,
-                              color: cVine,
-                              letterSpacing: 1,
+                          ..._availableLocations.map(
+                            (loc) => GestureDetector(
+                              onTap: () {
+                                setState(() => _activeLocation = loc);
+                                if (widget.sessionId.isNotEmpty) {
+                                  _log.addEvent(
+                                    title: 'Location Â· $loc',
+                                    body: 'The scene moved to $loc.',
+                                    source: 'location',
+                                    meta: {'locationName': loc},
+                                  );
+                                }
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(right: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _activeLocation == loc
+                                      ? cGold.withValues(alpha: 0.15)
+                                      : Colors.transparent,
+                                  border: Border.all(
+                                    color: _activeLocation == loc
+                                        ? cGold.withValues(alpha: 0.5)
+                                        : cAsh,
+                                  ),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                                child: Text(
+                                  loc,
+                                  style: TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 8,
+                                    color: _activeLocation == loc
+                                        ? cGold
+                                        : cSmoke,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ],
-                      ],
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: () => setState(() {
-                        _editorExpanded = false;
-                        _quotingPostId = null;
-                        _editingPostId = null;
-                        _editorCtrl.text = '';
-                      }),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: cAsh),
-                        ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 10,
-                            color: cSmoke,
-                            letterSpacing: 1,
-                          ),
-                        ),
                       ),
                     ),
-                    LoreTap(
-                      onTap: _sending ? null : _submitPost,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        color: _editorCtrl.text.trim().isEmpty
-                            ? cAsh
-                            : _editingPostId != null
-                            ? cIce.withValues(alpha: 0.8)
-                            : cParchment,
-                        child: Text(
-                          _sending
-                              ? 'Posting...'
-                              : _editingPostId != null
-                              ? 'Save'
-                              : 'Post',
-                          style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 10,
-                            color: _editorCtrl.text.trim().isEmpty
-                                ? cSmoke
-                                : cVoid,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
+                ],
+              ),
+            ),
+          if (_quotingPostId != null) _buildQuotePreview(),
+          _buildFormattingBar(),
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: ScrollConfiguration(
+              behavior: NoGlowBehavior(),
+              child: Focus(
+                onKeyEvent: (node, event) {
+                  final isDesktop =
+                      MediaQuery.sizeOf(context).width >= 900 || kIsWeb;
+                  if (!isDesktop) return KeyEventResult.ignored;
+                  if (event is KeyDownEvent) {
+                    final isCtrl =
+                        HardwareKeyboard.instance.isControlPressed ||
+                        HardwareKeyboard.instance.isMetaPressed;
+                    if (isCtrl && event.logicalKey == LogicalKeyboardKey.keyB) {
+                      if (MediaQuery.sizeOf(context).width >= 900) {
+                        setState(
+                          () => _desktopLogCollapsed = !_desktopLogCollapsed,
+                        );
+                      } else {
+                        _openLog();
+                      }
+                      return KeyEventResult.handled;
+                    }
+                    if (isCtrl && event.logicalKey == LogicalKeyboardKey.keyT) {
+                      if (MediaQuery.sizeOf(context).width >= 900) {
+                        setState(
+                          () =>
+                              _desktopToolsCollapsed = !_desktopToolsCollapsed,
+                        );
+                      } else {
+                        _openToolsPanel();
+                      }
+                      return KeyEventResult.handled;
+                    }
+                    final isEnter =
+                        event.logicalKey == LogicalKeyboardKey.enter ||
+                        event.logicalKey == LogicalKeyboardKey.numpadEnter;
+                    final isShift = HardwareKeyboard.instance.isShiftPressed;
+
+                    if (isEnter) {
+                      if (appSettings.enterToSend && !isShift) {
+                        _submitFromBox();
+                        return KeyEventResult.handled;
+                      } else if (!appSettings.enterToSend && isShift) {
+                        _submitFromBox();
+                        return KeyEventResult.handled;
+                      }
+                    }
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: SuperEditorBox(
+                  key: _boxKey,
+                  initialText: _editorCtrl.text,
+                  initialRuns: _pendingRuns,
+                  characterColor: _activeCharacter != null
+                      ? _activeCharacter!.accentColor
+                      : _fontColor,
+                  characterName: _activeCharacter?.name ?? '',
+                  onChanged: (plain) {
+                    _pendingPlain = plain;
+                    // Keep legacy draft / word-count / Post-button logic working
+                    if (_editorCtrl.text != plain) {
+                      _editorCtrl.text = plain;
+                    }
+                  },
+                  onRunsChanged: (runs) {
+                    _pendingRuns = runs;
+                  },
+                  onPost: (runs, plain) {
+                    _pendingRuns = runs;
+                    _pendingPlain = plain;
+                    _submitFromBox();
+                  },
                 ),
               ),
-            ],
+            ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+            child: Row(
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      '$_wordCount words',
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 10,
+                        color: cSmoke,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    if (_draftSaved && _editorCtrl.text.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      const Icon(Icons.circle, size: 5, color: cVine),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'saved',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 8,
+                          color: cVine,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => setState(() {
+                    _editorExpanded = false;
+                    _quotingPostId = null;
+                    _editingPostId = null;
+                    _editorCtrl.text = '';
+                    _pendingPlain = '';
+                    _pendingRuns = null;
+                    _boxKey = UniqueKey();
+                  }),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(border: Border.all(color: cAsh)),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 10,
+                        color: cSmoke,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                ),
+                LoreTap(
+                  onTap: _sending ? null : _submitFromBox,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    color: _editorCtrl.text.trim().isEmpty
+                        ? cAsh
+                        : _editingPostId != null
+                        ? cIce.withValues(alpha: 0.8)
+                        : cParchment,
+                    child: Text(
+                      _sending
+                          ? 'Posting...'
+                          : _editingPostId != null
+                          ? 'Save'
+                          : 'Post',
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 10,
+                        color: _editorCtrl.text.trim().isEmpty ? cSmoke : cVoid,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -4398,6 +4382,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   Widget _buildFormattingBar() {
+    // Only the character switcher now - B/I/Size/Colour live in SuperEditorBox
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -4443,74 +4428,6 @@ class _RPRoomScreenState extends State<RPRoomScreen>
               ),
             ),
           ),
-          const SizedBox(width: 4),
-          _fmtBtn(
-            'B',
-            _bold,
-            () => setState(() => _bold = !_bold),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              color: cMist,
-            ),
-          ),
-          _fmtBtn(
-            'I',
-            _italic,
-            () => setState(() => _italic = !_italic),
-            style: const TextStyle(
-              fontStyle: FontStyle.italic,
-              fontSize: 13,
-              color: cMist,
-            ),
-          ),
-          const SizedBox(width: 6),
-          _fmtLabel('Size'),
-          ...[12.0, 14.0, 16.0, 18.0, 22.0].map(
-            (s) => _fmtBtn(
-              s.toInt().toString(),
-              _fontSize == s,
-              () => setState(() => _fontSize = s),
-              style: const TextStyle(
-                fontSize: 10,
-                color: cMist,
-                fontFamily: 'monospace',
-              ),
-            ),
-          ),
-          if (_activeCharacter == null) ...[
-            const SizedBox(width: 6),
-            _fmtLabel('Colour'),
-            ...[
-              cParchment,
-              cGold,
-              cIce,
-              cEmber,
-              cMagic,
-              cVine,
-              Colors.white,
-              const Color(0xFFa0c4a0),
-            ].map(
-              (c) => GestureDetector(
-                onTap: () => setState(() => _fontColor = c),
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  decoration: BoxDecoration(
-                    color: c,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _fontColor == c
-                          ? Colors.white
-                          : Colors.transparent,
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -4900,7 +4817,10 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                               sounds.stopMoodSound();
                             } else {
                               // Preview: play current mood in chosen mode
-                              sounds.playMoodSound(_currentMood.name, mode: mode);
+                              sounds.playMoodSound(
+                                _currentMood.name,
+                                mode: mode,
+                              );
                             }
                             setState(() {});
                           },
@@ -4911,16 +4831,24 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                   ? cGold.withValues(alpha: 0.2)
                                   : Colors.transparent,
                               border: Border.all(
-                                color: appSettings.moodSoundMode == mode ? cGold : cAsh,
+                                color: appSettings.moodSoundMode == mode
+                                    ? cGold
+                                    : cAsh,
                               ),
                             ),
                             child: Text(
-                              mode == 'off' ? 'OFF' : mode == 'once' ? 'ONCE' : 'LOOP',
+                              mode == 'off'
+                                  ? 'OFF'
+                                  : mode == 'once'
+                                  ? 'ONCE'
+                                  : 'LOOP',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontFamily: 'monospace',
                                 fontSize: 9,
-                                color: appSettings.moodSoundMode == mode ? cGold : cSmoke,
+                                color: appSettings.moodSoundMode == mode
+                                    ? cGold
+                                    : cSmoke,
                                 letterSpacing: 1,
                               ),
                             ),
@@ -6438,6 +6366,7 @@ class _PostCardState extends State<_PostCard>
                     children: [
                       _selectablePostText(
                         text: post.content,
+                        runs: post.runs,
                         style: TextStyle(
                           fontSize: post.fontSize * _rpPostScale(),
                           color: post.textColor,

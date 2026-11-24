@@ -193,6 +193,7 @@ class CharacterEntry {
   final DateTime createdAt;
   Color accentColor;
   String? avatarUrl; // <--- Added
+  String ownerCode; // who created this character - empty = legacy / unknown
 
   CharacterEntry({
     required this.id,
@@ -209,6 +210,7 @@ class CharacterEntry {
     DateTime? createdAt,
     Color? accentColor,
     this.avatarUrl, // <--- Added
+    this.ownerCode = '',
   })  : createdAt = createdAt ?? DateTime.now(),
         accentColor = accentColor ?? const Color(0xFFC9A96E);
 
@@ -221,6 +223,7 @@ class CharacterEntry {
     'createdAt': createdAt.millisecondsSinceEpoch,
     'accentColor': accentColor.toARGB32(),
     'avatarUrl': avatarUrl, // <--- Added
+    'ownerCode': ownerCode,
   };
 
   factory CharacterEntry.fromJson(Map<String, dynamic> j) {
@@ -241,6 +244,7 @@ class CharacterEntry {
       createdAt: _parseCreatedAt(j['createdAt']),
       accentColor: _parseColor(j['accentColor'], const Color(0xFFC9A96E)),
       avatarUrl: j['avatarUrl'] as String?, // <--- Added
+      ownerCode: j['ownerCode'] as String? ?? '',
     );
   }
 }
@@ -362,17 +366,17 @@ extension DiceTypeExt on DiceType {
 class RPNote {
   final String id;
   String content;
-  String? tag; // e.g. "NPC", "Location", "Plot"
-  final DateTime createdAt;
+  String? contentDelta; // Make sure this is here
+  String? tag;
   bool isPinned;
 
   RPNote({
     required this.id,
     required this.content,
+    this.contentDelta,    // Make sure this is here
     this.tag,
-    DateTime? createdAt,
     this.isPinned = false,
-  }) : createdAt = createdAt ?? DateTime.now();
+  });
 }
 
 // ── SAMPLE DATA (empty — user creates their own) ──

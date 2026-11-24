@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../settings.dart';
 import '../models/world.dart';
+import '../note_editor_screen.dart';
 
 // ════════════════════════════════════════
 // RP TOOLS PANEL  (slide-up sheet)
@@ -60,10 +61,6 @@ class _RPToolsPanelState extends State<RPToolsPanel>
 
   // Note editing
     int _statsRevision = 0;
-  String? _editingNoteId;
-  final _noteCtrl = TextEditingController();
-  String? _noteTag;
-  final _noteTags = ['NPC', 'Location', 'Item', 'Plot', 'Other'];
 
   @override
   void initState() {
@@ -74,9 +71,31 @@ class _RPToolsPanelState extends State<RPToolsPanel>
   @override
   void dispose() {
     _tab.dispose();
-    _noteCtrl.dispose();
     super.dispose();
   }
+
+Future<void> _openNoteEditor({RPNote? note}) async {
+  final result = await Navigator.of(context).push<NoteEditorResult>(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => NoteEditorScreen(note: note),
+    ),
+  );
+  if (result == null) return;
+  setState(() {
+    if (result.deleted) {
+      widget.notes.removeWhere((n) => n.id == note?.id);
+    } else {
+      final saved = result.note!;
+      final idx = widget.notes.indexWhere((n) => n.id == saved.id);
+      if (idx >= 0) {
+        widget.notes[idx] = saved;
+      } else {
+        widget.notes.insert(0, saved);
+      }
+    }
+  });
+}
 
   @override
   Widget build(BuildContext context) => Container(
@@ -186,12 +205,11 @@ class _RPToolsPanelState extends State<RPToolsPanel>
         ),
       ),
       // Add note bar
-      _editingNoteId == 'new' ? _buildNoteEditor() : _buildAddNoteBar(),
+      _buildAddNoteBar(),
     ],
   );
 
-  Widget _buildNoteCard(RPNote note) {
-    final editing = _editingNoteId == note.id;
+    Widget _buildNoteCard(RPNote note) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -207,153 +225,63 @@ class _RPToolsPanelState extends State<RPToolsPanel>
           bottom: const BorderSide(color: cAsh),
         ),
       ),
-      child: editing
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildTagRow(),
-                TextField(
-                  controller: _noteCtrl,
-                  maxLines: null,
-                  autofocus: true,
-                  style: TextStyle(
-                    fontSize: appSettings.baseFontSize,
-                    color: cParchment,
-                    height: 1.7,
-                  ),
-                  decoration: const InputDecoration(border: InputBorder.none),
-                  cursorColor: cGold,
-                ),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        note.content = _noteCtrl.text;
-                        note.tag = _noteTag;
-                        setState(() => _editingNoteId = null);
-                      },
-                      child: const Text(
-                        'Done',
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 10,
-                          color: cGold,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: () => setState(() {
-                        widget.notes.remove(note);
-                        _editingNoteId = null;
-                      }),
-                      child: const Icon(
-                        Icons.delete_outline,
-                        size: 16,
-                        color: cEmber,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            )
-          : GestureDetector(
-              onTap: () => setState(() {
-                _editingNoteId = note.id;
-                _noteCtrl.text = note.content;
-                _noteTag = note.tag;
-              }),
-              child: Row(
+      child: GestureDetector(
+        onTap: () => _openNoteEditor(note: note),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (note.tag != null)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Text(
-                              note.tag!.toUpperCase(),
-                              style: const TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 8,
-                                color: cGold,
-                                letterSpacing: 2,
-                              ),
-                            ),
-                          ),
-                        Text(
-                          note.content,
-                          style: TextStyle(
-                            fontSize: appSettings.baseFontSize - 1,
-                            color: cMist,
-                            height: 1.6,
-                            fontStyle: FontStyle.italic,
-                          ),
+                  if (note.tag != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        note.tag!.toUpperCase(),
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 8,
+                          color: cGold,
+                          letterSpacing: 2,
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                  GestureDetector(
-                    onTap: () => setState(() => note.isPinned = !note.isPinned),
-                    child: Icon(
-                      note.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                      size: 14,
-                      color: note.isPinned ? cGold : cSmoke,
+                  Text(
+                    note.content,
+                    maxLines: 6,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: appSettings.baseFontSize - 1,
+                      color: cMist,
+                      height: 1.6,
+                      fontStyle: FontStyle.italic,
                     ),
                   ),
                 ],
               ),
             ),
-    );
-  }
-
-  Widget _buildTagRow() => SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: Row(
-      children: [
-        _tagChip(null, 'No tag'),
-        ..._noteTags.map((t) => _tagChip(t, t)),
-      ],
-    ),
-  );
-
-  Widget _tagChip(String? tag, String label) {
-    final active = _noteTag == tag;
-    return GestureDetector(
-      onTap: () => setState(() => _noteTag = tag),
-      child: Container(
-        margin: const EdgeInsets.only(right: 6, bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          border: Border.all(color: active ? cGold : cAsh),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 8,
-            letterSpacing: 1,
-            color: active ? cGold : cSmoke,
-          ),
+            GestureDetector(
+              onTap: () => setState(() => note.isPinned = !note.isPinned),
+              child: Icon(
+                note.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                size: 14,
+                color: note.isPinned ? cGold : cSmoke,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildAddNoteBar() => Container(
+    Widget _buildAddNoteBar() => Container(
     padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
     decoration: const BoxDecoration(
       border: Border(top: BorderSide(color: cAsh)),
     ),
     child: GestureDetector(
-      onTap: () => setState(() {
-        _editingNoteId = 'new';
-        _noteCtrl.clear();
-        _noteTag = null;
-      }),
+      onTap: () => _openNoteEditor(),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(border: Border.all(color: cAsh)),
@@ -372,86 +300,6 @@ class _RPToolsPanelState extends State<RPToolsPanel>
           ],
         ),
       ),
-    ),
-  );
-
-  Widget _buildNoteEditor() => Container(
-    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-    decoration: const BoxDecoration(
-      border: Border(top: BorderSide(color: cAsh)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildTagRow(),
-        TextField(
-          controller: _noteCtrl,
-          maxLines: 3,
-          autofocus: true,
-          style: TextStyle(
-            fontSize: appSettings.baseFontSize,
-            color: cParchment,
-            height: 1.7,
-          ),
-          decoration: const InputDecoration(
-            hintText: 'What do you want to remember?',
-            hintStyle: TextStyle(color: cSmoke, fontStyle: FontStyle.italic),
-            border: InputBorder.none,
-          ),
-          cursorColor: cGold,
-        ),
-        Row(
-          children: [
-            GestureDetector(
-              onTap: () => setState(() => _editingNoteId = null),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 10,
-                  color: cSmoke,
-                  letterSpacing: 1,
-                ),
-              ),
-            ),
-            const Spacer(),
-            GestureDetector(
-              onTap: () {
-                final text = _noteCtrl.text.trim();
-                if (text.isEmpty) return;
-                setState(() {
-                  widget.notes.insert(
-                    0,
-                    RPNote(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      content: text,
-                      tag: _noteTag,
-                    ),
-                  );
-                  _editingNoteId = null;
-                  _noteCtrl.clear();
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                color: cParchment,
-                child: const Text(
-                  'Save',
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 10,
-                    color: cVoid,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
     ),
   );
 
@@ -1313,14 +1161,17 @@ class _RPToolsPanelState extends State<RPToolsPanel>
             ],
           ),
         ),
-        GestureDetector(
-          onTap: () => widget.onRemoveCharacter(c),
-          child: const Icon(
-            Icons.remove_circle_outline,
-            size: 16,
-            color: cSmoke,
+        // Remove net as dit MY character is (in my Sandbox by naam).
+        // Partner se characters wys GEEN Remove nie - jy kan hulle nie uit die RP haal nie.
+        if (widget.availableCharacters.any((a) => a.name.trim().toLowerCase() == c.name.trim().toLowerCase()))
+          GestureDetector(
+            onTap: () => widget.onRemoveCharacter(c),
+            child: const Icon(
+              Icons.remove_circle_outline,
+              size: 16,
+              color: cSmoke,
+            ),
           ),
-        ),
       ],
     ),
   );

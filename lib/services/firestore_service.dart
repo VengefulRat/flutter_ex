@@ -326,7 +326,7 @@ class FirestoreService {
   // POSTS (RP Room)
   // ════════════════════════════════════════
 
-    Stream<List<Map<String, dynamic>>> sessionPosts(String sessionId) {
+  Stream<List<Map<String, dynamic>>> sessionPosts(String sessionId) {
     return _db
         .collection('sessions')
         .doc(sessionId)
@@ -334,7 +334,11 @@ class FirestoreService {
         .snapshots()
         .asyncMap((snap) async {
           final sessionKey = await _sessionKey(sessionId);
-          return _decryptDocs(snap, sessionKey, ['content', 'quotedContent']);
+          return _decryptDocs(snap, sessionKey, [
+            'content',
+            'quotedContent',
+            'contentRuns',
+          ]);
         });
   }
 
@@ -344,6 +348,8 @@ class FirestoreService {
     String? chapter,
     String? quotedPostId,
     String? quotedContent,
+    String? contentDelta,
+    String? contentRuns,
     String? quotedAuthor,
     String? characterName,
     String? locationName,
@@ -379,6 +385,13 @@ class FirestoreService {
           .collection('posts')
           .doc();
 
+      String? storedRuns;
+      String? storedRunsIv;
+      if (contentRuns != null && contentRuns.isNotEmpty) {
+        final rEnc = await _crypto.encryptContent(contentRuns, sessionKey);
+        storedRuns = rEnc['cipher'];
+        storedRunsIv = rEnc['iv'];
+      }
       batch.set(postRef, {
         'authorCode': code,
         'authorName': name,
@@ -386,6 +399,9 @@ class FirestoreService {
         'locationName': locationName,
         'textColor': textColor?.toARGB32(),
         'content': storedContent,
+        'contentDelta': contentDelta,
+        'contentRuns': storedRuns,
+        'contentRunsIv': storedRunsIv,
         'contentIv': storedIv,
         'quotedPostId': quotedPostId,
         'quotedContent': storedQuotedContent,
@@ -405,7 +421,9 @@ class FirestoreService {
       });
 
       await batch.commit();
-      print('[addPost] Success id=${postRef.id} chapter=${chapter ?? 'Chapter 1'}');
+      print(
+        '[addPost] Success id=${postRef.id} chapter=${chapter ?? 'Chapter 1'}',
+      );
 
       final partnerCode = await _getPartnerCode(sessionId, code);
       if (partnerCode != null) {
@@ -432,10 +450,18 @@ class FirestoreService {
   Future<void> editPost({
     required String sessionId,
     required String postId,
+    String? contentRuns,
     required String newContent,
     Color? textColor,
   }) async {
     final sessionKey = await _requireSessionKey(sessionId);
+    String? storedRuns;
+    String? storedRunsIv;
+    if (contentRuns != null && contentRuns.isNotEmpty) {
+      final rEnc = await _crypto.encryptContent(contentRuns, sessionKey);
+      storedRuns = rEnc['cipher'];
+      storedRunsIv = rEnc['iv'];
+    }
     final enc = await _crypto.encryptContent(newContent, sessionKey);
     await _db
         .collection('sessions')
@@ -444,6 +470,8 @@ class FirestoreService {
         .doc(postId)
         .update({
           'content': enc['cipher']!,
+          'contentRuns': storedRuns,
+          'contentRunsIv': storedRunsIv,
           'contentIv': enc['iv'],
           'textColor': textColor?.toARGB32(),
           'encrypted': true,
@@ -472,7 +500,7 @@ class FirestoreService {
   // BRAINSTORM MESSAGES
   // ════════════════════════════════════════
 
-    Stream<List<Map<String, dynamic>>> brainstormMessages(String sessionId) {
+  Stream<List<Map<String, dynamic>>> brainstormMessages(String sessionId) {
     return _db
         .collection('sessions')
         .doc(sessionId)
@@ -545,7 +573,7 @@ class FirestoreService {
   // OOC MESSAGES
   // ════════════════════════════════════════
 
-    Stream<List<Map<String, dynamic>>> oocMessages(String sessionId) {
+  Stream<List<Map<String, dynamic>>> oocMessages(String sessionId) {
     return _db
         .collection('sessions')
         .doc(sessionId)
@@ -600,52 +628,84 @@ class FirestoreService {
   }
 
   // SHARED SESSION LOG — sessions/{id}/log/{entryId}
-// Encrypted with the per-session key. Allowlist only.
-// NEVER writes: importedCharacterIds, importedWorldIds, Sandbox,
-// or the "write as" selection. Those stay local, per-device.
+  // Encrypted with the per-session key. Allowlist only.
+  // NEVER writes: importedCharacterIds, importedWorldIds, Sandbox,
+  // or the "write as" selection. Those stay local, per-device.
 
-Map<String, dynamic> _sanitizeLogMap(Map<String, dynamic> input) {
-  final out = <String, dynamic>{};
-  for (final e in input.entries) {
-    final k = e.key.toLowerCase();
-    if (k.contains('key') || k.contains('token') || k.contains('code') ||
-        k.contains('password') || k.contains('secret') || k.contains('private')) {
-      continue;
+  Map<String, dynamic> _sanitizeLogMap(Map<String, dynamic> input) {
+    final out = <String, dynamic>{};
+    for (final e in input.entries) {
+      final k = e.key.toLowerCase();
+      if (k.contains('key') ||
+          k.contains('token') ||
+          k.contains('code') ||
+          k.contains('password') ||
+          k.contains('secret') ||
+          k.contains('private')) {
+        continue;
+      }
+      final v = e.value;
+      if (v is Map<String, dynamic>) {
+        out[e.key] = _sanitizeLogMap(v);
+      } else if (v is List) {
+        out[e.key] = v
+            .map((x) => x is Map<String, dynamic> ? _sanitizeLogMap(x) : x)
+            .toList();
+      } else {
+        out[e.key] = v;
+      }
     }
-    final v = e.value;
-    if (v is Map<String, dynamic>) {
-      out[e.key] = _sanitizeLogMap(v);
-    } else if (v is List) {
-      out[e.key] = v.map((x) => x is Map<String, dynamic> ? _sanitizeLogMap(x) : x).toList();
-    } else {
-      out[e.key] = v;
+    return out;
+  }
+
+  Future<void> upsertLogEntry({
+    required String sessionId,
+    required Map<String, dynamic> entryJson,
+  }) async {
+    final sessionKey = await _requireSessionKey(sessionId);
+    const allowed = {
+      'id',
+      'type',
+      'title',
+      'body',
+      'createdAt',
+      'role',
+      'customTag',
+      'characterData',
+      'worldData',
+    };
+    final safe = <String, dynamic>{};
+    for (final k in allowed) {
+      if (entryJson.containsKey(k)) safe[k] = entryJson[k];
     }
+    final enc = await _crypto.encryptContent(
+      jsonEncode(_sanitizeLogMap(safe)),
+      sessionKey,
+    );
+    await _db
+        .collection('sessions')
+        .doc(sessionId)
+        .collection('log')
+        .doc(entryJson['id'] as String)
+        .set({
+          'content': enc['cipher'],
+          'contentIv': enc['iv'],
+          'encrypted': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
   }
-  return out;
-}
 
-Future<void> upsertLogEntry({
-  required String sessionId,
-  required Map<String, dynamic> entryJson,
-}) async {
-  final sessionKey = await _requireSessionKey(sessionId);
-  const allowed = {'id', 'type', 'title', 'body', 'createdAt', 'role', 'customTag', 'characterData', 'worldData'};
-  final safe = <String, dynamic>{};
-  for (final k in allowed) {
-    if (entryJson.containsKey(k)) safe[k] = entryJson[k];
+  Future<void> deleteLogEntry({
+    required String sessionId,
+    required String entryId,
+  }) async {
+    await _db
+        .collection('sessions')
+        .doc(sessionId)
+        .collection('log')
+        .doc(entryId)
+        .delete();
   }
-  final enc = await _crypto.encryptContent(jsonEncode(_sanitizeLogMap(safe)), sessionKey);
-  await _db.collection('sessions').doc(sessionId).collection('log').doc(entryJson['id'] as String).set({
-    'content': enc['cipher'],
-    'contentIv': enc['iv'],
-    'encrypted': true,
-    'updatedAt': FieldValue.serverTimestamp(),
-  });
-}
-
-Future<void> deleteLogEntry({required String sessionId, required String entryId}) async {
-  await _db.collection('sessions').doc(sessionId).collection('log').doc(entryId).delete();
-}
 
   Stream<List<Map<String, dynamic>>> logEntries(String sessionId) {
     return _db
@@ -656,11 +716,13 @@ Future<void> deleteLogEntry({required String sessionId, required String entryId}
         .asyncMap((snap) async {
           final sessionKey = await _sessionKey(sessionId);
           final docs = await _decryptDocs(snap, sessionKey, ['content']);
-          
+
           final out = <Map<String, dynamic>>[];
           for (final d in docs) {
             if (d['content'] != null && d['content'] != '[encrypted]') {
-              try { out.add(Map<String, dynamic>.from(jsonDecode(d['content']))); } catch (_) {}
+              try {
+                out.add(Map<String, dynamic>.from(jsonDecode(d['content'])));
+              } catch (_) {}
             }
           }
           return out;
@@ -687,12 +749,13 @@ Future<void> deleteLogEntry({required String sessionId, required String entryId}
           }).toList();
 
           // Filter based on the user's Alert Settings
-                    return all.where((n) {
+          return all.where((n) {
             final type = n['type'] as String? ?? '';
             if (type == 'rp_post' && !appSettings.notifRpPost) return false;
             if (type == 'ooc_message' && !appSettings.notifOoc) return false;
-            if (type == 'brainstorm_message' && !appSettings.notifBrainstorm) return false;
-            
+            if (type == 'brainstorm_message' && !appSettings.notifBrainstorm)
+              return false;
+
             // These two were previously ignored by the backend!
             if (type == 'interest' && !appSettings.notifInterest) return false;
             if (type == 'accepted' && !appSettings.notifNewPost) return false;
@@ -1151,7 +1214,8 @@ Future<void> deleteLogEntry({required String sessionId, required String entryId}
       rethrow;
     }
   }
-    // ── Helper to decrypt a list of docs ──
+
+  // ── Helper to decrypt a list of docs ──
   Future<List<Map<String, dynamic>>> _decryptDocs(
     QuerySnapshot snap,
     dynamic sessionKey,

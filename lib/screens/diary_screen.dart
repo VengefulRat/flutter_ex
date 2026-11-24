@@ -9,6 +9,7 @@ import '../theme.dart';
 import '../widgets/colour_picker.dart';
 import '../settings.dart';
 import '../models/world.dart';
+import '../services/sandbox_sync.dart';
 import 'sandbox_screen.dart';
 import '../services/auth_service.dart';
 import '../widgets/card_frame.dart';
@@ -1384,6 +1385,7 @@ class _NewEntrySetupState extends State<_NewEntrySetup> {
             onSave: (c) {
               setState(() => _allChars.add(c));
               SandboxStorage.saveCharacters(_allChars);
+              SandboxSync.pushCharacters(_allChars); // Diary chars must also push to cloud, else mobile never sees them
             },
           ))),
       child: Container(
