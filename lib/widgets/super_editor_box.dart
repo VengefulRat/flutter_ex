@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:super_editor/super_editor.dart';
 
-
-
 class EditorRun {
   final String text;
   final bool bold;
@@ -10,6 +8,8 @@ class EditorRun {
   final bool underline;
   final int color;
   final double size;
+  final String? speaker;
+
   const EditorRun({
     required this.text,
     this.bold = false,
@@ -17,6 +17,7 @@ class EditorRun {
     this.underline = false,
     required this.color,
     required this.size,
+    this.speaker,
   });
 }
 
@@ -54,6 +55,8 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
   double _fontSize = 16;
   int _nodeCounter = 0;
   late Color _fontColor;
+  String? _lastSpeaker;
+  final List<Map<String, Object?>> _speakerMarks = [];
   final List<Color> _palette = const [
     Colors.white,
     Colors.black,
@@ -75,6 +78,8 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
   void initState() {
     super.initState();
     _fontColor = Colors.white;
+    _lastSpeaker = widget.characterName.isEmpty ? null : widget.characterName;
+    _speakerMarks.add({'offset': 0, 'speaker': _lastSpeaker});
     _doc = MutableDocument(
       nodes: [
         ParagraphNode(
@@ -132,6 +137,20 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
   }
 
   @override
+  void didUpdateWidget(covariant SuperEditorBox oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final newSpeaker = widget.characterName.isEmpty
+        ? null
+        : widget.characterName;
+
+    if (newSpeaker != _lastSpeaker) {
+      _speakerMarks.add({'offset': _speakerOffset(), 'speaker': newSpeaker});
+      _lastSpeaker = newSpeaker;
+    }
+  }
+
+  @override
   void dispose() {
     _doc.removeListener(_docListener);
     _editor.dispose();
@@ -140,6 +159,18 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
   }
 
   String get plainText => _doc.toPlainText();
+  int _speakerOffset() {
+    int offset = 0;
+
+    for (final node in _doc) {
+      if (node is TextNode) {
+        offset += node.text.toPlainText().length;
+      }
+    }
+
+    return offset;
+  }
+
   List<EditorRun> get runs {
     final out = <EditorRun>[];
     for (final node in _doc) {
@@ -148,7 +179,10 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
       final plain = attributed.toPlainText();
       if (plain.isEmpty) continue;
       // Build per-character attribution sets from spans, then group runs
-      final perChar = List<Set<Attribution>>.generate(plain.length, (_) => <Attribution>{});
+      final perChar = List<Set<Attribution>>.generate(
+        plain.length,
+        (_) => <Attribution>{},
+      );
       for (final span in attributed.computeAttributionSpans()) {
         final start = span.start.clamp(0, plain.length);
         final end = span.end.clamp(0, plain.length - 1);
@@ -174,17 +208,62 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
           if (a is ColorAttribution) c = a.color;
           if (a is FontSizeAttribution) s = a.fontSize;
         }
-        out.add(EditorRun(
-          text: runText,
-          bold: b,
-          italic: it,
-          underline: u,
-          color: (c ?? _fontColor).toARGB32(),
-          size: s ?? _fontSize,
-        ));
+        out.add(
+          EditorRun(
+            text: runText,
+            bold: b,
+            italic: it,
+            underline: u,
+            color: (c ?? Colors.white).toARGB32(),
+            size: s ?? _fontSize,
+          ),
+        );
         i = j;
       }
     }
+    debugPrint('RUNS BEFORE SPEAKER ASSIGNMENT');
+    for (final r in out) {
+      debugPrint('[${r.text}] color=${r.color} size=${r.size}');
+    }
+
+    debugPrint('SPEAKER MARKS');
+    for (final m in _speakerMarks) {
+      debugPrint(m.toString());
+    }
+    return _withSpeakers(out);
+  }
+
+  List<EditorRun> _withSpeakers(List<EditorRun> input) {
+    final out = <EditorRun>[];
+    int offset = 0;
+    int markIndex = 0;
+    String? currentSpeaker;
+
+    final marks = [..._speakerMarks]
+      ..sort((a, b) => (a['offset'] as int).compareTo(b['offset'] as int));
+
+    for (final r in input) {
+      while (markIndex < marks.length &&
+          (marks[markIndex]['offset'] as int) <= offset) {
+        currentSpeaker = marks[markIndex]['speaker'] as String?;
+        markIndex++;
+      }
+
+      out.add(
+        EditorRun(
+          text: r.text,
+          bold: r.bold,
+          italic: r.italic,
+          underline: r.underline,
+          color: r.color,
+          size: r.size,
+          speaker: currentSpeaker,
+        ),
+      );
+
+      offset += r.text.length;
+    }
+
     return out;
   }
 
@@ -221,7 +300,10 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
     _applyToggle(underlineAttribution);
   }
 
-  void _applyValueAttribution(Attribution next, bool Function(Attribution) isSameKind) {
+  void _applyValueAttribution(
+    Attribution next,
+    bool Function(Attribution) isSameKind,
+  ) {
     final sel = _composer.selection;
     if (sel == null) return;
     if (sel.isCollapsed) {
@@ -247,7 +329,10 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
       }
       if (existing.isNotEmpty) {
         _editor.execute([
-          RemoveTextAttributionsRequest(documentRange: sel, attributions: existing),
+          RemoveTextAttributionsRequest(
+            documentRange: sel,
+            attributions: existing,
+          ),
         ]);
       }
       _editor.execute([
@@ -267,10 +352,7 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
 
   void _pickColor(Color c) {
     setState(() => _fontColor = c);
-    _applyValueAttribution(
-      ColorAttribution(c),
-      (a) => a is ColorAttribution,
-    );
+    _applyValueAttribution(ColorAttribution(c), (a) => a is ColorAttribution);
   }
 
   void clear() {
@@ -305,7 +387,6 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
 
   @override
   Widget build(BuildContext context) {
-    final plain = plainText;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -351,29 +432,29 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
             border: Border.all(color: Colors.white12),
           ),
           child: SuperEditor(
-  editor: _editor,
-  focusNode: _focus,
-  stylesheet: defaultStylesheet.copyWith(
-    inlineTextStyler: (attributions, existingStyle) {
-      TextStyle style = defaultInlineTextStyler(
-        attributions,
-        existingStyle,
-      );
+            editor: _editor,
+            focusNode: _focus,
+            stylesheet: defaultStylesheet.copyWith(
+              inlineTextStyler: (attributions, existingStyle) {
+                TextStyle style = defaultInlineTextStyler(
+                  attributions,
+                  existingStyle,
+                );
 
-      // Base/default colour: white.
-      style = style.copyWith(color: Colors.white);
+                // Base/default colour: white.
+                style = style.copyWith(color: Colors.white);
 
-      // Let an explicit colour attribution override the default.
-      for (final attribution in attributions) {
-        if (attribution is ColorAttribution) {
-          style = style.copyWith(color: attribution.color);
-        }
-      }
+                // Let an explicit colour attribution override the default.
+                for (final attribution in attributions) {
+                  if (attribution is ColorAttribution) {
+                    style = style.copyWith(color: attribution.color);
+                  }
+                }
 
-      return style;
-    },
-  ),
-),
+                return style;
+              },
+            ),
+          ),
         ),
       ],
     );

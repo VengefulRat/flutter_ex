@@ -580,9 +580,7 @@ class MoodParticlePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter old) => true;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // SHARED: selectable post text
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Widget _selectablePostText({
   required String text,
   required TextStyle style,
@@ -593,15 +591,67 @@ Widget _selectablePostText({
   if (runs == null || runs.isEmpty) {
     return Text(text, style: style);
   }
-  final spans = <TextSpan>[];
+
+  final children = <Widget>[];
+  String? currentSpeaker;
+  List<TextSpan> spans = [];
+
+  void flush() {
+    if (spans.isEmpty) return;
+
+    children.add(
+      RichText(
+        text: TextSpan(children: spans, style: style),
+      ),
+    );
+
+    spans = [];
+  }
+
   for (final r in runs) {
+    final speaker = r['speaker'] as String?;
+
+    if (speaker != currentSpeaker) {
+      flush();
+      currentSpeaker = speaker;
+
+      if (speaker != null && speaker.isNotEmpty) {
+        final speakerColor = r['color'] is int
+            ? Color(r['color'] as int)
+            : style.color;
+
+        children.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 10, bottom: 4),
+            child: Row(
+              children: [
+                Container(width: 3, height: 14, color: speakerColor),
+                const SizedBox(width: 6),
+                Text(
+                  speaker.toUpperCase(),
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 9,
+                    letterSpacing: 2,
+                    color: speakerColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+
     final runText = r['text'] as String? ?? '';
     if (runText.isEmpty) continue;
-    final runBold = r['bold'] == true;
-    final runItalic = r['italic'] == true;
-    final runUnderline = r['underline'] == true;
+
+    final runBold = r['bold'] as bool? ?? false;
+    final runItalic = r['italic'] as bool? ?? false;
+    final runUnderline = r['underline'] as bool? ?? false;
     final runColorRaw = r['color'];
     final runSizeRaw = r['size'];
+
     spans.add(
       TextSpan(
         text: runText,
@@ -617,17 +667,16 @@ Widget _selectablePostText({
       ),
     );
   }
-  if (spans.isEmpty) {
-    return Text(text, style: style);
-  }
-  return RichText(
-    text: TextSpan(children: spans, style: style),
+
+  flush();
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: children,
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // SCREEN
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 double _rpPostScale() => appSettings.rpPostSize == 'S'
     ? 0.85
     : appSettings.rpPostSize == 'L'
@@ -1724,6 +1773,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                             'underline': r.underline,
                             'color': r.color,
                             'size': r.size,
+                            'speaker': r.speaker,
                           },
                         )
                         .toList(),
@@ -1766,6 +1816,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                           'underline': r.underline,
                           'color': r.color,
                           'size': r.size,
+                          'speaker': r.speaker,
                         },
                       )
                       .toList(),
@@ -1819,6 +1870,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                           'underline': r.underline,
                           'color': r.color,
                           'size': r.size,
+                          'speaker': r.speaker,
                         },
                       )
                       .toList(),
@@ -1949,6 +2001,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             underline: (m['underline'] as bool?) ?? false,
             color: (m['color'] as int?) ?? _fontColor.toARGB32(),
             size: ((m['size'] as num?) ?? 16).toDouble(),
+            speaker: m['speaker'] as String?,
           ),
         )
         .toList();
@@ -1956,7 +2009,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       _editingPostId = post.id;
       _quotingPostId = null;
       _editorExpanded = true;
-      _boxKey = UniqueKey(); // force SuperEditorBox to rebuild with new initial text/runs
+      _boxKey =
+          UniqueKey(); // force SuperEditorBox to rebuild with new initial text/runs
     });
     _editorFocus.requestFocus();
   }
@@ -6209,6 +6263,20 @@ class _PostCardState extends State<_PostCard>
   @override
   Widget build(BuildContext context) {
     final post = widget.post;
+    final speakers = post.runs
+        .map((r) => r['speaker'] as String?)
+        .whereType<String>()
+        .where((s) => s.isNotEmpty)
+        .toSet()
+        .toList();
+
+debugPrint('POST RUNS');
+for (final r in post.runs) {
+  debugPrint(
+    'speaker=${r['speaker']} text=${r['text']}',
+  );
+}
+
     final preview = post.content.length > 120
         ? '${post.content.substring(0, 120)}...'
         : post.content;
@@ -6268,14 +6336,19 @@ class _PostCardState extends State<_PostCard>
                   padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
                   child: Row(
                     children: [
-                      Text(
-                        post.characterName ?? post.author,
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 10,
-                          color: nameColor,
-                          letterSpacing: 2,
-                        ),
+                      Wrap(
+                        spacing: 10,
+                        children: speakers.map((speaker) {
+                          return Text(
+                            speaker.toUpperCase(),
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 10,
+                              color: nameColor,
+                              letterSpacing: 2,
+                            ),
+                          );
+                        }).toList(),
                       ),
                       if (post.locationName != null) ...[
                         const Text(
