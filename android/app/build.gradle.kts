@@ -24,7 +24,7 @@ kotlin {
 
 android {
     namespace = "com.lore.app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
