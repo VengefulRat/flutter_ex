@@ -3292,22 +3292,12 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  post.characterName ?? post.author,
-                                  style: TextStyle(
+                                  _postSpeakers(post).join('  ·  '),
+                                                                    style: const TextStyle(
                                     fontFamily: 'monospace',
                                     fontSize: 9,
                                     letterSpacing: 2,
-                                    color: isUser
-                                        ? (appSettings.textColourFor(
-                                                'char_name',
-                                              ) ??
-                                              (post.textColor == cParchment
-                                                  ? cGold
-                                                  : post.textColor))
-                                        : (appSettings.textColourFor(
-                                                'partner_name',
-                                              ) ??
-                                              cMist),
+                                    color: cGold,
                                   ),
                                 ),
                                 if (post.locationName != null) ...[
@@ -3447,20 +3437,12 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   child: Row(
                     children: [
                       Text(
-                        (post.characterName ?? post.author).toUpperCase(),
-                        style: TextStyle(
+                        _postSpeakers(post).join('  ·  ').toUpperCase(),
+                                                style: const TextStyle(
                           fontFamily: 'monospace',
                           fontSize: 10,
                           letterSpacing: 4,
-                          color: post.isUser
-                              ? (appSettings.textColourFor('char_name') ??
-                                    (post.textColor == cParchment
-                                        ? cGold
-                                        : post.textColor.withValues(
-                                            alpha: 0.9,
-                                          )))
-                              : (appSettings.textColourFor('partner_name') ??
-                                    cMist),
+                          color: cGold,
                         ),
                       ),
                       if (post.locationName != null) ...[
@@ -6212,6 +6194,21 @@ class _PostCard extends StatefulWidget {
   State<_PostCard> createState() => _PostCardState();
 }
 
+/// All distinct speakers in a post, in order of first appearance.
+/// Falls back to the post's single character/author for old posts
+/// that were saved before runs had speakers.
+List<String> _postSpeakers(RPPost post) {
+  final seen = <String>[];
+  for (final r in post.runs) {
+    final s = (r['speaker'] as String?)?.trim();
+    final name = (s == null || s.isEmpty) ? 'Self' : s;
+    if (!seen.contains(name)) seen.add(name);
+  }
+  if (seen.isNotEmpty) return seen;
+  final fallback = (post.characterName ?? post.author).trim();
+  return [fallback.isEmpty ? 'Self' : fallback];
+}
+
 class _PostCardState extends State<_PostCard>
     with SingleTickerProviderStateMixin {
   bool _hovering = false;
@@ -6263,19 +6260,7 @@ class _PostCardState extends State<_PostCard>
   @override
   Widget build(BuildContext context) {
     final post = widget.post;
-    final speakers = post.runs
-        .map((r) => r['speaker'] as String?)
-        .whereType<String>()
-        .where((s) => s.isNotEmpty)
-        .toSet()
-        .toList();
-
-debugPrint('POST RUNS');
-for (final r in post.runs) {
-  debugPrint(
-    'speaker=${r['speaker']} text=${r['text']}',
-  );
-}
+    final speakers = _postSpeakers(post);
 
     final preview = post.content.length > 120
         ? '${post.content.substring(0, 120)}...'
@@ -6337,14 +6322,14 @@ for (final r in post.runs) {
                   child: Row(
                     children: [
                       Wrap(
-                        spacing: 10,
+                       spacing: 10,
                         children: speakers.map((speaker) {
                           return Text(
                             speaker.toUpperCase(),
                             style: TextStyle(
                               fontFamily: 'monospace',
                               fontSize: 10,
-                              color: nameColor,
+                              color: cGold,
                               letterSpacing: 2,
                             ),
                           );

@@ -78,7 +78,7 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
   void initState() {
     super.initState();
     _fontColor = Colors.white;
-    _lastSpeaker = widget.characterName.isEmpty ? null : widget.characterName;
+    _lastSpeaker = widget.characterName.isEmpty ? 'Self' : widget.characterName;
     _speakerMarks.add({'offset': 0, 'speaker': _lastSpeaker});
     _doc = MutableDocument(
       nodes: [
@@ -141,7 +141,7 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
     super.didUpdateWidget(oldWidget);
 
     final newSpeaker = widget.characterName.isEmpty
-        ? null
+        ? 'Self'
         : widget.characterName;
 
     if (newSpeaker != _lastSpeaker) {
@@ -236,32 +236,54 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
   List<EditorRun> _withSpeakers(List<EditorRun> input) {
     final out = <EditorRun>[];
     int offset = 0;
-    int markIndex = 0;
-    String? currentSpeaker;
 
     final marks = [..._speakerMarks]
       ..sort((a, b) => (a['offset'] as int).compareTo(b['offset'] as int));
 
+    String? speakerAt(int pos) {
+      String? current;
+      for (final m in marks) {
+        if ((m['offset'] as int) <= pos) {
+          current = m['speaker'] as String?;
+        } else {
+          break;
+        }
+      }
+      return current;
+    }
+
     for (final r in input) {
-      while (markIndex < marks.length &&
-          (marks[markIndex]['offset'] as int) <= offset) {
-        currentSpeaker = marks[markIndex]['speaker'] as String?;
-        markIndex++;
+      final runStart = offset;
+      final runEnd = offset + r.text.length;
+
+      // All speaker boundaries strictly inside this run.
+      final cuts = <int>{runStart, runEnd};
+      for (final m in marks) {
+        final mo = m['offset'] as int;
+        if (mo > runStart && mo < runEnd) cuts.add(mo);
+      }
+      final sortedCuts = cuts.toList()..sort();
+
+      for (var i = 0; i < sortedCuts.length - 1; i++) {
+        final s = sortedCuts[i];
+        final e = sortedCuts[i + 1];
+        if (e <= s) continue;
+        final speaker = speakerAt(s);
+        out.add(
+          EditorRun(
+            text: r.text.substring(s - runStart, e - runStart),
+            bold: r.bold,
+            italic: r.italic,
+            underline: r.underline,
+            color: r.color,
+            size: r.size,
+            // Empty = Self, so Self actually shows in the header.
+            speaker: (speaker == null || speaker.isEmpty) ? 'Self' : speaker,
+          ),
+        );
       }
 
-      out.add(
-        EditorRun(
-          text: r.text,
-          bold: r.bold,
-          italic: r.italic,
-          underline: r.underline,
-          color: r.color,
-          size: r.size,
-          speaker: currentSpeaker,
-        ),
-      );
-
-      offset += r.text.length;
+      offset = runEnd;
     }
 
     return out;
