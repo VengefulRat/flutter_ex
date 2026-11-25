@@ -455,29 +455,34 @@ class FirestoreService {
     Color? textColor,
   }) async {
     final sessionKey = await _requireSessionKey(sessionId);
+    final enc = await _crypto.encryptContent(newContent, sessionKey);
+    final update = <String, dynamic>{
+      'content': enc['cipher']!,
+      'contentIv': enc['iv'],
+      'textColor': textColor?.toARGB32(),
+      'encrypted': true,
+      'edited': true,
+      'editedAt': FieldValue.serverTimestamp(),
+    };
+
     String? storedRuns;
     String? storedRunsIv;
-    if (contentRuns != null && contentRuns.isNotEmpty) {
-      final rEnc = await _crypto.encryptContent(contentRuns, sessionKey);
-      storedRuns = rEnc['cipher'];
-      storedRunsIv = rEnc['iv'];
+    if (contentRuns != null) {
+      if (contentRuns.isNotEmpty) {
+        final rEnc = await _crypto.encryptContent(contentRuns, sessionKey);
+        storedRuns = rEnc['cipher'];
+        storedRunsIv = rEnc['iv'];
+      }
+      update['contentRuns'] = storedRuns;
+      update['contentRunsIv'] = storedRunsIv;
     }
-    final enc = await _crypto.encryptContent(newContent, sessionKey);
+
     await _db
         .collection('sessions')
         .doc(sessionId)
         .collection('posts')
         .doc(postId)
-        .update({
-          'content': enc['cipher']!,
-          'contentRuns': storedRuns,
-          'contentRunsIv': storedRunsIv,
-          'contentIv': enc['iv'],
-          'textColor': textColor?.toARGB32(),
-          'encrypted': true,
-          'edited': true,
-          'editedAt': FieldValue.serverTimestamp(),
-        });
+        .update(update);
   }
 
   Future<void> deletePost({
@@ -583,6 +588,26 @@ class FirestoreService {
           final sessionKey = await _sessionKey(sessionId);
           return _decryptDocs(snap, sessionKey, ['content']);
         });
+  }
+
+  Stream<DateTime?> oocLastReadAt(String sessionId) {
+    final code = _auth.currentCode;
+    if (code == null) return Stream.value(null);
+
+    return _db.collection('sessions').doc(sessionId).snapshots().map((doc) {
+      final readAtByUser = doc.data()?['oocLastReadAtByUser'];
+      final readAt = readAtByUser is Map ? readAtByUser[code] : null;
+      return readAt is Timestamp ? readAt.toDate() : null;
+    });
+  }
+
+  Future<void> markOocRead(String sessionId) async {
+    final code = _auth.currentCode;
+    if (code == null) return;
+
+    await _db.collection('sessions').doc(sessionId).update({
+      'oocLastReadAtByUser.$code': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> addOocMessage({

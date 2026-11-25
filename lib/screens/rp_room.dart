@@ -1106,6 +1106,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   final _auth = AuthService();
   StreamSubscription? _postsSub;
   StreamSubscription? _oocSub;
+  StreamSubscription? _oocReadSub;
   bool _loadingPosts = true;
 
   final _editorCtrl = TextEditingController();
@@ -1180,7 +1181,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   bool get _desktopFocusMode => _desktopLogCollapsed && _desktopToolsCollapsed;
   bool _oocOpen = false;
   int _oocUnread = 0;
-  int _oocTotalNonUser = 0;
+  DateTime? _oocLastReadAt;
+  bool _oocReadStateLoaded = false;
 
   final _oocCtrl = TextEditingController();
   final _oocFocus = FocusNode();
@@ -1216,6 +1218,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   String? _expandedPostId;
   String? _quotingPostId;
   String? _editingPostId;
+  String? _editingSpeakerName;
+  Color? _editingTextColor;
 
   RPDisplayMode _displayMode = RPDisplayMode.cards;
 
@@ -1306,6 +1310,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     _editorCtrl.removeListener(_onEditorChanged);
     _postsSub?.cancel();
     _oocSub?.cancel();
+    _oocReadSub?.cancel();
     _statsSub?.cancel();
     _statsSaveDebounce?.cancel();
     _partnerStatsN.dispose();
@@ -1394,6 +1399,17 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       });
     }, onError: _handleStreamError);
 
+    _oocReadSub = _fs.oocLastReadAt(widget.sessionId).listen((readAt) {
+      if (!mounted) return;
+      final isFirstReadState = !_oocReadStateLoaded;
+      setState(() {
+        _oocReadStateLoaded = true;
+        _oocLastReadAt = readAt;
+        _refreshOocUnread();
+      });
+      if (isFirstReadState && readAt == null) _markOocRead();
+    }, onError: _handleStreamError);
+
     _oocSub = _fs.oocMessages(widget.sessionId).listen((data) {
       final myCode = _auth.currentCode ?? '';
       final msgs = data.map((d) {
@@ -1410,20 +1426,50 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         );
       }).toList();
       if (mounted) {
+        final oocVisible = _oocOpen || _desktopOOCExpanded;
+        final hasUnreadWhileVisible =
+            oocVisible &&
+            msgs.any(
+              (message) =>
+                  !message.isUser &&
+                  (_oocLastReadAt == null ||
+                      message.timestamp.isAfter(_oocLastReadAt!)),
+            );
         setState(() {
-          final newNonUser = msgs.where((m) => !m.isUser).length;
-          final isFirstLoad = _oocMessages.isEmpty && _oocTotalNonUser == 0;
-          final oocVisible = _oocOpen || _desktopOOCExpanded;
-          if (!isFirstLoad && !oocVisible && newNonUser > _oocTotalNonUser) {
-            _oocUnread += newNonUser - _oocTotalNonUser;
-          }
-          _oocTotalNonUser = newNonUser;
           _oocMessages
             ..clear()
             ..addAll(msgs);
+          _refreshOocUnread();
         });
+        if (hasUnreadWhileVisible) _markOocRead();
       }
     }, onError: _handleStreamError);
+  }
+
+  void _refreshOocUnread() {
+    if (!_oocReadStateLoaded ||
+        _oocLastReadAt == null ||
+        _oocOpen ||
+        _desktopOOCExpanded) {
+      _oocUnread = 0;
+      return;
+    }
+
+    _oocUnread = _oocMessages
+        .where(
+          (message) =>
+              !message.isUser && message.timestamp.isAfter(_oocLastReadAt!),
+        )
+        .length;
+  }
+
+  void _markOocRead() {
+    if (widget.sessionId.isEmpty) return;
+    unawaited(
+      _fs.markOocRead(widget.sessionId).catchError((Object error) {
+        debugPrint('Failed to sync OOC read state: $error');
+      }),
+    );
   }
 
   void _handleStreamError(Object e) {
@@ -1480,6 +1526,20 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     // Load saved import IDs from Firestore
     if (widget.sessionId.isNotEmpty) {
       try {
+        await _log.syncFromCloud();
+        final logCharacters = <String, CharacterEntry>{};
+        final logWorlds = <String, WorldEntry>{};
+        for (final entry in _log.all) {
+          final character = entry.characterData;
+          if (character != null) {
+            logCharacters.putIfAbsent(character.id, () => character);
+          }
+          final world = entry.worldData;
+          if (world != null) {
+            logWorlds.putIfAbsent(world.id, () => world);
+          }
+        }
+
         final doc = await FirebaseFirestore.instance
             .collection('sessions')
             .doc(widget.sessionId)
@@ -1490,13 +1550,15 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           final worldIds = List<String>.from(data['importedWorldIds'] ?? []);
 
           for (final id in charIds) {
-            final match = chars.where((c) => c.id == id).firstOrNull;
+            final match =
+                chars.where((c) => c.id == id).firstOrNull ?? logCharacters[id];
             if (match != null && !_importedCharacters.any((c) => c.id == id)) {
               _importedCharacters.add(match);
             }
           }
           for (final id in worldIds) {
-            final match = worlds.where((w) => w.id == id).firstOrNull;
+            final match =
+                worlds.where((w) => w.id == id).firstOrNull ?? logWorlds[id];
             if (match != null && !_importedWorlds.any((w) => w.id == id)) {
               _importedWorlds.add(match);
             }
@@ -1778,7 +1840,10 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                         )
                         .toList(),
                   ),
-            textColor: _activeCharacter?.accentColor ?? _fontColor,
+            textColor:
+                _editingTextColor ??
+                _activeCharacter?.accentColor ??
+                _fontColor,
           );
         } catch (e) {
           if (mounted) {
@@ -1833,6 +1898,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         }
         _editorCtrl.text = '';
         _editingPostId = null;
+        _editingSpeakerName = null;
+        _editingTextColor = null;
         _editorExpanded = false;
         _sending = false;
       });
@@ -1989,6 +2056,23 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
   void _editPost(RPPost post) {
     if (!mounted) return;
+    String? speakerName = post.characterName;
+    for (final run in post.runs.reversed) {
+      final speaker = run['speaker'] as String?;
+      if (speaker != null && speaker.trim().isNotEmpty) {
+        speakerName = speaker.trim();
+        break;
+      }
+    }
+    CharacterEntry? character;
+    for (final candidate in [..._importedCharacters, ..._sandboxCharacters]) {
+      if (candidate.name.trim().toLowerCase() ==
+          speakerName?.trim().toLowerCase()) {
+        character = candidate;
+        break;
+      }
+    }
+
     _editorCtrl.text = post.content;
     // Convert saved run maps back to EditorRun so colours/sizes survive edit
     _pendingPlain = post.content;
@@ -2006,6 +2090,9 @@ class _RPRoomScreenState extends State<RPRoomScreen>
         )
         .toList();
     setState(() {
+      _activeCharacter = character;
+      _editingSpeakerName = speakerName;
+      _editingTextColor = post.textColor;
       _editingPostId = post.id;
       _quotingPostId = null;
       _editorExpanded = true;
@@ -2528,12 +2615,15 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                                               color: cInk,
                                               child: InkWell(
                                                 onTap: () {
-                                                  setState(
-                                                    () => _desktopOOCExpanded =
-                                                        !_desktopOOCExpanded,
-                                                  );
+                                                  setState(() {
+                                                    _desktopOOCExpanded =
+                                                        !_desktopOOCExpanded;
+                                                    if (_desktopOOCExpanded) {
+                                                      _oocUnread = 0;
+                                                    }
+                                                  });
                                                   if (_desktopOOCExpanded) {
-                                                    _oocUnread = 0;
+                                                    _markOocRead();
                                                     _scrollOocToBottom();
                                                   }
                                                 },
@@ -2701,6 +2791,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                         _oocOpen = true;
                         _oocUnread = 0;
                       });
+                      _markOocRead();
                       _scrollOocToBottom();
                     },
                     child: Stack(
@@ -3981,10 +4072,30 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                     ? charColor.withValues(alpha: 0.08)
                     : Colors.transparent,
               ),
-              child: Icon(
-                Icons.person_outline,
-                size: 16,
-                color: _activeCharacter != null ? charColor : cSmoke,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.person_outline,
+                    size: 16,
+                    color: _activeCharacter != null ? charColor : cSmoke,
+                  ),
+                  const SizedBox(width: 6),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 100),
+                    child: Text(
+                      _activeCharacter?.name ?? 'Self',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 9,
+                        color: _activeCharacter != null ? charColor : cSmoke,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -3994,8 +4105,12 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   Widget _buildFullEditor() {
-    final charColor = _activeCharacter?.accentColor ?? _fontColor;
-    final displayName = _activeCharacter?.name ?? 'You';
+    final charColor =
+        _activeCharacter?.accentColor ?? _editingTextColor ?? _fontColor;
+    final displayName =
+        _activeCharacter?.name ?? _editingSpeakerName ?? 'You';
+    final editorCharacterName =
+        _activeCharacter?.name ?? _editingSpeakerName ?? '';
     return Container(
       decoration: BoxDecoration(
         color: Colors.black.withValues(
@@ -4032,7 +4147,12 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   LoreTap(
                     onTap: () => setState(() {
                       _editingPostId = null;
+                      _editingSpeakerName = null;
+                      _editingTextColor = null;
                       _editorCtrl.text = '';
+                      _pendingPlain = '';
+                      _pendingRuns = null;
+                      _boxKey = UniqueKey();
                     }),
                     child: const Text(
                       'cancel',
@@ -4047,7 +4167,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                 ],
               ),
             ),
-          if (_activeCharacter != null)
+          if (_activeCharacter != null || _editingSpeakerName != null)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
@@ -4067,28 +4187,48 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                       color: charColor,
                     ),
                   ),
-                  Text(
-                    displayName,
+                  const Text(
+                    'SELECTED CHARACTER',
                     style: TextStyle(
                       fontFamily: 'monospace',
-                      fontSize: 9,
-                      color: charColor,
-                      letterSpacing: 2,
+                      fontSize: 8,
+                      color: cSmoke,
+                      letterSpacing: 1,
                     ),
                   ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () => setState(() => _activeCharacter = null),
-                    child: const Text(
-                      'exit character',
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontFamily: 'monospace',
-                        fontSize: 8,
-                        color: cSmoke,
-                        letterSpacing: 1,
+                        fontSize: 9,
+                        color: charColor,
+                        letterSpacing: 2,
                       ),
                     ),
                   ),
+                  const Spacer(),
+                  if (_activeCharacter != null)
+                    GestureDetector(
+                      onTap: () => setState(() {
+                        _activeCharacter = null;
+                        if (_editingPostId != null) {
+                          _editingSpeakerName = 'Self';
+                        }
+                      }),
+                      child: const Text(
+                        'exit character',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 8,
+                          color: cSmoke,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -4251,8 +4391,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                   initialRuns: _pendingRuns,
                   characterColor: _activeCharacter != null
                       ? _activeCharacter!.accentColor
-                      : _fontColor,
-                  characterName: _activeCharacter?.name ?? '',
+                      : _editingTextColor ?? _fontColor,
+                  characterName: editorCharacterName,
                   onChanged: (plain) {
                     _pendingPlain = plain;
                     // Keep legacy draft / word-count / Post-button logic working
@@ -4309,6 +4449,8 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                     _editorExpanded = false;
                     _quotingPostId = null;
                     _editingPostId = null;
+                    _editingSpeakerName = null;
+                    _editingTextColor = null;
                     _editorCtrl.text = '';
                     _pendingPlain = '';
                     _pendingRuns = null;
@@ -4465,44 +4607,6 @@ class _RPRoomScreenState extends State<RPRoomScreen>
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _fmtBtn(
-    String label,
-    bool active,
-    VoidCallback onTap, {
-    TextStyle? style,
-  }) {
-    return LoreTap(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: active ? cAsh : Colors.transparent,
-          border: Border.all(color: active ? cSmoke : cAsh),
-        ),
-        child: Text(
-          label,
-          style: style ?? const TextStyle(fontSize: 12, color: cMist),
-        ),
-      ),
-    );
-  }
-
-  Widget _fmtLabel(String t) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Text(
-        t,
-        style: const TextStyle(
-          fontFamily: 'monospace',
-          fontSize: 9,
-          color: cSmoke,
-          letterSpacing: 2,
-        ),
       ),
     );
   }

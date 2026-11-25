@@ -26,6 +26,7 @@ import '../services/sandbox_sync.dart';
 import '../services/sound_service.dart';
 import '../services/update_service.dart';
 import 'rp_room.dart';
+import 'fantasy_room_preview.dart';
 import 'sandbox_screen.dart';
 import 'brainstorm_room.dart';
 import 'login_screen.dart';
@@ -2976,6 +2977,14 @@ class _RoleplaysContentState extends State<_RoleplaysContent> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        OutlinedButton.icon(
+          onPressed: () => Navigator.of(context).push(
+            fadeRoute(FantasyRoomPreview(backgroundColor: appSettings.bgColor)),
+          ),
+          icon: const Icon(Icons.auto_awesome_outlined, size: 16),
+          label: const Text('Fantasy room preview'),
+        ),
+        const SizedBox(height: 12),
         // Show archived toggle
         if (_archivedCount > 0) ...[
           GestureDetector(

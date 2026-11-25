@@ -5,9 +5,39 @@ import 'auth_service.dart';
 import '../models/world.dart';
 
 class SandboxPull {
-  final List<WorldEntry> worlds;
-  final List<CharacterEntry> characters;
+  final List<WorldEntry>? worlds;
+  final List<CharacterEntry>? characters;
   const SandboxPull({required this.worlds, required this.characters});
+
+  factory SandboxPull.fromCloudData(Map<String, dynamic> data) {
+    final worldsRaw = data['sandboxWorlds'] as String?;
+    final charsRaw = data['sandboxCharacters'] as String?;
+    return SandboxPull(
+      worlds: worldsRaw == null
+          ? null
+          : (jsonDecode(worldsRaw) as List)
+                .map((entry) => WorldEntry.fromJson(
+                      Map<String, dynamic>.from(entry as Map),
+                    ))
+                .toList(),
+      characters: charsRaw == null
+          ? null
+          : (jsonDecode(charsRaw) as List)
+                .map((entry) => CharacterEntry.fromJson(
+                      Map<String, dynamic>.from(entry as Map),
+                    ))
+                .toList(),
+    );
+  }
+
+  Future<void> saveLocally() async {
+    final pulledWorlds = worlds;
+    final pulledCharacters = characters;
+    if (pulledWorlds != null) await SandboxStorage.saveWorlds(pulledWorlds);
+    if (pulledCharacters != null) {
+      await SandboxStorage.saveCharacters(pulledCharacters);
+    }
+  }
 }
 
 class SandboxSync {
@@ -81,8 +111,7 @@ class SandboxSync {
     // (no doc, no network, parse error). In ALL of those cases the
     // safe move is keep local data — never wipe it.
     if (pull == null) return;
-    await SandboxStorage.saveWorlds(pull.worlds);
-    await SandboxStorage.saveCharacters(pull.characters);
+    await pull.saveLocally();
   }
 
   static Future<SandboxPull?> pull() async {
@@ -98,40 +127,7 @@ class SandboxSync {
       final charsRaw = data['sandboxCharacters'] as String?;
       if (worldsRaw == null && charsRaw == null) return null;
 
-      final worlds = <WorldEntry>[];
-      final chars = <CharacterEntry>[];
-
-      if (worldsRaw != null) {
-        try {
-          final list = jsonDecode(worldsRaw) as List;
-          for (final e in list) {
-            worlds.add(
-              WorldEntry.fromJson(Map<String, dynamic>.from(e as Map)),
-            );
-          }
-        } catch (e) {
-          print('[SandboxSync] worlds parse failed: $e');
-          // Corrupt on one side => treat the whole pull as unusable,
-          // so syncOnLogin keeps local data instead of overwriting
-          // one side with empty.
-          return null;
-        }
-      }
-      if (charsRaw != null) {
-        try {
-          final list = jsonDecode(charsRaw) as List;
-          for (final e in list) {
-            chars.add(
-              CharacterEntry.fromJson(Map<String, dynamic>.from(e as Map)),
-            );
-          }
-        } catch (e) {
-          print('[SandboxSync] characters parse failed: $e');
-          return null;
-        }
-      }
-
-      return SandboxPull(worlds: worlds, characters: chars);
+      return SandboxPull.fromCloudData(data);
     } catch (e) {
       print('[SandboxSync] pull failed: $e');
       return null;

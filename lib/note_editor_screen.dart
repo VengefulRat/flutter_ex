@@ -4,7 +4,6 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../theme.dart';
 import '../settings.dart';
 import 'models/world.dart';
-import 'screens/rp_room.dart';
 
 class NoteEditorResult {
   final RPNote? note;

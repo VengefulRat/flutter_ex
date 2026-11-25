@@ -44,6 +44,260 @@ class SuperEditorBox extends StatefulWidget {
 }
 
 class SuperEditorBoxState extends State<SuperEditorBox> {
+  final List<_CharacterSection> _sections = [];
+  late _CharacterSection _activeSection;
+
+  String get _selectedSpeaker =>
+      widget.characterName.isEmpty ? 'Self' : widget.characterName;
+
+  @override
+  void initState() {
+    super.initState();
+    final savedRuns = widget.initialRuns;
+    final initialRuns = <EditorRun>[...?savedRuns];
+    final savedText = initialRuns.map((run) => run.text).join();
+    if (initialRuns.isNotEmpty && savedText == widget.initialText.trim()) {
+      final leadingLength =
+          widget.initialText.length - widget.initialText.trimLeft().length;
+      final trailingStart = leadingLength + savedText.length;
+      if (leadingLength > 0) {
+        final first = initialRuns.first;
+        initialRuns.insert(
+          0,
+          EditorRun(
+            text: widget.initialText.substring(0, leadingLength),
+            bold: first.bold,
+            italic: first.italic,
+            underline: first.underline,
+            color: first.color,
+            size: first.size,
+            speaker: first.speaker,
+          ),
+        );
+      }
+      if (trailingStart < widget.initialText.length) {
+        final last = initialRuns.last;
+        initialRuns.add(
+          EditorRun(
+            text: widget.initialText.substring(trailingStart),
+            bold: last.bold,
+            italic: last.italic,
+            underline: last.underline,
+            color: last.color,
+            size: last.size,
+            speaker: last.speaker,
+          ),
+        );
+      }
+    }
+    if (initialRuns.isNotEmpty &&
+        initialRuns.map((run) => run.text).join() == widget.initialText) {
+      for (final run in initialRuns) {
+        final speaker = run.speaker?.trim().isNotEmpty == true
+            ? run.speaker!.trim()
+            : _selectedSpeaker;
+        if (_sections.isEmpty || _sections.last.speaker != speaker) {
+          _sections.add(
+            _CharacterSection(
+              speaker: speaker,
+              color: speaker == _selectedSpeaker
+                  ? widget.characterColor
+                  : Colors.white54,
+            ),
+          );
+        }
+        _sections.last.initialRuns.add(run);
+      }
+    } else {
+      _sections.add(
+        _CharacterSection(
+          speaker: _selectedSpeaker,
+          color: widget.characterColor,
+          initialText: widget.initialText,
+        ),
+      );
+    }
+    _activeSection = _sections.last;
+  }
+
+  @override
+  void didUpdateWidget(covariant SuperEditorBox oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldSpeaker = oldWidget.characterName.isEmpty
+        ? 'Self'
+        : oldWidget.characterName;
+    if (_selectedSpeaker != oldSpeaker) {
+      final section = _CharacterSection(
+        speaker: _selectedSpeaker,
+        color: widget.characterColor,
+      );
+      final index = _sections.indexOf(_activeSection);
+      if (_activeSection.key.currentState?.rawText.isEmpty ?? false) {
+        _sections[index] = section;
+      } else {
+        _sections.insert(index + 1, section);
+      }
+      _activeSection = section;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && identical(_activeSection, section)) {
+          section.key.currentState?.requestFocus();
+          final sectionContext = section.key.currentContext;
+          if (sectionContext != null) {
+            Scrollable.ensureVisible(sectionContext);
+          }
+        }
+      });
+    }
+  }
+
+  String get plainText => _sections
+      .map((section) => section.key.currentState?.rawText ?? section.text)
+      .join();
+
+  List<EditorRun> get runs {
+    final allRuns = <EditorRun>[];
+    for (final section in _sections) {
+      allRuns.addAll(section.key.currentState?.rawRuns ?? section.initialRuns);
+    }
+    final text = plainText;
+    final start = text.length - text.trimLeft().length;
+    final end = start + text.trim().length;
+    return _sliceEditorRuns(allRuns, start, end);
+  }
+
+  void _notifyChanged() {
+    widget.onChanged?.call(plainText);
+    widget.onRunsChanged?.call(runs);
+  }
+
+  void clear() {
+    setState(() {
+      _sections
+        ..clear()
+        ..add(
+          _CharacterSection(
+            speaker: _selectedSpeaker,
+            color: widget.characterColor,
+          ),
+        );
+      _activeSection = _sections.single;
+    });
+    widget.onChanged?.call('');
+    widget.onRunsChanged?.call([]);
+  }
+
+  void setText(String text) {
+    setState(() {
+      _sections
+        ..clear()
+        ..add(
+          _CharacterSection(
+            speaker: _selectedSpeaker,
+            color: widget.characterColor,
+            initialText: text,
+          ),
+        );
+      _activeSection = _sections.single;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _notifyChanged();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 360),
+      child: CustomScrollView(
+        shrinkWrap: true,
+        slivers: [
+          for (final section in _sections)
+            SliverPadding(
+              padding: const EdgeInsets.only(bottom: 8),
+              sliver: _CharacterSectionEditor(
+                key: section.key,
+                initialText: section.text,
+                initialRuns: section.initialRuns,
+                characterName: section.speaker,
+                characterColor: section.color,
+                onFocus: () => _activeSection = section,
+                onChanged: _notifyChanged,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CharacterSection {
+  _CharacterSection({
+    required this.speaker,
+    required this.color,
+    this.initialText = '',
+  });
+
+  final String speaker;
+  final Color color;
+  final String initialText;
+  final List<EditorRun> initialRuns = [];
+  final key = GlobalKey<_CharacterSectionEditorState>();
+
+  String get text =>
+      initialRuns.isEmpty ? initialText : initialRuns.map((r) => r.text).join();
+}
+
+List<EditorRun> _sliceEditorRuns(List<EditorRun> input, int start, int end) {
+  final out = <EditorRun>[];
+  var offset = 0;
+  for (final run in input) {
+    final runEnd = offset + run.text.length;
+    final sliceStart = start > offset ? start : offset;
+    final sliceEnd = end < runEnd ? end : runEnd;
+    if (sliceEnd > sliceStart) {
+      out.add(
+        EditorRun(
+          text: run.text.substring(sliceStart - offset, sliceEnd - offset),
+          bold: run.bold,
+          italic: run.italic,
+          underline: run.underline,
+          color: run.color,
+          size: run.size,
+          speaker: run.speaker,
+        ),
+      );
+    }
+    offset = runEnd;
+    if (offset >= end) break;
+  }
+  return out;
+}
+
+class _CharacterSectionEditor extends StatefulWidget {
+  const _CharacterSectionEditor({
+    super.key,
+    required this.initialText,
+    required this.initialRuns,
+    required this.characterName,
+    required this.characterColor,
+    required this.onFocus,
+    required this.onChanged,
+  });
+
+  final String initialText;
+  final List<EditorRun> initialRuns;
+  final String characterName;
+  final Color characterColor;
+  final VoidCallback onFocus;
+  final VoidCallback onChanged;
+
+  @override
+  State<_CharacterSectionEditor> createState() =>
+      _CharacterSectionEditorState();
+}
+
+class _CharacterSectionEditorState extends State<_CharacterSectionEditor> {
+  final String _inputRole = UniqueKey().toString();
   late final MutableDocument _doc;
   late final MutableDocumentComposer _composer;
   late final Editor _editor;
@@ -55,8 +309,6 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
   double _fontSize = 16;
   int _nodeCounter = 0;
   late Color _fontColor;
-  String? _lastSpeaker;
-  final List<Map<String, Object?>> _speakerMarks = [];
   final List<Color> _palette = const [
     Colors.white,
     Colors.black,
@@ -77,9 +329,8 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
   @override
   void initState() {
     super.initState();
+    _focus.addListener(_handleFocus);
     _fontColor = Colors.white;
-    _lastSpeaker = widget.characterName.isEmpty ? 'Self' : widget.characterName;
-    _speakerMarks.add({'offset': 0, 'speaker': _lastSpeaker});
     _doc = MutableDocument(
       nodes: [
         ParagraphNode(
@@ -90,9 +341,9 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
     );
     _composer = MutableDocumentComposer();
     _editor = createDefaultDocumentEditor(document: _doc, composer: _composer);
-    // Edit mode: re-apply saved runs (colour/size/bold/italic/underline)
+    // Edit mode: re-apply saved runs (colour/size/bold/italic/underline).
     final initRuns = widget.initialRuns;
-    if (initRuns != null && initRuns.isNotEmpty) {
+    if (initRuns.isNotEmpty) {
       final firstNode = _doc.first;
       if (firstNode is TextNode) {
         var offset = 0;
@@ -106,78 +357,87 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
           if (r.underline) attrs.add(underlineAttribution);
           attrs.add(ColorAttribution(Color(r.color)));
           attrs.add(FontSizeAttribution(r.size));
-          if (attrs.isNotEmpty && end > start) {
-            _editor.execute([
-              AddTextAttributionsRequest(
-                documentRange: DocumentRange(
-                  start: DocumentPosition(
-                    nodeId: firstNode.id,
-                    nodePosition: TextNodePosition(offset: start),
+          if (end > start) {
+            for (final attribution in attrs) {
+              _editor.execute([
+                AddTextAttributionsRequest(
+                  documentRange: DocumentRange(
+                    start: DocumentPosition(
+                      nodeId: firstNode.id,
+                      nodePosition: TextNodePosition(offset: start),
+                    ),
+                    end: DocumentPosition(
+                      nodeId: firstNode.id,
+                      nodePosition: TextNodePosition(offset: end),
+                    ),
                   ),
-                  end: DocumentPosition(
-                    nodeId: firstNode.id,
-                    nodePosition: TextNodePosition(offset: end),
-                  ),
+                  attributions: {attribution},
                 ),
-                attributions: attrs,
-              ),
-            ]);
+              ]);
+            }
           }
         }
       }
     }
     _docListener = (_) {
-      // SuperEditor renders text with NO ColorAttribution as black.
-      // Stamp the default colour onto uncoloured text so typing shows white, not black.
-      widget.onChanged?.call(plainText);
-      widget.onRunsChanged?.call(runs);
+      widget.onChanged();
       if (mounted) setState(() {});
     };
     _doc.addListener(_docListener);
   }
 
   @override
-  void didUpdateWidget(covariant SuperEditorBox oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    final newSpeaker = widget.characterName.isEmpty
-        ? 'Self'
-        : widget.characterName;
-
-    if (newSpeaker != _lastSpeaker) {
-      _speakerMarks.add({'offset': _speakerOffset(), 'speaker': newSpeaker});
-      _lastSpeaker = newSpeaker;
-    }
-  }
-
-  @override
   void dispose() {
     _doc.removeListener(_docListener);
     _editor.dispose();
+    _focus.removeListener(_handleFocus);
     _focus.dispose();
     super.dispose();
   }
 
-  String get plainText => _doc.toPlainText();
-  int _speakerOffset() {
-    int offset = 0;
-
-    for (final node in _doc) {
-      if (node is TextNode) {
-        offset += node.text.toPlainText().length;
-      }
-    }
-
-    return offset;
+  void _handleFocus() {
+    if (_focus.hasFocus) widget.onFocus();
   }
 
-  List<EditorRun> get runs {
+  void requestFocus() {
+    final lastNode = _doc.last;
+    _composer.setSelectionWithReason(
+      DocumentSelection.collapsed(
+        position: DocumentPosition(
+          nodeId: lastNode.id,
+          nodePosition: lastNode.endPosition,
+        ),
+      ),
+      SelectionReason.userInteraction,
+    );
+    _focus.requestFocus();
+  }
+
+  String get rawText => _doc
+      .whereType<TextNode>()
+      .map((node) => node.text.toPlainText())
+      .join('\n');
+
+  List<EditorRun> get rawRuns {
     final out = <EditorRun>[];
-    for (final node in _doc) {
-      if (node is! TextNode) continue;
+    final textNodes = _doc.whereType<TextNode>().toList();
+    for (var nodeIndex = 0; nodeIndex < textNodes.length; nodeIndex++) {
+      final node = textNodes[nodeIndex];
       final attributed = node.text;
       final plain = attributed.toPlainText();
-      if (plain.isEmpty) continue;
+      if (plain.isEmpty) {
+        if (nodeIndex < textNodes.length - 1) {
+          out.add(
+            EditorRun(
+              text: '\n',
+              color: _fontColor.toARGB32(),
+              size: _fontSize,
+              speaker: widget.characterName,
+            ),
+          );
+        }
+        continue;
+      }
       // Build per-character attribution sets from spans, then group runs
       final perChar = List<Set<Attribution>>.generate(
         plain.length,
@@ -216,74 +476,25 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
             underline: u,
             color: (c ?? Colors.white).toARGB32(),
             size: s ?? _fontSize,
+            speaker: widget.characterName,
           ),
         );
         i = j;
       }
-    }
-    debugPrint('RUNS BEFORE SPEAKER ASSIGNMENT');
-    for (final r in out) {
-      debugPrint('[${r.text}] color=${r.color} size=${r.size}');
-    }
-
-    debugPrint('SPEAKER MARKS');
-    for (final m in _speakerMarks) {
-      debugPrint(m.toString());
-    }
-    return _withSpeakers(out);
-  }
-
-  List<EditorRun> _withSpeakers(List<EditorRun> input) {
-    final out = <EditorRun>[];
-    int offset = 0;
-
-    final marks = [..._speakerMarks]
-      ..sort((a, b) => (a['offset'] as int).compareTo(b['offset'] as int));
-
-    String? speakerAt(int pos) {
-      String? current;
-      for (final m in marks) {
-        if ((m['offset'] as int) <= pos) {
-          current = m['speaker'] as String?;
-        } else {
-          break;
-        }
-      }
-      return current;
-    }
-
-    for (final r in input) {
-      final runStart = offset;
-      final runEnd = offset + r.text.length;
-
-      // All speaker boundaries strictly inside this run.
-      final cuts = <int>{runStart, runEnd};
-      for (final m in marks) {
-        final mo = m['offset'] as int;
-        if (mo > runStart && mo < runEnd) cuts.add(mo);
-      }
-      final sortedCuts = cuts.toList()..sort();
-
-      for (var i = 0; i < sortedCuts.length - 1; i++) {
-        final s = sortedCuts[i];
-        final e = sortedCuts[i + 1];
-        if (e <= s) continue;
-        final speaker = speakerAt(s);
+      if (nodeIndex < textNodes.length - 1) {
+        final previousRun = out.last;
         out.add(
           EditorRun(
-            text: r.text.substring(s - runStart, e - runStart),
-            bold: r.bold,
-            italic: r.italic,
-            underline: r.underline,
-            color: r.color,
-            size: r.size,
-            // Empty = Self, so Self actually shows in the header.
-            speaker: (speaker == null || speaker.isEmpty) ? 'Self' : speaker,
+            text: '\n',
+            bold: previousRun.bold,
+            italic: previousRun.italic,
+            underline: previousRun.underline,
+            color: previousRun.color,
+            size: previousRun.size,
+            speaker: previousRun.speaker,
           ),
         );
       }
-
-      offset = runEnd;
     }
 
     return out;
@@ -377,116 +588,115 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
     _applyValueAttribution(ColorAttribution(c), (a) => a is ColorAttribution);
   }
 
-  void clear() {
-    _doc.clear();
-    final id = _newNodeId();
-    _doc.add(ParagraphNode(id: id, text: AttributedText('')));
-    _composer.setSelectionWithReason(
-      DocumentSelection.collapsed(
-        position: DocumentPosition(
-          nodeId: id,
-          nodePosition: const TextNodePosition(offset: 0),
-        ),
-      ),
-      SelectionReason.userInteraction,
-    );
-  }
-
-  void setText(String text) {
-    _doc.clear();
-    final id = _newNodeId();
-    _doc.add(ParagraphNode(id: id, text: AttributedText(text)));
-    _composer.setSelectionWithReason(
-      DocumentSelection.collapsed(
-        position: DocumentPosition(
-          nodeId: id,
-          nodePosition: TextNodePosition(offset: text.length),
-        ),
-      ),
-      SelectionReason.userInteraction,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Wrap(
-          spacing: 4,
-          runSpacing: 4,
-          children: [
-            _toolBtn('B', _bold, _toggleBold, bold: true),
-            _toolBtn('I', _italic, _toggleItalic, italic: true),
-            _toolBtn('U', _underline, _toggleUnderline, underline: true),
-            _toolBtn('A-', false, () => _changeSize(-2)),
-            _toolBtn('A+', false, () => _changeSize(2)),
-            Text(
-              '${_fontSize.toInt()}',
-              style: const TextStyle(color: Colors.white70),
-            ),
-            ..._palette.map(
-              (c) => GestureDetector(
-                onTap: () => _pickColor(c),
-                child: Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: c,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _fontColor == c ? Colors.white : Colors.white30,
-                      width: _fontColor == c ? 2 : 1,
+    return DecoratedSliver(
+      key: ValueKey('character-section-${widget.characterName}'),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A22),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: widget.characterColor.withValues(alpha: 0.6)),
+      ),
+      sliver: SliverPadding(
+        padding: const EdgeInsets.all(10),
+        sliver: SliverMainAxisGroup(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.characterName.toUpperCase(),
+                    style: TextStyle(
+                      color: widget.characterColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: [
+                      _toolBtn('B', _bold, _toggleBold, bold: true),
+                      _toolBtn('I', _italic, _toggleItalic, italic: true),
+                      _toolBtn(
+                        'U',
+                        _underline,
+                        _toggleUnderline,
+                        underline: true,
+                      ),
+                      _toolBtn('A-', false, () => _changeSize(-2)),
+                      _toolBtn('A+', false, () => _changeSize(2)),
+                      Text(
+                        '${_fontSize.toInt()}',
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                      ..._palette.map(
+                        (c) => GestureDetector(
+                          onTap: () => _pickColor(c),
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            decoration: BoxDecoration(
+                              color: c,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: _fontColor == c
+                                    ? Colors.white
+                                    : Colors.white30,
+                                width: _fontColor == c ? 2 : 1,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                ],
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+              sliver: SuperEditor(
+                editor: _editor,
+                focusNode: _focus,
+                inputRole: _inputRole,
+                stylesheet: defaultStylesheet.copyWith(
+                  addRulesAfter: [
+                    StyleRule(const BlockSelector("paragraph"), (doc, docNode) {
+                      return {
+                        Styles.padding: const CascadingPadding.only(top: 2),
+                      };
+                    }),
+                  ],
+                  inlineTextStyler: (attributions, existingStyle) {
+                    TextStyle style = defaultInlineTextStyler(
+                      attributions,
+                      existingStyle,
+                    );
+
+                    style = style.copyWith(
+                      color: Colors.white,
+                      fontSize: 14,
+                      height: 1.35,
+                    );
+
+                    for (final attribution in attributions) {
+                      if (attribution is ColorAttribution) {
+                        style = style.copyWith(color: attribution.color);
+                      }
+                    }
+                    return style;
+                  },
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 6),
-        Container(
-          constraints: const BoxConstraints(minHeight: 80, maxHeight: 180),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1A22),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white12),
-          ),
-          child: SuperEditor(
-            editor: _editor,
-            focusNode: _focus,
-            stylesheet: defaultStylesheet.copyWith(
-              addRulesAfter: [
-                StyleRule(const BlockSelector("paragraph"), (doc, docNode) {
-                  return {Styles.padding: const CascadingPadding.only(top: 2)};
-                }), // StyleRule
-              ],
-              inlineTextStyler: (attributions, existingStyle) {
-                TextStyle style = defaultInlineTextStyler(
-                  attributions,
-                  existingStyle,
-                );
-
-                // Base/default colour: white.
-                style = style.copyWith(
-                  color: Colors.white,
-                  fontSize: 14,
-                  height: 1.35,
-                );
-
-                // Let an explicit colour attribution override the default.
-                for (final attribution in attributions) {
-                  if (attribution is ColorAttribution) {
-                    style = style.copyWith(color: attribution.color);
-                  }
-                }
-                return style;
-              },
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 

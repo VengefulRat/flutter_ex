@@ -195,6 +195,19 @@ class DiaryStorage {
     }
     return out;
   }
+
+  static List<DiaryEntry> mergeEntries(
+      List<DiaryEntry> local, List<DiaryEntry> remote) {
+    final merged = {for (final entry in local) entry.id: entry};
+    for (final entry in remote) {
+      final current = merged[entry.id];
+      if (current == null || entry.updatedAt.isAfter(current.updatedAt)) {
+        merged[entry.id] = entry;
+      }
+    }
+    return merged.values.toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  }
 }
 
 // ─────────────────────────────────────────
@@ -397,12 +410,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
     if (code != null) {
       try {
         final remote = await DiaryStorage.loadFromFirestore(code);
-        // Merge: remote entries that aren't in local
-        final localIds = local.map((e) => e.id).toSet();
-        for (final r in remote) {
-          if (!localIds.contains(r.id)) merged.add(r);
-        }
-        merged.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+        merged = DiaryStorage.mergeEntries(local, remote);
         await DiaryStorage.saveEntries(merged);
       } catch (_) {}
     }
@@ -1441,6 +1449,7 @@ class _NewEntrySetupState extends State<_NewEntrySetup> {
             onSave: (w) {
               setState(() => _allWorlds.add(w));
               SandboxStorage.saveWorlds(_allWorlds);
+              SandboxSync.pushWorlds(_allWorlds);
             },
           ))),
       child: Container(

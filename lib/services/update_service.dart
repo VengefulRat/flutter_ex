@@ -6,13 +6,21 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import 'update_downloader_stub.dart'
-    if (dart.library.io) 'update_downloader_io.dart' as downloader;
+    if (dart.library.io) 'update_downloader_io.dart'
+    as downloader;
 
 class UpdateService {
   static const String _repoOwner = 'VengefulRat';
   static const String _repoName = 'flutter_ex';
 
   static Future<void> checkForUpdates(BuildContext context) async {
+    final platform = defaultTargetPlatform;
+    if (kIsWeb ||
+        (platform != TargetPlatform.android &&
+            platform != TargetPlatform.windows)) {
+      return;
+    }
+
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
@@ -22,8 +30,7 @@ class UpdateService {
         'https://api.github.com/repos/$_repoOwner/$_repoName/releases',
       );
 
-      final response =
-          await http.get(url).timeout(const Duration(seconds: 10));
+      final response = await http.get(url).timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) {
         debugPrint('UPDATE CHECK: GitHub returned ${response.statusCode}');
         return;
@@ -39,7 +46,7 @@ class UpdateService {
       if (latestRelease == null) return;
 
       final latestTag = latestRelease['tag_name'] as String? ?? '';
-      final latestVersion = latestTag.replaceAll('v', '');
+      final latestVersion = latestTag.replaceFirst(RegExp(r'^v'), '');
       debugPrint('UPDATE CHECK: latest=$latestVersion');
 
       if (!_isNewerVersion(currentVersion, latestVersion)) return;
@@ -49,32 +56,60 @@ class UpdateService {
       if (dismissedVersion == latestVersion) return;
 
       final changelog = (latestRelease['body'] as String?) ?? '';
-      int? apkSize;
-      final assets = latestRelease['assets'] as List<dynamic>?;
-      if (assets != null && assets.isNotEmpty) {
-        final isWin = defaultTargetPlatform == TargetPlatform.windows;
-        Map<String, dynamic>? match;
-        for (final a in assets) {
-          final name = ((a as Map)['name'] as String? ?? '').toLowerCase();
-          if (isWin && name.endsWith('.exe')) { match = a as Map<String, dynamic>; break; }
-          if (!isWin && name.endsWith('.apk')) { match = a as Map<String, dynamic>; break; }
-        }
-        match ??= assets.first as Map<String, dynamic>;
-        apkSize = (match['size'] as num?)?.toInt();
+      final expectedAssetName = platform == TargetPlatform.windows
+          ? 'LoreEx-Setup.exe'
+          : 'flutter_ex-releases.apk';
+      final assets = latestRelease['assets'];
+      if (assets is! List) {
+        debugPrint('UPDATE CHECK: release has no assets list');
+        return;
       }
 
+      final matchingAssets = assets.whereType<Map<String, dynamic>>().where(
+        (asset) =>
+            (asset['name'] as String?)?.toLowerCase() ==
+            expectedAssetName.toLowerCase(),
+      );
+      if (matchingAssets.isEmpty) {
+        debugPrint('UPDATE CHECK: release asset $expectedAssetName not found');
+        return;
+      }
+
+      final asset = matchingAssets.first;
+      final downloadUrl = asset['browser_download_url'];
+      final downloadUri = downloadUrl is String
+          ? Uri.tryParse(downloadUrl)
+          : null;
+      if (downloadUri == null ||
+          downloadUri.scheme != 'https' ||
+          downloadUri.host != 'github.com') {
+        debugPrint('UPDATE CHECK: release asset has an invalid download URL');
+        return;
+      }
+      final assetSize = (asset['size'] as num?)?.toInt();
+
       if (!context.mounted) return;
-      _showUpdateDialog(context, latestVersion, latestTag, changelog, apkSize);
+      _showUpdateDialog(
+        context,
+        latestVersion,
+        changelog,
+        assetSize,
+        downloadUri.toString(),
+      );
     } catch (e) {
       debugPrint('UPDATE CHECK FAILED: $e');
     }
   }
 
   static bool _isNewerVersion(String current, String latest) {
-    final currParts =
-        current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-    final lastParts =
-        latest.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final currParts = current
+        .split('.')
+        .map((e) => int.tryParse(e) ?? 0)
+        .toList();
+    final lastParts = latest
+        .split('.')
+        .map((e) => int.tryParse(e) ?? 0)
+        .toList();
 
     for (int i = 0; i < 3; i++) {
       final c = i < currParts.length ? currParts[i] : 0;
@@ -107,16 +142,18 @@ class UpdateService {
 
   static String _formatSize(int? bytes) {
     if (bytes == null) return '';
-    if (bytes < 1024 * 1024) return ' • ${(bytes / 1024).toStringAsFixed(0)} KB';
+    if (bytes < 1024 * 1024) {
+      return ' • ${(bytes / 1024).toStringAsFixed(0)} KB';
+    }
     return ' • ${(bytes / (1024 * 1024)).toStringAsFixed(0)} MB';
   }
 
   static void _showUpdateDialog(
     BuildContext context,
     String newVersion,
-    String tag,
     String changelog,
-    int? apkSize,
+    int? assetSize,
+    String downloadUrl,
   ) {
     final items = _parseChangelog(changelog);
     showDialog(
@@ -142,7 +179,7 @@ class UpdateService {
               ),
               const SizedBox(height: 12),
               Text(
-                'Lore v$newVersion is out${_formatSize(apkSize)}. What\'s new:',
+                'Lore v$newVersion is out${_formatSize(assetSize)}. What\'s new:',
                 style: const TextStyle(
                   fontSize: 13,
                   color: cMist,
@@ -182,13 +219,18 @@ class UpdateService {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('•  ',
-                                  style: TextStyle(fontSize: 13, color: cGold)),
+                              const Text(
+                                '•  ',
+                                style: TextStyle(fontSize: 13, color: cGold),
+                              ),
                               Expanded(
                                 child: Text(
                                   item,
                                   style: const TextStyle(
-                                      fontSize: 13, color: cMist, height: 1.5),
+                                    fontSize: 13,
+                                    color: cMist,
+                                    height: 1.5,
+                                  ),
                                 ),
                               ),
                             ],
@@ -202,7 +244,11 @@ class UpdateService {
                 const Text(
                   'Latest features and fixes. Tap Update Now to install.',
                   style: TextStyle(
-                      fontSize: 13, color: cMist, fontStyle: FontStyle.italic, height: 1.7),
+                    fontSize: 13,
+                    color: cMist,
+                    fontStyle: FontStyle.italic,
+                    height: 1.7,
+                  ),
                 ),
               const SizedBox(height: 24),
               Row(
@@ -236,9 +282,16 @@ class UpdateService {
                   const SizedBox(width: 8),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () {
+                      onTap: () async {
+                        if (defaultTargetPlatform == TargetPlatform.windows) {
+                          final confirmed = await showDialog<bool>(
+                            context: ctx,
+                            builder: (_) => const WindowsInstallerWarning(),
+                          );
+                          if (confirmed != true || !ctx.mounted) return;
+                        }
                         Navigator.pop(ctx);
-                        _downloadAndInstall(context, tag);
+                        _downloadAndInstall(context, downloadUrl);
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -264,7 +317,10 @@ class UpdateService {
                 child: GestureDetector(
                   onTap: () async {
                     final prefs = await SharedPreferences.getInstance();
-                    await prefs.setString('dismissed_update_version', newVersion);
+                    await prefs.setString(
+                      'dismissed_update_version',
+                      newVersion,
+                    );
                     if (ctx.mounted) Navigator.pop(ctx);
                   },
                   child: const Text(
@@ -288,13 +344,8 @@ class UpdateService {
 
   static Future<void> _downloadAndInstall(
     BuildContext context,
-    String tag,
+    String downloadUrl,
   ) async {
-    final isWin = defaultTargetPlatform == TargetPlatform.windows;
-    final fileName = isWin ? 'LoreEx-Setup.exe' : 'flutter_ex-releases.apk';
-    final apkUrl =
-        'https://github.com/$_repoOwner/$_repoName/releases/download/$tag/$fileName';
-
     final progress = ValueNotifier<double>(0);
 
     showDialog(
@@ -325,8 +376,8 @@ class UpdateService {
                   p <= 0
                       ? 'Starting download...'
                       : p >= 1
-                          ? 'Download complete. Opening installer...'
-                          : 'Downloading... ${(p * 100).toInt()}%',
+                      ? 'Download complete. Opening installer...'
+                      : 'Downloading... ${(p * 100).toInt()}%',
                   style: const TextStyle(
                     fontSize: 13,
                     color: cMist,
@@ -338,8 +389,7 @@ class UpdateService {
                 LinearProgressIndicator(
                   value: p <= 0 ? null : p,
                   backgroundColor: cAsh,
-                  valueColor:
-                      const AlwaysStoppedAnimation<Color>(cGold),
+                  valueColor: const AlwaysStoppedAnimation<Color>(cGold),
                 ),
               ],
             ),
@@ -350,7 +400,7 @@ class UpdateService {
 
     try {
       await downloader.downloadAndInstall(
-        apkUrl,
+        downloadUrl,
         (p) => progress.value = p,
       );
       if (context.mounted) {
@@ -360,14 +410,43 @@ class UpdateService {
       if (context.mounted) {
         Navigator.of(context, rootNavigator: true).maybePop();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Download failed: $e'),
-            backgroundColor: cInk,
-          ),
+          SnackBar(content: Text('Download failed: $e'), backgroundColor: cInk),
         );
       }
     } finally {
       progress.dispose();
     }
+  }
+}
+
+class WindowsInstallerWarning extends StatelessWidget {
+  const WindowsInstallerWarning({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: cInk,
+      title: const Text(
+        'Unsigned Windows installer',
+        style: TextStyle(color: cGold),
+      ),
+      content: const Text(
+        'Only download Lore installers from the official '
+        'github.com/VengefulRat/flutter_ex releases. This installer is not '
+        'digitally signed, so even an official download cannot be verified '
+        'against tampering. Continue only if you accept this risk.',
+        style: TextStyle(color: cMist),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Install anyway'),
+        ),
+      ],
+    );
   }
 }
