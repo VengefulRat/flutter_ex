@@ -457,6 +457,11 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
             editor: _editor,
             focusNode: _focus,
             stylesheet: defaultStylesheet.copyWith(
+              addRulesAfter: [
+                StyleRule(const BlockSelector("paragraph"), (doc, docNode) {
+                  return {Styles.padding: const CascadingPadding.only(top: 2)};
+                }), // StyleRule
+              ],
               inlineTextStyler: (attributions, existingStyle) {
                 TextStyle style = defaultInlineTextStyler(
                   attributions,
@@ -464,7 +469,11 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
                 );
 
                 // Base/default colour: white.
-                style = style.copyWith(color: Colors.white);
+                style = style.copyWith(
+                  color: Colors.white,
+                  fontSize: 14,
+                  height: 1.35,
+                );
 
                 // Let an explicit colour attribution override the default.
                 for (final attribution in attributions) {
@@ -472,7 +481,6 @@ class SuperEditorBoxState extends State<SuperEditorBox> {
                     style = style.copyWith(color: attribution.color);
                   }
                 }
-
                 return style;
               },
             ),
