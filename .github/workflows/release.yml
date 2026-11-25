@@ -34,6 +34,10 @@ jobs:
           printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=upload\nstoreFile=upload-keystore.jks\n' "$STORE_PASSWORD" "$KEY_PASSWORD" > android/key.properties
 
       - run: flutter pub get
+
+      - name: Patch super_keyboard compileSdk 34 -> 36
+        run: sed -i 's/compileSdk = 34/compileSdk = 36/' /home/runner/.pub-cache/hosted/pub.dev/super_keyboard-*/android/build.gradle
+
       - run: flutter build apk --release
 
       # Rename so users always download the same filename
