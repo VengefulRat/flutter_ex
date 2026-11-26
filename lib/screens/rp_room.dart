@@ -9,6 +9,7 @@ import '../widgets/super_editor_box.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:file_selector/file_selector.dart' show getSaveLocation;
 import 'package:path_provider/path_provider.dart';
 import '../theme.dart';
 import '../widgets/shared.dart';
@@ -20,8 +21,10 @@ import '../settings.dart';
 import '../services/firestore_service.dart';
 import '../services/auth_service.dart';
 import '../services/crypto_service.dart';
+import '../services/rp_story_export.dart';
 import '../services/sound_service.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'dart:ui' as ui;
 import '../widgets/holo_card_v2.dart';
 import '../widgets/card_frame.dart';
@@ -1191,6 +1194,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   final _oocScrollCtrlDesktop = ScrollController();
 
   bool _settingsOpen = false;
+  bool _exportingStory = false;
   late String _sessionTitle;
 
   final List<RPNote> _notes = [];
@@ -4844,6 +4848,59 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     );
   }
 
+  Future<void> _exportStory() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Export RP story'),
+        content: const Text(
+          'This saves the story posts, chapters and formatting only. '
+          'It does not include OOC, characters or media.\n\n'
+          'The file is not encrypted: anyone with it can read your story. '
+          'Store it privately. Pause writing on both devices during export.\n\n'
+          'Import into new accounts is not available yet. Keep the old '
+          'accounts and room until restoration has been verified.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _exportingStory = true);
+    try {
+      final location = await getSaveLocation(
+        suggestedName: 'lore-rp-story.json',
+      );
+      if (location == null) return;
+      final story = await RpStoryExport().create(widget.sessionId);
+      await XFile.fromData(
+        Uint8List.fromList(utf8.encode(story)),
+        mimeType: 'application/json',
+      ).saveTo(location.path);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Story exported. Keep the file private.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Story export failed: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exportingStory = false);
+    }
+  }
+
   Widget _buildSettingsPanel() {
     return Positioned(
       right: 0,
@@ -4885,6 +4942,19 @@ class _RPRoomScreenState extends State<RPRoomScreen>
                 ),
               ),
               const Divider(color: cAsh, height: 1),
+              if (!kIsWeb &&
+                  defaultTargetPlatform == TargetPlatform.windows &&
+                  widget.sessionId.isNotEmpty) ...[
+                ListTile(
+                  title: Text(
+                    _exportingStory ? 'Exporting story...' : 'Export RP story',
+                    style: const TextStyle(color: cParchment, fontSize: 13),
+                  ),
+                  leading: const Icon(Icons.save_alt, color: cGold),
+                  onTap: _exportingStory ? null : _exportStory,
+                ),
+                const Divider(color: cAsh, height: 1),
+              ],
               const Padding(
                 padding: EdgeInsets.fromLTRB(14, 12, 14, 6),
                 child: Text(
