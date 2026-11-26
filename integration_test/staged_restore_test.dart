@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -14,6 +17,8 @@ import 'package:lore/services/staged_restore_service.dart';
 import 'package:lore/services/staged_room_invites.dart';
 import 'package:lore/screens/staged_account_demo.dart';
 import 'package:lore/screens/staged_room_invites_demo.dart';
+import 'package:lore/screens/staged_story_import_demo.dart';
+import 'package:lore/screens/staged_story_review_demo.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +55,10 @@ void main() {
   testWidgets('two accounts restore an approved story through the emulators', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(1200, 3600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     Future<void> waitFor(String text) async {
       await tester.runAsync(() async {
         for (var i = 0; i < 300; i++) {
@@ -222,6 +231,12 @@ void main() {
         'chapters': ['Chapter 1'],
       },
       posts: [
+        StoryPost('post-alice', {
+          'authorCode': 'old-alice',
+          'authorName': 'Alice before migration',
+          'content': 'The beginning',
+          'createdAt': Timestamp(0, 0),
+        }),
         StoryPost('post', {
           'authorCode': 'old-bob',
           'authorName': 'Bob before migration',
@@ -231,7 +246,156 @@ void main() {
         }),
       ],
     );
-    final authors = {'old-bob': bob.code};
+    final authors = {'old-alice': alice.code, 'old-bob': bob.code};
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StagedRoomInvitesDemo(
+          auth: auth,
+          firestore: firestore,
+          functions: functions,
+          account: alice,
+        ),
+      ),
+    );
+    await waitFor('Import a demo story');
+    await tester.ensureVisible(find.text('Import a demo story'));
+    await tester.tap(find.text('Import a demo story'));
+    await waitFor('No restore has been started.');
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    final backupJson = await encodeRpStory(
+      sessionId: backup.sessionId,
+      session: backup.session,
+      posts: backup.posts,
+      decrypt: (_, _) async => throw StateError('Unexpected encryption.'),
+      exportedAt: backup.exportedAt,
+    );
+    var fileSelections = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StagedStoryImportDemo(
+          auth: auth,
+          firestore: firestore,
+          functions: functions,
+          account: alice,
+          room: rooms.single,
+          selectFile: () async {
+            fileSelections++;
+            return XFile.fromData(
+              utf8.encode(fileSelections == 1 ? 'invalid JSON' : backupJson),
+              name: 'test-story.json',
+              mimeType: 'application/json',
+            );
+          },
+        ),
+      ),
+    );
+    await waitFor('No restore has been started.');
+    await tester.tap(find.text('Choose backup JSON'));
+    await waitFor('Unexpected character');
+    await tester.tap(find.text('Choose backup JSON'));
+    await waitFor('Posts: 2');
+    await tester.ensureVisible(find.text('Stage backup for review'));
+    await tester.tap(find.text('Stage backup for review'));
+    await waitFor('Map each original author to a different participant.');
+
+    Future<void> mapAuthor(String oldCode, String newCode) async {
+      final dropdown = find.byKey(ValueKey('author-$oldCode'));
+      await tester.ensureVisible(dropdown);
+      await tester.tap(dropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(newCode).last);
+      await tester.pumpAndSettle();
+    }
+
+    await mapAuthor('old-alice', alice.code);
+    await mapAuthor('old-bob', alice.code);
+    await tester.ensureVisible(find.text('Stage backup for review'));
+    await tester.tap(find.text('Stage backup for review'));
+    await waitFor('Map each original author to a different participant.');
+    await mapAuthor('old-bob', bob.code);
+    await tester.ensureVisible(find.widgetWithText(TextField, 'PIN'));
+    await tester.enterText(find.widgetWithText(TextField, 'PIN'), '000000');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Account password'),
+      'emulator-password',
+    );
+    await tester.ensureVisible(find.text('Stage backup for review'));
+    await tester.tap(find.text('Stage backup for review'));
+    await waitFor('The password or PIN is incorrect.');
+    await tester.enterText(find.widgetWithText(TextField, 'PIN'), '123456');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Account password'),
+      'emulator-password',
+    );
+    await tester.ensureVisible(find.text('Stage backup for review'));
+    await tester.tap(find.text('Stage backup for review'));
+    await waitFor('Backup staged for partner review.');
+    expect(
+      (await room.collection('restore').doc('state').get()).data()?['status'],
+      'review',
+    );
+    await auth.signOut();
+    await waitFor('The signed-in account changed. Return and sign in again.');
+    expect(find.text('Posts: 2'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await accounts.signIn(
+      email: 'android-bob@example.invalid',
+      password: 'emulator-password',
+    );
+    final oldReview = await restore.loadReview(
+      sessionId: roomId,
+      identity: bobKey,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StagedRoomInvitesDemo(
+          auth: auth,
+          firestore: firestore,
+          functions: functions,
+          account: bob,
+        ),
+      ),
+    );
+    await waitFor('Review a demo story');
+    await tester.tap(find.text('Review a demo story'));
+    await waitFor('Load story for review');
+
+    Future<void> unlockReview(String pin) async {
+      await tester.enterText(find.widgetWithText(TextField, 'PIN'), pin);
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Account password'),
+        'emulator-password',
+      );
+      await tester.tap(find.text('Load story for review'));
+    }
+
+    await unlockReview('000000');
+    await waitFor('The password or PIN is incorrect.');
+    await unlockReview('654321');
+    await waitFor('Posts: 2');
+    bool hasSelectable(String text) => tester
+        .widgetList<SelectableText>(find.byType(SelectableText))
+        .any((widget) => widget.data?.contains(text) ?? false);
+    expect(hasSelectable('The beginning'), isTrue);
+    expect(hasSelectable('Story'), isTrue);
+    expect(hasSelectable('Chapter 1'), isTrue);
+    expect(hasSelectable('bold'), isTrue);
+    final approve = find.widgetWithText(FilledButton, 'Approve review');
+    expect(tester.widget<FilledButton>(approve).onPressed, isNull);
+    await tester.tap(find.text('Reject review'));
+    await waitFor('Review rejected. The importer can retry the staging.');
+    expect(
+      (await room.collection('restore').doc('state').get()).data()?['status'],
+      'rejected',
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await auth.signOut();
+    await accounts.signIn(
+      email: 'android-alice@example.invalid',
+      password: 'emulator-password',
+    );
     await restore.stage(
       sessionId: roomId,
       reviewerCode: bob.code,
@@ -244,14 +408,36 @@ void main() {
       email: 'android-bob@example.invalid',
       password: 'emulator-password',
     );
-    final review = await restore.loadReview(
-      sessionId: roomId,
-      identity: bobKey,
+    await expectLater(
+      restore.decide(oldReview, approve: true),
+      throwsStateError,
     );
-    expect(review.posts.single.data['content'], 'Story');
-    expect(review.posts.single.data['contentRuns'], contains('"bold":true'));
-    expect(review.session['chapters'], ['Chapter 1']);
-    await restore.decide(review, approve: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StagedStoryReviewDemo(
+          auth: auth,
+          firestore: firestore,
+          functions: functions,
+          account: bob,
+          room: rooms.single,
+        ),
+      ),
+    );
+    await unlockReview('654321');
+    await waitFor('Posts: 2');
+    expect(tester.widget<FilledButton>(approve).onPressed, isNull);
+    await tester.tap(find.text('I reviewed all posts and room metadata.'));
+    await tester.pump();
+    expect(tester.widget<FilledButton>(approve).onPressed, isNotNull);
+    await tester.tap(find.text('Approve review'));
+    await waitFor(
+      'Review approved. The importer can publish after verification.',
+    );
+    expect(
+      (await room.collection('restore').doc('state').get()).data()?['status'],
+      'approved',
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
     await auth.signOut();
     await accounts.signIn(
       email: 'android-alice@example.invalid',

@@ -184,19 +184,28 @@ class StagedStoryReviewService {
       );
     }
     final stateRef = _state(review.sessionId);
-    await _firestore.runTransaction((transaction) async {
+    // Return validation errors before writing: FlutterFire can double-complete
+    // the future when a transaction callback throws on Android.
+    final error = await _firestore.runTransaction<String?>((transaction) async {
       final snapshot = await transaction.get(stateRef);
-      final state = _reviewState(snapshot.data(), review.reviewerCode);
+      ({int version, int count, int metadataCount, String importer}) state;
+      try {
+        state = _reviewState(snapshot.data(), review.reviewerCode);
+      } on StateError catch (error) {
+        return error.message;
+      }
       if (state.version != review.reviewVersion ||
           state.count != review.posts.length ||
           state.metadataCount != review._metadataCount) {
-        throw StateError('The restore changed. Load it again before deciding.');
+        return 'The restore changed. Load it again before deciding.';
       }
       transaction.update(stateRef, {
         'status': approve ? 'approved' : 'rejected',
         'decisionVersion': review.reviewVersion,
       });
+      return null;
     });
+    if (error != null) throw StateError(error);
   }
 }
 

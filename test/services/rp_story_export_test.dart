@@ -7,6 +7,23 @@ import 'package:lore/services/rp_story_export.dart';
 import 'package:lore/services/rp_story_import.dart';
 
 void main() {
+  test('review formatting preserves nested timestamps and story fields', () {
+    final value = jsonDecode(
+      formatRpStoryValue({
+        'chapters': ['Chapter 1'],
+        'createdAt': Timestamp(1, 123),
+        'formatting': '[{"text":"Hello","bold":true}]',
+      }),
+    );
+    expect(value['chapters'], ['Chapter 1']);
+    expect(value['createdAt'], {
+      r'$type': 'firestore_timestamp',
+      'seconds': 1,
+      'nanoseconds': 123,
+    });
+    expect(value['formatting'], '[{"text":"Hello","bold":true}]');
+  });
+
   test(
     'exports ordered, decrypted posts with chapters and rich formatting',
     () async {

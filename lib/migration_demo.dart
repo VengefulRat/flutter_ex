@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -36,8 +37,10 @@ Future<void> main() async {
   );
   final auth = FirebaseAuth.instanceFor(app: app);
   final firestore = FirebaseFirestore.instanceFor(app: app);
+  final functions = FirebaseFunctions.instanceFor(app: app);
   await auth.useAuthEmulator('127.0.0.1', 18765);
   firestore.useFirestoreEmulator('127.0.0.1', 18764);
+  functions.useFunctionsEmulator('127.0.0.1', 18766);
   runApp(
     MaterialApp(
       title: 'Lore migration demo',
@@ -50,7 +53,11 @@ Future<void> main() async {
         ),
         useMaterial3: true,
       ),
-      home: StagedAccountDemo(auth: auth, firestore: firestore),
+      home: StagedAccountDemo(
+        auth: auth,
+        firestore: firestore,
+        functions: functions,
+      ),
     ),
   );
 }

@@ -38,12 +38,19 @@ emulators. Its debug-only network configuration permits HTTP to `10.0.2.2`.
 
 The standalone account demo can be launched with
 `flutter run -t lib/migration_demo.dart -d <android-emulator>`, while the local
-Auth and Firestore emulators are running. It uses only the demo project and
-local emulators; it does not connect to live accounts. After unlocking, users
-can send, accept or decline demo room invitations using account codes and see
-their demo rooms. Verify your partner's code before inviting them. Refresh after
-an interrupted request before retrying, because it may already have succeeded.
-Story import and the production app are not connected to these screens.
+Auth, Firestore and Functions emulators are running. It uses only the demo
+project and local emulators; it does not connect to live accounts. After
+unlocking, users can send, accept or decline demo room invitations using account
+codes and see their demo rooms. Verify your partner's code before inviting them.
+Refresh after an interrupted request before retrying, because it may already
+have succeeded.
+For a demo room, a test backup can be selected, its authors mapped to the two
+participants, and its encrypted contents staged for review. The partner can
+load all staged posts and room metadata, then approve or reject the reviewed
+version. Formatting is displayed as raw data, not a visual preview. Use test
+data, not the real story: this is not a production environment. Publishing is
+not connected to the demo UI yet. Keep the original backup and author mapping;
+they are needed when publishing. The production app remains separate.
 
 Finalization compares the approved encrypted staged and published documents;
 it cannot establish that the importer included everything in the original

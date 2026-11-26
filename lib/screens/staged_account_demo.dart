@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -32,11 +33,13 @@ class StagedAccountDemo extends StatefulWidget {
     super.key,
     required this.auth,
     required this.firestore,
+    this.functions,
     this.storage,
   });
 
   final FirebaseAuth auth;
   final FirebaseFirestore firestore;
+  final FirebaseFunctions? functions;
   final FlutterSecureStorage? storage;
 
   @override
@@ -611,9 +614,7 @@ class _StagedAccountDemoState extends State<StagedAccountDemo> {
         return [
           Text('Demo account unlocked: ${_account?.name ?? ''}'),
           Text('Account code: ${_account?.code ?? ''}'),
-          const Text(
-            'Story restoration and the rest of the app are not connected yet.',
-          ),
+          const Text('The production app is not connected to this demo.'),
           _button('Demo room invitations', () async {
             final account = _account;
             if (account == null ||
@@ -626,6 +627,8 @@ class _StagedAccountDemoState extends State<StagedAccountDemo> {
                   auth: widget.auth,
                   firestore: widget.firestore,
                   account: account,
+                  functions: widget.functions,
+                  storage: widget.storage,
                 ),
               ),
             );

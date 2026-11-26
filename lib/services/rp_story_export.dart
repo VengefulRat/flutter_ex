@@ -53,6 +53,10 @@ Object? _jsonValue(Object? value) {
   throw FormatException('Unsupported story value: ${value.runtimeType}.');
 }
 
+/// Formats story metadata without dropping Firestore timestamp precision.
+String formatRpStoryValue(Object? value) =>
+    const JsonEncoder.withIndent('  ').convert(_jsonValue(value));
+
 /// Produces a versioned plaintext file; encrypted fields must all decrypt.
 Future<String> encodeRpStory({
   required String sessionId,

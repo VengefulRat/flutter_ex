@@ -1,11 +1,15 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../services/staged_account_service.dart';
 import '../services/staged_room_invites.dart';
+import 'staged_story_import_demo.dart';
+import 'staged_story_review_demo.dart';
 
 class StagedRoomInvitesDemo extends StatefulWidget {
   const StagedRoomInvitesDemo({
@@ -13,11 +17,15 @@ class StagedRoomInvitesDemo extends StatefulWidget {
     required this.auth,
     required this.firestore,
     required this.account,
+    this.functions,
+    this.storage,
   });
 
   final FirebaseAuth auth;
   final FirebaseFirestore firestore;
   final StagedAccount account;
+  final FirebaseFunctions? functions;
+  final FlutterSecureStorage? storage;
 
   @override
   State<StagedRoomInvitesDemo> createState() => _StagedRoomInvitesDemoState();
@@ -211,16 +219,56 @@ class _StagedRoomInvitesDemoState extends State<StagedRoomInvitesDemo> {
               if (_rooms.isEmpty) const Text('No rooms loaded.'),
               for (final room in _rooms)
                 Card(
-                  child: ListTile(
-                    title: SelectableText('Room: ${room.id}'),
-                    subtitle: SelectableText(
-                      'Participants: ${room.participants.join(', ')}',
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SelectableText('Room: ${room.id}'),
+                        SelectableText(
+                          'Participants: ${room.participants.join(', ')}',
+                        ),
+                        if (widget.functions != null)
+                          TextButton(
+                            onPressed: _busy || _invalidated
+                                ? null
+                                : () => Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => StagedStoryImportDemo(
+                                        auth: widget.auth,
+                                        firestore: widget.firestore,
+                                        functions: widget.functions!,
+                                        account: widget.account,
+                                        room: room,
+                                        storage: widget.storage,
+                                      ),
+                                    ),
+                                  ),
+                            child: const Text('Import a demo story'),
+                          ),
+                        if (widget.functions != null)
+                          TextButton(
+                            onPressed: _busy || _invalidated
+                                ? null
+                                : () => Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => StagedStoryReviewDemo(
+                                        auth: widget.auth,
+                                        firestore: widget.firestore,
+                                        functions: widget.functions!,
+                                        account: widget.account,
+                                        room: room,
+                                        storage: widget.storage,
+                                      ),
+                                    ),
+                                  ),
+                            child: const Text('Review a demo story'),
+                          ),
+                      ],
                     ),
                   ),
                 ),
-              const Text(
-                'Story restoration is not connected to this screen yet.',
-              ),
+              const Text('Publishing is not connected to this screen yet.'),
             ],
           ),
         ),
