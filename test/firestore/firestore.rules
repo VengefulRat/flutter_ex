@@ -1,0 +1,399 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Test-only, incomplete migration rules. Never deploy to the live project.
+    function passwordUser() {
+      return request.auth != null &&
+        request.auth.token.firebase.sign_in_provider == 'password';
+    }
+
+    function owner(uid) {
+      return passwordUser() && request.auth.uid == uid;
+    }
+
+    function account(uid) {
+      return /databases/$(database)/documents/accounts_v2/$(uid);
+    }
+
+    function profile(code) {
+      return /databases/$(database)/documents/profiles_v2/$(code);
+    }
+
+    function nameEntry(name) {
+      return /databases/$(database)/documents/names_v2/$(name);
+    }
+
+    function identity(uid) {
+      return /databases/$(database)/documents/private_v2/$(uid)/data/identity;
+    }
+
+    function interest(id) {
+      return /databases/$(database)/documents/interests_v2/$(id);
+    }
+
+    function session(id) {
+      return /databases/$(database)/documents/sessions_v2/$(id);
+    }
+
+    function restore(id) {
+      return /databases/$(database)/documents/sessions_v2/$(id)/restore/state;
+    }
+
+    function restorePost(id, postId) {
+      return /databases/$(database)/documents/sessions_v2/$(id)/restore/state/posts/$(postId);
+    }
+
+    function restoreMetadata(id, chunkId) {
+      return /databases/$(database)/documents/sessions_v2/$(id)/restore/state/metadata/$(chunkId);
+    }
+
+    function roomKey(id, code) {
+      return /databases/$(database)/documents/sessions_v2/$(id)/keys/$(code);
+    }
+
+    function registeredUser() {
+      return passwordUser() && exists(account(request.auth.uid));
+    }
+
+    function userCode() {
+      return get(account(request.auth.uid)).data.code;
+    }
+
+    function participant(data) {
+      return registeredUser() && userCode() in data.participants;
+    }
+
+    function validId(id) {
+      return id is string && id.matches('^[a-zA-Z0-9_-]{1,128}$');
+    }
+
+    function validCode(code) {
+      return code is string && code.matches('^LR-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$');
+    }
+
+    function validName(name) {
+      return name is string && name.matches('^[a-z0-9_-]{2,24}$');
+    }
+
+    function validProfile(code, data) {
+      return data.keys().hasOnly([
+          'uid', 'code', 'displayName', 'displayNameOriginal', 'isDiscoverable', 'publicKey'
+        ]) &&
+        data.keys().hasAll([
+          'uid', 'code', 'displayName', 'displayNameOriginal', 'isDiscoverable'
+        ]) &&
+        data.uid is string &&
+        data.code == code &&
+        validCode(code) &&
+        validName(data.displayName) &&
+        data.displayNameOriginal is string &&
+        data.displayNameOriginal.lower() == data.displayName &&
+        data.isDiscoverable is bool &&
+        (!data.keys().hasAny(['publicKey']) ||
+          (data.publicKey is string && data.publicKey.matches('^[A-Za-z0-9+/]{43}=$')));
+    }
+
+    match /accounts_v2/{uid} {
+      allow get: if owner(uid);
+      allow create: if owner(uid) &&
+        request.resource.data.keys().hasOnly(['code']) &&
+        request.resource.data.keys().hasAll(['code']) &&
+        validCode(request.resource.data.code) &&
+        getAfter(profile(request.resource.data.code)).data.uid == uid;
+    }
+
+    match /profiles_v2/{code} {
+      allow get: if passwordUser();
+      allow list: if passwordUser() && resource.data.isDiscoverable == true;
+      allow create: if passwordUser() &&
+        validProfile(code, request.resource.data) &&
+        !request.resource.data.keys().hasAny(['publicKey']) &&
+        request.resource.data.uid == request.auth.uid &&
+        getAfter(account(request.auth.uid)).data.code == code &&
+        getAfter(nameEntry(request.resource.data.displayName)).data.code == code;
+      allow update: if owner(resource.data.uid) &&
+        validProfile(code, request.resource.data) &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.displayName == resource.data.displayName &&
+        (
+          (!resource.data.keys().hasAny(['publicKey']) &&
+            (!request.resource.data.keys().hasAny(['publicKey']) ||
+              getAfter(identity(request.auth.uid)).data.publicKey == request.resource.data.publicKey)) ||
+          (resource.data.keys().hasAny(['publicKey']) &&
+            request.resource.data.get('publicKey', null) == resource.data.publicKey)
+        );
+    }
+
+    match /names_v2/{name} {
+      allow get: if passwordUser();
+      allow create: if passwordUser() &&
+        validName(name) &&
+        request.resource.data.keys().hasOnly(['code']) &&
+        request.resource.data.keys().hasAll(['code']) &&
+        validCode(request.resource.data.code) &&
+        getAfter(profile(request.resource.data.code)).data.uid == request.auth.uid &&
+        getAfter(profile(request.resource.data.code)).data.displayName == name &&
+        getAfter(account(request.auth.uid)).data.code == request.resource.data.code;
+    }
+
+    match /private_v2/{uid}/{document=**} {
+      allow read, write: if owner(uid);
+    }
+
+    match /interests_v2/{id} {
+      allow read: if registeredUser() &&
+        (resource.data.fromCode == userCode() || resource.data.toCode == userCode());
+      allow create: if registeredUser() &&
+        validId(id) &&
+        request.resource.data.keys().hasOnly(['fromCode', 'toCode', 'status']) &&
+        request.resource.data.keys().hasAll(['fromCode', 'toCode', 'status']) &&
+        request.resource.data.fromCode == userCode() &&
+        validCode(request.resource.data.toCode) &&
+        request.resource.data.toCode != userCode() &&
+        exists(profile(request.resource.data.toCode)) &&
+        request.resource.data.status == 'pending';
+      allow update: if registeredUser() &&
+        resource.data.toCode == userCode() &&
+        resource.data.status == 'pending' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'sessionId']) &&
+        (
+          (request.resource.data.status == 'declined' &&
+            !request.resource.data.keys().hasAny(['sessionId'])) ||
+          (request.resource.data.status == 'accepted' &&
+            validId(request.resource.data.sessionId) &&
+            !exists(session(request.resource.data.sessionId)) &&
+            getAfter(session(request.resource.data.sessionId)).data.requestId == id)
+        );
+    }
+
+    match /sessions_v2/{id} {
+      function member() {
+        return participant(get(session(id)).data);
+      }
+
+      function optionalText(data, field) {
+        return data.get(field, null) == null || data.get(field, null) is string;
+      }
+
+      function ciphertext(text) {
+        return text is string && text.size() >= 24 &&
+          text.size() % 4 == 0 && text.matches('^[A-Za-z0-9+/]+={0,2}$');
+      }
+
+      function nonce(iv) {
+        return iv is string && iv.matches('^[A-Za-z0-9+/]{16}$');
+      }
+
+      function encryptedPair(data, field, ivField) {
+        let text = data.get(field, null);
+        let iv = data.get(ivField, null);
+        return (text == null && iv == null) ||
+          (ciphertext(text) && nonce(iv));
+      }
+
+      function validPost(data) {
+        return data.keys().hasOnly([
+            'authorCode', 'authorName', 'content', 'contentIv', 'contentRuns',
+            'contentRunsIv', 'quotedContent', 'quotedContentIv', 'quotedPostId',
+            'quotedAuthor', 'characterName', 'locationName', 'textColor',
+            'chapter', 'createdAt', 'edited', 'editedAt', 'encrypted'
+          ]) &&
+          data.keys().hasAll([
+            'authorCode', 'authorName', 'content', 'contentIv', 'createdAt', 'encrypted'
+          ]) &&
+          data.authorCode is string &&
+          data.authorName is string &&
+          ciphertext(data.content) &&
+          nonce(data.contentIv) &&
+          data.encrypted == true &&
+          data.createdAt is timestamp &&
+          encryptedPair(data, 'quotedContent', 'quotedContentIv') &&
+          encryptedPair(data, 'contentRuns', 'contentRunsIv') &&
+          optionalText(data, 'quotedPostId') &&
+          optionalText(data, 'quotedAuthor') &&
+          optionalText(data, 'characterName') &&
+          optionalText(data, 'locationName') &&
+          optionalText(data, 'chapter') &&
+          (data.get('textColor', null) == null || data.get('textColor', null) is int) &&
+          (data.get('edited', null) == null || data.get('edited', null) is bool) &&
+          (data.get('editedAt', null) == null || data.get('editedAt', null) is timestamp);
+      }
+
+      function validRoomKey(data) {
+        return data.keys().hasOnly(['version', 'ephemeralPublicKey', 'nonce', 'ciphertext']) &&
+          data.keys().hasAll(['version', 'ephemeralPublicKey', 'nonce', 'ciphertext']) &&
+          data.version is int && data.version == 1 &&
+          data.ephemeralPublicKey is string &&
+          data.ephemeralPublicKey.matches('^[A-Za-z0-9+/]{43}=$') &&
+          nonce(data.nonce) &&
+          data.ciphertext is string &&
+          data.ciphertext.matches('^[A-Za-z0-9+/]{64}$');
+      }
+
+      function normalWritesAllowed() {
+        return !exists(restore(id)) ||
+          get(restore(id)).data.status in ['completed', 'rejected'];
+      }
+
+      function publishingImporter() {
+        return exists(restore(id)) &&
+          get(restore(id)).data.status == 'approved' &&
+          get(restore(id)).data.importerCode == userCode();
+      }
+
+      allow read: if participant(resource.data);
+      allow create: if registeredUser() &&
+        validId(id) &&
+        request.resource.data.keys().hasOnly(['requestId', 'participants']) &&
+        request.resource.data.keys().hasAll(['requestId', 'participants']) &&
+        validId(request.resource.data.requestId) &&
+        request.resource.data.participants is list &&
+        request.resource.data.participants.size() == 2 &&
+        get(interest(request.resource.data.requestId)).data.status == 'pending' &&
+        getAfter(interest(request.resource.data.requestId)).data.status == 'accepted' &&
+        getAfter(interest(request.resource.data.requestId)).data.sessionId == id &&
+        getAfter(interest(request.resource.data.requestId)).data.toCode == userCode() &&
+        getAfter(interest(request.resource.data.requestId)).data.fromCode in request.resource.data.participants &&
+        getAfter(interest(request.resource.data.requestId)).data.toCode in request.resource.data.participants;
+
+      match /keys/{code} {
+        allow read: if member() && code in get(session(id)).data.participants;
+        allow create: if member() &&
+          code in get(session(id)).data.participants &&
+          validRoomKey(request.resource.data) &&
+          !exists(restore(id)) &&
+          !exists(roomKey(id, get(session(id)).data.participants[0])) &&
+          !exists(roomKey(id, get(session(id)).data.participants[1])) &&
+          validRoomKey(getAfter(roomKey(id, get(session(id)).data.participants[0])).data) &&
+          validRoomKey(getAfter(roomKey(id, get(session(id)).data.participants[1])).data) &&
+          get(profile(get(session(id)).data.participants[0])).data.publicKey is string &&
+          get(profile(get(session(id)).data.participants[1])).data.publicKey is string;
+      }
+
+      match /posts/{postId} {
+        allow read: if member() && (normalWritesAllowed() || publishingImporter());
+        allow create: if member() &&
+          validPost(request.resource.data) &&
+          (
+            (normalWritesAllowed() &&
+              exists(roomKey(id, get(session(id)).data.participants[0])) &&
+              exists(roomKey(id, get(session(id)).data.participants[1])) &&
+              request.resource.data.authorCode == userCode() &&
+              request.resource.data.authorName == get(profile(userCode())).data.displayNameOriginal) ||
+            (publishingImporter() &&
+              request.resource.data == get(restorePost(id, postId)).data)
+          );
+        allow update: if member() &&
+          normalWritesAllowed() &&
+          resource.data.authorCode == userCode() &&
+          validPost(request.resource.data) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'content', 'contentIv', 'contentRuns', 'contentRunsIv',
+            'textColor', 'edited', 'editedAt'
+          ]);
+        allow delete: if member() &&
+          normalWritesAllowed() &&
+          resource.data.authorCode == userCode();
+      }
+
+      match /story_metadata/{chunkId} {
+        allow read: if member() && (normalWritesAllowed() || publishingImporter());
+        allow create: if member() && publishingImporter() &&
+          request.resource.data == get(restoreMetadata(id, chunkId)).data;
+      }
+
+      match /restore/{restoreId} {
+        // Rules cannot count child documents; only a trusted service may
+        // complete a restore after comparing the frozen and published sets.
+        // Approval must carry the review version that the reviewer inspected.
+        allow read: if restoreId == 'state' && member();
+        allow create: if restoreId == 'state' && member() &&
+          request.resource.data.keys().hasOnly([
+            'status', 'importerCode', 'reviewerCode', 'postCount', 'metadataCount',
+            'reviewVersion', 'decisionVersion'
+          ]) &&
+          request.resource.data.keys().hasAll([
+            'status', 'importerCode', 'reviewerCode', 'postCount', 'metadataCount',
+            'reviewVersion', 'decisionVersion'
+          ]) &&
+          request.resource.data.status == 'uploading' &&
+          request.resource.data.importerCode == userCode() &&
+          request.resource.data.reviewerCode != userCode() &&
+          request.resource.data.reviewerCode in get(session(id)).data.participants &&
+          exists(roomKey(id, get(session(id)).data.participants[0])) &&
+          exists(roomKey(id, get(session(id)).data.participants[1])) &&
+          request.resource.data.postCount is int &&
+          request.resource.data.postCount >= 0 &&
+          request.resource.data.metadataCount is int &&
+          request.resource.data.metadataCount > 0 &&
+          request.resource.data.metadataCount <= 1000000 &&
+          request.resource.data.reviewVersion is int &&
+          request.resource.data.reviewVersion == 0 &&
+          request.resource.data.decisionVersion is int &&
+          request.resource.data.decisionVersion == 0;
+        allow update: if restoreId == 'state' && member() &&
+          (
+            (resource.data.status == 'uploading' &&
+              resource.data.importerCode == userCode() &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['postCount', 'metadataCount']) &&
+              request.resource.data.postCount is int &&
+              request.resource.data.postCount >= 0 &&
+              request.resource.data.metadataCount is int &&
+              request.resource.data.metadataCount > 0 &&
+              request.resource.data.metadataCount <= 1000000) ||
+            (resource.data.status == 'uploading' &&
+              resource.data.importerCode == userCode() &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewVersion']) &&
+              request.resource.data.status == 'verifying' &&
+              request.resource.data.reviewVersion == resource.data.reviewVersion + 1) ||
+            (resource.data.status == 'verifying' &&
+              resource.data.importerCode == userCode() &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+              request.resource.data.status == 'review') ||
+            (resource.data.status in ['verifying', 'rejected'] &&
+              resource.data.importerCode == userCode() &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'postCount', 'metadataCount']) &&
+              request.resource.data.postCount is int &&
+              request.resource.data.postCount >= 0 &&
+              request.resource.data.metadataCount is int &&
+              request.resource.data.metadataCount > 0 &&
+              request.resource.data.metadataCount <= 1000000 &&
+              request.resource.data.status == 'uploading') ||
+            (resource.data.status == 'review' &&
+              resource.data.reviewerCode == userCode() &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decisionVersion']) &&
+              request.resource.data.status in ['approved', 'rejected'] &&
+              request.resource.data.decisionVersion is int &&
+              request.resource.data.decisionVersion == resource.data.reviewVersion)
+          );
+
+        match /posts/{postId} {
+          allow read: if restoreId == 'state' && member();
+          allow create, update: if restoreId == 'state' && member() &&
+            get(restore(id)).data.status == 'uploading' &&
+            get(restore(id)).data.importerCode == userCode() &&
+            validPost(request.resource.data) &&
+            request.resource.data.authorCode in get(session(id)).data.participants;
+          allow delete: if restoreId == 'state' && member() &&
+            get(restore(id)).data.status == 'uploading' &&
+            get(restore(id)).data.importerCode == userCode();
+        }
+
+        match /metadata/{chunkId} {
+          allow read: if restoreId == 'state' && member();
+          allow create, update: if restoreId == 'state' && member() &&
+            chunkId.matches('^[0-9]{6}$') &&
+            get(restore(id)).data.status == 'uploading' &&
+            get(restore(id)).data.importerCode == userCode() &&
+            request.resource.data.keys().hasOnly(['cipher', 'iv']) &&
+            request.resource.data.keys().hasAll(['cipher', 'iv']) &&
+            ciphertext(request.resource.data.cipher) &&
+            nonce(request.resource.data.iv);
+          allow delete: if restoreId == 'state' && member() &&
+            get(restore(id)).data.status == 'uploading' &&
+            get(restore(id)).data.importerCode == userCode();
+        }
+      }
+    }
+  }
+}

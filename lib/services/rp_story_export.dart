@@ -14,7 +14,7 @@ class StoryPost {
   final Map<String, dynamic> data;
 }
 
-const _storySessionFields = [
+const rpStorySessionFields = [
   'title',
   'summary',
   'genre',
@@ -26,7 +26,7 @@ const _storySessionFields = [
 ];
 
 Map<String, dynamic> _storySession(Map<String, dynamic> data) => {
-  for (final field in _storySessionFields)
+  for (final field in rpStorySessionFields)
     if (data.containsKey(field)) field: data[field],
 };
 

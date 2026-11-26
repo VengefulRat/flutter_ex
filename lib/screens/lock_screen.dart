@@ -22,7 +22,10 @@ Future<bool> showLockScreen(BuildContext context) async {
 }
 
 class LockScreen extends StatefulWidget {
-  const LockScreen({super.key});
+  const LockScreen({super.key, this.auth});
+
+  final AuthService? auth;
+
   @override
   State<LockScreen> createState() => _LockScreenState();
 }
@@ -31,7 +34,7 @@ class _LockScreenState extends State<LockScreen> {
   final _localAuth = LocalAuthentication();
   bool _biometricsAvailable = false;
   bool _bioAutoPrompted = false;
-  final _auth = AuthService();
+  late final _auth = widget.auth ?? AuthService();
   String _mode = 'pin'; // 'pin' | 'code'
   String _pinInput = '';
   int _pinLength = AuthService.pinMinLength;
@@ -166,7 +169,7 @@ class _LockScreenState extends State<LockScreen> {
           _pinInput = '';
           _verifying = false;
           _error =
-              'Couldn\'t unlock your stories with that PIN. Try your unique code.';
+              'Couldn\'t unlock your stories with that PIN. Try again.';
         });
         _pinCtrl.clear();
         return;
@@ -205,16 +208,11 @@ class _LockScreenState extends State<LockScreen> {
       return;
     }
 
-    final unlocked = await _auth.silentUnlock();
-    if (!mounted) return;
-    if (unlocked) {
-      Navigator.of(context).pop(true);
-      return;
-    }
-
     setState(() {
       _codeLoading = false;
       _mode = 'pin';
+      _pinInput = '';
+      _pinCtrl.clear();
       _error =
           'Code accepted. Enter your PIN to unlock your stories on this device.';
     });
@@ -306,7 +304,7 @@ class _LockScreenState extends State<LockScreen> {
                                 _error = null;
                               }),
                               child: const Text(
-                                'Forgot PIN — use unique code',
+                                'Use a different account code',
                                 style: TextStyle(
                                   fontFamily: 'monospace',
                                   fontSize: 9,
@@ -506,7 +504,7 @@ class _LockScreenState extends State<LockScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Use this if you\'ve forgotten your PIN.',
+          'You will still need your PIN to unlock your stories.',
           style: TextStyle(
             fontSize: 11,
             color: cSmoke,

@@ -7,6 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'crypto_service.dart';
+import 'user_code.dart';
 import '../models/world.dart';
 import '../settings.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -65,14 +66,6 @@ class AuthService {
     bits: 256,
   );
 
-  String _generateCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    final rand = Random.secure();
-    final part1 = List.generate(4, (_) => chars[rand.nextInt(chars.length)]).join();
-    final part2 = List.generate(4, (_) => chars[rand.nextInt(chars.length)]).join();
-    return 'LR-$part1-$part2';
-  }
-
   List<int> _randomBytes(int length) {
     final rnd = Random.secure();
     return List<int>.generate(length, (_) => rnd.nextInt(256));
@@ -114,7 +107,7 @@ class AuthService {
       bool codeExists = true;
       int attempts = 0;
       do {
-        code = _generateCode();
+        code = generateUserCode();
         final doc = await _db.collection('users').doc(code).get();
         codeExists = doc.exists;
         attempts++;
