@@ -19,9 +19,12 @@ import 'package:flutter_quill/flutter_quill.dart'
 import 'screens/diary_screen.dart';
 import 'services/sound_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'screens/home_screen.dart';
+import 'migration_demo.dart' show MigrationDemoHome;
 
+const migrationDemoEnabled =
+    kDebugMode && bool.fromEnvironment('LORE_MIGRATION_DEMO');
 
 // Must be top-level for FCM background handling
 @pragma('vm:entry-point')
@@ -31,10 +34,12 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  await initDiaryNotifications();
-  await appSettings.load();
+  if (!migrationDemoEnabled) {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    await initDiaryNotifications();
+    await appSettings.load();
+  }
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -54,7 +59,9 @@ class _LoreAppState extends State<LoreApp> {
   @override
   void initState() {
     super.initState();
-    appSettings.addListener(_onSettingsChanged);
+    if (!migrationDemoEnabled) {
+      appSettings.addListener(_onSettingsChanged);
+    }
   }
 
   void _onSettingsChanged() {
@@ -63,7 +70,9 @@ class _LoreAppState extends State<LoreApp> {
 
   @override
   void dispose() {
-    appSettings.removeListener(_onSettingsChanged);
+    if (!migrationDemoEnabled) {
+      appSettings.removeListener(_onSettingsChanged);
+    }
     super.dispose();
   }
 
@@ -79,15 +88,15 @@ class _LoreAppState extends State<LoreApp> {
     ],
     supportedLocales: const [Locale('en')],
     theme: ThemeData(
-      scaffoldBackgroundColor: appSettings.bgColor,
+      scaffoldBackgroundColor: migrationDemoEnabled ? cVoid : appSettings.bgColor,
       colorScheme: ColorScheme.dark(
         primary: cGold,
         secondary: cIce,
-        surface: appSettings.surfaceColor,
+        surface: migrationDemoEnabled ? cInk : appSettings.surfaceColor,
       ),
       useMaterial3: true,
     ),
-    home: const SplashScreen(),
+    home: migrationDemoEnabled ? const MigrationDemoHome() : const SplashScreen(),
   );
 }
 

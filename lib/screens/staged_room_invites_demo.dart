@@ -8,6 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../services/staged_account_service.dart';
 import '../services/staged_room_invites.dart';
+import 'staged_published_story_demo.dart';
 import 'staged_story_import_demo.dart';
 import 'staged_story_review_demo.dart';
 
@@ -264,11 +265,31 @@ class _StagedRoomInvitesDemoState extends State<StagedRoomInvitesDemo> {
                                   ),
                             child: const Text('Review a demo story'),
                           ),
+                        if (widget.functions != null)
+                          TextButton(
+                            onPressed: _busy || _invalidated
+                                ? null
+                                : () => Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => StagedPublishedStoryDemo(
+                                        auth: widget.auth,
+                                        firestore: widget.firestore,
+                                        functions: widget.functions!,
+                                        account: widget.account,
+                                        room: room,
+                                        storage: widget.storage,
+                                      ),
+                                    ),
+                                  ),
+                            child: const Text('View published demo story'),
+                          ),
                       ],
                     ),
                   ),
                 ),
-              const Text('Publishing is not connected to this screen yet.'),
+              const Text(
+                'The importer can verify and publish an approved demo story from the import screen.',
+              ),
             ],
           ),
         ),

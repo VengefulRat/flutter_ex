@@ -4,11 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/world.dart';
 import 'auth_service.dart';
 import 'crypto_service.dart';
+import 'room_post_writer.dart';
 import '../settings.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:convert';
 
-class FirestoreService {
+class FirestoreService implements RoomPostWriter {
   static final FirestoreService _instance = FirestoreService._internal();
   factory FirestoreService() => _instance;
   FirestoreService._internal();

@@ -19,6 +19,7 @@ import '../widgets/colour_picker.dart';
 import '../models/world.dart';
 import '../settings.dart';
 import '../services/firestore_service.dart';
+import '../services/room_post_writer.dart';
 import '../services/auth_service.dart';
 import '../services/crypto_service.dart';
 import '../services/rp_story_export.dart';
@@ -73,6 +74,38 @@ class RPPost {
     this.characterName,
     this.locationName,
   }) : wordCount = content.trim().split(RegExp(r'\s+')).length;
+
+  factory RPPost.fromData(Map<String, dynamic> data, String myCode) => RPPost(
+    id: data['id'] as String,
+    author: data['authorName'] as String? ?? '?',
+    isUser: data['authorCode'] == myCode,
+    content: data['content'] as String? ?? '',
+    timestamp: data['createdAt'] != null
+        ? (data['createdAt'] as dynamic).toDate()
+        : DateTime.now(),
+    quotedContent: data['quotedContent'] as String?,
+    quotedAuthor: data['quotedAuthor'] as String?,
+    characterName: data['characterName'] as String?,
+    locationName: data['locationName'] as String?,
+    textColor: data['textColor'] != null
+        ? Color(data['textColor'] as int)
+        : cParchment,
+    runs: _parseRuns(data['contentRuns'] as String?),
+  );
+
+  static List<Map<String, dynamic>> _parseRuns(String? raw) {
+    if (raw == null || raw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        return decoded
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+    } catch (_) {}
+    return const [];
+  }
 }
 
 class OOCMessage {
@@ -587,7 +620,7 @@ class MoodParticlePainter extends CustomPainter {
 Widget _selectablePostText({
   required String text,
   required TextStyle style,
-  required void Function(String) onAddToLog,
+  void Function(String)? onAddToLog,
   void Function(String)? onSelectionChanged,
   List<Map<String, dynamic>>? runs,
 }) {
@@ -676,6 +709,33 @@ Widget _selectablePostText({
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: children,
+  );
+}
+
+class ReadOnlyRPPost extends StatelessWidget {
+  const ReadOnlyRPPost({super.key, required this.post});
+
+  final RPPost post;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(post.characterName ?? post.author),
+          if (post.quotedContent != null)
+            Text('${post.quotedAuthor ?? ''}: ${post.quotedContent}'),
+          const SizedBox(height: 8),
+          _selectablePostText(
+            text: post.content,
+            runs: post.runs,
+            style: TextStyle(color: post.textColor, fontSize: post.fontSize),
+          ),
+        ],
+      ),
+    ),
   );
 }
 
@@ -1106,6 +1166,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
   }
 
   final _fs = FirestoreService();
+  late final RoomPostWriter _postWriter = _fs;
   final _auth = AuthService();
   StreamSubscription? _postsSub;
   StreamSubscription? _oocSub;
@@ -1333,20 +1394,6 @@ class _RPRoomScreenState extends State<RPRoomScreen>
     super.dispose();
   }
 
-  static List<Map<String, dynamic>> _parseRuns(String? raw) {
-    if (raw == null || raw.isEmpty) return const [];
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is List) {
-        return decoded
-            .whereType<Map>()
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList();
-      }
-    } catch (_) {}
-    return const [];
-  }
-
   void _subscribeToFirestore() {
     _postsSub = _fs.sessionPosts(widget.sessionId).listen((data) {
       final myCode = _auth.currentCode ?? '';
@@ -1356,26 +1403,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
           (_scrollCtrl.position.maxScrollExtent - _scrollCtrl.position.pixels) <
               100;
 
-      final posts = data.map((d) {
-        final isUser = d['authorCode'] == myCode;
-        return RPPost(
-          id: d['id'] as String,
-          author: d['authorName'] as String? ?? '?',
-          isUser: isUser,
-          content: d['content'] as String? ?? '',
-          timestamp: (d['createdAt'] != null)
-              ? (d['createdAt'] as dynamic).toDate()
-              : DateTime.now(),
-          quotedContent: d['quotedContent'] as String?,
-          quotedAuthor: d['quotedAuthor'] as String?,
-          characterName: d['characterName'] as String?,
-          locationName: d['locationName'] as String?,
-          textColor: d['textColor'] != null
-              ? Color(d['textColor'] as int)
-              : cParchment,
-          runs: _parseRuns(d['contentRuns'] as String?),
-        );
-      }).toList();
+      final posts = data.map((d) => RPPost.fromData(d, myCode)).toList();
 
       if (!mounted) return;
       setState(() {
@@ -1823,7 +1851,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
       final postId = _editingPostId!;
       if (widget.sessionId.isNotEmpty) {
         try {
-          await _fs.editPost(
+          await _postWriter.editPost(
             sessionId: widget.sessionId,
             postId: postId,
             newContent: text,
@@ -1925,7 +1953,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
     if (widget.sessionId.isNotEmpty) {
       try {
-        final newFirestoreId = await _fs.addPost(
+        final newFirestoreId = await _postWriter.addPost(
           sessionId: widget.sessionId,
           chapter: _selectedChapter,
           content: text,
@@ -2031,7 +2059,7 @@ class _RPRoomScreenState extends State<RPRoomScreen>
 
     if (widget.sessionId.isNotEmpty) {
       try {
-        await _fs.deletePost(sessionId: widget.sessionId, postId: id);
+        await _postWriter.deletePost(sessionId: widget.sessionId, postId: id);
       } catch (e) {
         if (mounted) {
           setState(() => _posts.insert(i, original));

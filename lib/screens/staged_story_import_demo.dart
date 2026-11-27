@@ -62,6 +62,7 @@ class _StagedStoryImportDemoState extends State<StagedStoryImportDemo> {
   bool _busy = false;
   bool _invalidated = false;
   bool _useDevice = false;
+  int _backupRevision = 0;
 
   @override
   void initState() {
@@ -238,6 +239,7 @@ class _StagedStoryImportDemoState extends State<StagedStoryImportDemo> {
       _backup = null;
       _authors = {};
       _mapping.clear();
+      _backupRevision++;
     });
     final source = await file.readAsString();
     _requireUser();
@@ -264,12 +266,7 @@ class _StagedStoryImportDemoState extends State<StagedStoryImportDemo> {
   }
 
   Future<void> _stage() async {
-    final backup = _backup;
-    if (backup == null) throw StateError('Choose a story backup first.');
-    if (_mapping.length != _authors.length ||
-        _mapping.values.toSet().length != _mapping.length) {
-      throw StateError('Map each original author to a different participant.');
-    }
+    final backup = _validatedBackup();
     await _refreshStatus();
     _requireUser();
     final partner = widget.room.participants.singleWhere(
@@ -308,6 +305,57 @@ class _StagedStoryImportDemoState extends State<StagedStoryImportDemo> {
     }
   }
 
+  RpStoryBackup _validatedBackup() {
+    final backup = _backup;
+    if (backup == null) throw StateError('Choose a story backup first.');
+    if (_mapping.length != _authors.length ||
+        _mapping.values.toSet().length != _mapping.length) {
+      throw StateError('Map each original author to a different participant.');
+    }
+    return backup;
+  }
+
+  bool get _canPublish =>
+      _statusLoaded &&
+      (_status == 'approved' || _status == 'completed') &&
+      _importer == widget.account.code;
+
+  Future<void> _publish() async {
+    final backup = _validatedBackup();
+    await _refreshStatus();
+    _requireUser();
+    if (!_canPublish) {
+      throw StateError('Only the importer can publish an approved restore.');
+    }
+    final wasCompleted = _status == 'completed';
+    try {
+      final identity = _useDevice
+          ? await _device.unlock(pin: _pin.text)
+          : await _identity.unlock(pin: _pin.text, password: _password.text);
+      _requireUser();
+      setState(() => _statusLoaded = false);
+      await _restore.publish(
+        sessionId: widget.room.id,
+        identity: identity,
+        backup: backup,
+        authorCodes: Map.of(_mapping),
+      );
+      await _refreshStatus();
+      if (mounted && !_invalidated) {
+        setState(
+          () => _notice = wasCompleted
+              ? 'Restore was already complete; the approved staging matches this backup.'
+              : 'Demo story published and restore completed.',
+        );
+      }
+    } finally {
+      if (mounted) {
+        _pin.clear();
+        _password.clear();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) => PopScope(
     canPop: !_busy,
@@ -331,8 +379,8 @@ class _StagedStoryImportDemoState extends State<StagedStoryImportDemo> {
                 ),
                 const Text(
                   'The importer checks the staged copy against the chosen backup. '
-                  'Partner review is separate; publishing is not connected yet. '
-                  'Keep the original backup and remember the author mapping for publishing.',
+                  'After partner approval, select the same backup and author mapping '
+                  'to verify and publish. Keep the original backup safe.',
                 ),
                 TextButton(
                   onPressed: _busy || _invalidated
@@ -349,7 +397,8 @@ class _StagedStoryImportDemoState extends State<StagedStoryImportDemo> {
                 ),
                 const Text(
                   'If an upload is interrupted, refresh its status before retrying. '
-                  'Retries replace staged data only; an already requested review cannot be restarted unless rejected.',
+                  'Retries replace staged data only; an already requested review cannot be restarted unless rejected. '
+                  'If publishing is interrupted, refresh and retry with the same backup and mapping.',
                 ),
                 if (_busy) const LinearProgressIndicator(),
                 if (_error != null)
@@ -376,7 +425,7 @@ class _StagedStoryImportDemoState extends State<StagedStoryImportDemo> {
                   ),
                   for (final entry in _authors.entries)
                     DropdownButtonFormField<String>(
-                      key: ValueKey('author-${entry.key}'),
+                      key: ValueKey('author-$_backupRevision-${entry.key}'),
                       initialValue: _mapping[entry.key],
                       decoration: InputDecoration(
                         labelText: '${entry.value.join(', ')} (${entry.key})',
@@ -433,6 +482,12 @@ class _StagedStoryImportDemoState extends State<StagedStoryImportDemo> {
                         ? null
                         : () => _run(_stage),
                     child: const Text('Stage backup for review'),
+                  ),
+                  FilledButton(
+                    onPressed: _busy || _invalidated || !_canPublish
+                        ? null
+                        : () => _run(_publish),
+                    child: const Text('Verify and publish demo story'),
                   ),
                 ],
               ],

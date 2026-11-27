@@ -123,38 +123,10 @@ class StagedStoryReviewService {
       decrypt: decrypt,
     );
 
-    final posts = <StoryPost>[];
-    for (final doc in snapshot.docs) {
-      final data = Map<String, dynamic>.from(doc.data());
-      if (data['encrypted'] != true ||
-          data['authorCode'] is! String ||
-          data['authorName'] is! String ||
-          data['createdAt'] is! Timestamp) {
-        throw FormatException('Post ${doc.id} has invalid metadata.');
-      }
-      for (final field in ['content', 'quotedContent', 'contentRuns']) {
-        final ciphertext = data[field];
-        final iv = data['${field}Iv'];
-        if (field != 'content' && ciphertext == null && iv == null) continue;
-        if (ciphertext is! String || iv is! String) {
-          throw FormatException('Post ${doc.id} has invalid encrypted $field.');
-        }
-        final plaintext = await decrypt(ciphertext, iv);
-        if (plaintext == null) {
-          throw StateError('Cannot decrypt $field for post ${doc.id}.');
-        }
-        data[field] = plaintext;
-        data.remove('${field}Iv');
-      }
-      data['encrypted'] = false;
-      posts.add(StoryPost(doc.id, Map<String, dynamic>.unmodifiable(data)));
-    }
-    posts.sort((a, b) {
-      final order = (a.data['createdAt'] as Timestamp).compareTo(
-        b.data['createdAt'] as Timestamp,
-      );
-      return order != 0 ? order : a.id.compareTo(b.id);
-    });
+    final posts = await decryptStoryPosts(
+      posts: [for (final doc in snapshot.docs) StoryPost(doc.id, doc.data())],
+      decrypt: decrypt,
+    );
 
     final last = await stateRef.get(server);
     if (last.metadata.isFromCache || last.metadata.hasPendingWrites) {

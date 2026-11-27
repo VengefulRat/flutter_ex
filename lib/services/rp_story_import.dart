@@ -70,8 +70,9 @@ Object? _decodeValue(Object? value) {
   return value;
 }
 
-Map<String, dynamic> _decodeMap(Map<String, dynamic> value) =>
-    {for (final entry in value.entries) entry.key: _decodeValue(entry.value)};
+Map<String, dynamic> _decodeMap(Map<String, dynamic> value) => {
+  for (final entry in value.entries) entry.key: _decodeValue(entry.value),
+};
 
 /// Checks the backup envelope and plaintext post fields without writing data.
 RpStoryBackup decodeRpStory(String source) {
@@ -145,7 +146,9 @@ Future<RpStoryBackup> decodeStagedStoryMetadata({
   if (expectedCount < 1 ||
       expectedCount > 1000000 ||
       chunks.length != expectedCount) {
-    throw const FormatException('The staged story metadata count does not match.');
+    throw const FormatException(
+      'The staged story metadata count does not match.',
+    );
   }
   final sorted = [...chunks]..sort((a, b) => a.id.compareTo(b.id));
   final metadata = StringBuffer();
@@ -167,7 +170,9 @@ Future<RpStoryBackup> decodeStagedStoryMetadata({
   }
   final backup = decodeRpStory(metadata.toString());
   if (backup.posts.isNotEmpty ||
-      backup.session.keys.any((field) => !rpStorySessionFields.contains(field))) {
+      backup.session.keys.any(
+        (field) => !rpStorySessionFields.contains(field),
+      )) {
     throw const FormatException('Invalid staged story metadata.');
   }
   return backup;
@@ -194,6 +199,46 @@ const _importablePostFields = {
   'edited',
   'editedAt',
 };
+
+/// Decrypts and orders story posts, rejecting incomplete or invalid fields.
+Future<List<StoryPost>> decryptStoryPosts({
+  required List<StoryPost> posts,
+  required StoryDecrypt decrypt,
+}) async {
+  final result = <StoryPost>[];
+  for (final post in posts) {
+    final data = Map<String, dynamic>.from(post.data);
+    if (data['encrypted'] != true ||
+        data['authorCode'] is! String ||
+        data['authorName'] is! String ||
+        data['createdAt'] is! Timestamp) {
+      throw FormatException('Post ${post.id} has invalid metadata.');
+    }
+    for (final field in ['content', 'quotedContent', 'contentRuns']) {
+      final ciphertext = data[field];
+      final iv = data['${field}Iv'];
+      if (field != 'content' && ciphertext == null && iv == null) continue;
+      if (ciphertext is! String || iv is! String) {
+        throw FormatException('Post ${post.id} has invalid encrypted $field.');
+      }
+      final plaintext = await decrypt(ciphertext, iv);
+      if (plaintext == null) {
+        throw StateError('Cannot decrypt $field for post ${post.id}.');
+      }
+      data[field] = plaintext;
+      data.remove('${field}Iv');
+    }
+    data['encrypted'] = false;
+    result.add(StoryPost(post.id, Map<String, dynamic>.unmodifiable(data)));
+  }
+  result.sort((a, b) {
+    final order = (a.data['createdAt'] as Timestamp).compareTo(
+      b.data['createdAt'] as Timestamp,
+    );
+    return order != 0 ? order : a.id.compareTo(b.id);
+  });
+  return List.unmodifiable(result);
+}
 
 /// Prepares posts for a new room without writing them or changing the backup.
 ///
@@ -366,7 +411,9 @@ void verifyRpStoryPostSet({
   final expectedById = index(expected);
   final actualById = index(actual);
   if (expectedById.length != actualById.length) {
-    throw const FormatException('The story post set is incomplete or has extra posts.');
+    throw const FormatException(
+      'The story post set is incomplete or has extra posts.',
+    );
   }
   for (final entry in expectedById.entries) {
     final actualPost = actualById[entry.key];

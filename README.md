@@ -48,9 +48,25 @@ For a demo room, a test backup can be selected, its authors mapped to the two
 participants, and its encrypted contents staged for review. The partner can
 load all staged posts and room metadata, then approve or reject the reviewed
 version. Formatting is displayed as raw data, not a visual preview. Use test
-data, not the real story: this is not a production environment. Publishing is
-not connected to the demo UI yet. Keep the original backup and author mapping;
-they are needed when publishing. The production app remains separate.
+data, not the real story: this is not a production environment. After approval,
+the importer selects the same backup and mapping on the import screen to verify
+and publish. If publishing is interrupted, refresh the status and retry with
+the same backup and mapping. Keep the original backup safe; the production app
+remains separate.
+
+The normal app entry point can also open this same demo in the real app shell:
+`flutter run -t lib/main.dart --dart-define=LORE_MIGRATION_DEMO=true -d <android-emulator>`.
+This switch only works in debug builds and initializes the named demo project
+and local emulators instead of production Firebase. Without it, startup and
+existing accounts remain unchanged. This is not yet production integration:
+the existing home and room screens still use the legacy schema.
+After publishing, a read-only demo view can unlock and display the restored
+posts using the room's text renderer. The full room screen is not yet connected
+to the new service; it still uses the legacy schema.
+The existing room editor now uses a post-writer interface. An encrypted writer
+for the demo schema exists, but is not yet selected by the full room screen;
+room metadata, notifications, and the remaining room features still need to be
+migrated before that switch is safe.
 
 Finalization compares the approved encrypted staged and published documents;
 it cannot establish that the importer included everything in the original

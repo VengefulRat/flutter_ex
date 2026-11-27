@@ -10,37 +10,6 @@ import 'theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android) {
-    runApp(
-      const MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: Text(
-              'This local demo currently supports Android emulators and web.',
-            ),
-          ),
-        ),
-      ),
-    );
-    return;
-  }
-  final app = await Firebase.initializeApp(
-    name: 'lore-migration-demo',
-    options: FirebaseOptions(
-      apiKey: 'AIzaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
-      appId: kIsWeb
-          ? '1:123:web:0123456789abcdef'
-          : '1:123:android:0123456789abcdef',
-      messagingSenderId: '123',
-      projectId: 'demo-lore-migration',
-    ),
-  );
-  final auth = FirebaseAuth.instanceFor(app: app);
-  final firestore = FirebaseFirestore.instanceFor(app: app);
-  final functions = FirebaseFunctions.instanceFor(app: app);
-  await auth.useAuthEmulator('127.0.0.1', 18765);
-  firestore.useFirestoreEmulator('127.0.0.1', 18764);
-  functions.useFunctionsEmulator('127.0.0.1', 18766);
   runApp(
     MaterialApp(
       title: 'Lore migration demo',
@@ -53,11 +22,119 @@ Future<void> main() async {
         ),
         useMaterial3: true,
       ),
-      home: StagedAccountDemo(
-        auth: auth,
-        firestore: firestore,
-        functions: functions,
-      ),
+      home: const MigrationDemoHome(),
     ),
+  );
+}
+
+/// Initializes only the named demo project and its local emulators.
+class MigrationDemoHome extends StatefulWidget {
+  const MigrationDemoHome({super.key});
+
+  @override
+  State<MigrationDemoHome> createState() => _MigrationDemoHomeState();
+}
+
+class _MigrationDemoHomeState extends State<MigrationDemoHome> {
+  bool _authConfigured = false;
+  bool _firestoreConfigured = false;
+  bool _functionsConfigured = false;
+  late Future<
+    ({
+      FirebaseAuth auth,
+      FirebaseFirestore firestore,
+      FirebaseFunctions functions,
+    })
+  >
+  _services;
+
+  @override
+  void initState() {
+    super.initState();
+    _services = _connect();
+  }
+
+  Future<
+    ({
+      FirebaseAuth auth,
+      FirebaseFirestore firestore,
+      FirebaseFunctions functions,
+    })
+  >
+  _connect() async {
+    if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android) {
+      throw UnsupportedError(
+        'This local demo currently supports Android emulators and web.',
+      );
+    }
+    const name = 'lore-migration-demo';
+    const project = 'demo-lore-migration';
+    final existing = Firebase.apps.where((app) => app.name == name);
+    final app = existing.isEmpty
+        ? await Firebase.initializeApp(
+            name: name,
+            options: FirebaseOptions(
+              apiKey: 'AIzaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+              appId: kIsWeb
+                  ? '1:123:web:0123456789abcdef'
+                  : '1:123:android:0123456789abcdef',
+              messagingSenderId: '123',
+              projectId: project,
+            ),
+          )
+        : existing.single;
+    if (app.options.projectId != project) {
+      throw StateError('The migration demo Firebase project is invalid.');
+    }
+    final auth = FirebaseAuth.instanceFor(app: app);
+    final firestore = FirebaseFirestore.instanceFor(app: app);
+    final functions = FirebaseFunctions.instanceFor(app: app);
+    if (!_authConfigured) {
+      await auth.useAuthEmulator('127.0.0.1', 18765);
+      _authConfigured = true;
+    }
+    if (!_firestoreConfigured) {
+      firestore.useFirestoreEmulator('127.0.0.1', 18764);
+      _firestoreConfigured = true;
+    }
+    if (!_functionsConfigured) {
+      functions.useFunctionsEmulator('127.0.0.1', 18766);
+      _functionsConfigured = true;
+    }
+    return (auth: auth, firestore: firestore, functions: functions);
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder(
+    future: _services,
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Could not start the local migration demo: ${snapshot.error}',
+                ),
+                TextButton(
+                  onPressed: () => setState(() => _services = _connect()),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      final services = snapshot.data;
+      if (services == null) {
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      }
+      return StagedAccountDemo(
+        auth: services.auth,
+        firestore: services.firestore,
+        functions: services.functions,
+      );
+    },
   );
 }

@@ -8,6 +8,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:lore/main.dart' as app_main;
 import 'package:lore/services/rp_story_export.dart';
 import 'package:lore/services/rp_story_import.dart';
 import 'package:lore/services/staged_account_service.dart';
@@ -15,6 +16,7 @@ import 'package:lore/services/staged_device_unlock.dart';
 import 'package:lore/services/staged_identity_service.dart';
 import 'package:lore/services/staged_restore_service.dart';
 import 'package:lore/services/staged_room_invites.dart';
+import 'package:lore/services/staged_room_post_writer.dart';
 import 'package:lore/screens/staged_account_demo.dart';
 import 'package:lore/screens/staged_room_invites_demo.dart';
 import 'package:lore/screens/staged_story_import_demo.dart';
@@ -224,6 +226,26 @@ void main() {
       email: 'android-alice@example.invalid',
       password: 'emulator-password',
     );
+    final aliceWriter = StagedRoomPostWriter(
+      auth: auth,
+      firestore: firestore,
+      account: alice,
+      identity: aliceKey,
+    );
+    final freshPost = await aliceWriter.addPost(
+      sessionId: roomId,
+      content: 'First post in a new room',
+    );
+    expect(
+      (await room.collection('keys').doc(alice.code).get()).exists,
+      isTrue,
+    );
+    expect((await room.collection('keys').doc(bob.code).get()).exists, isTrue);
+    expect(
+      (await room.collection('posts').doc(freshPost).get()).data()?['content'],
+      isNot('First post in a new room'),
+    );
+    await aliceWriter.deletePost(sessionId: roomId, postId: freshPost);
     final backup = RpStoryBackup(
       sessionId: 'old-room',
       exportedAt: DateTime.utc(2026),
@@ -301,7 +323,12 @@ void main() {
     await waitFor('Map each original author to a different participant.');
 
     Future<void> mapAuthor(String oldCode, String newCode) async {
-      final dropdown = find.byKey(ValueKey('author-$oldCode'));
+      final dropdown = find.byWidgetPredicate(
+        (widget) =>
+            widget is DropdownButtonFormField<String> &&
+            widget.key is ValueKey<String> &&
+            (widget.key as ValueKey<String>).value.endsWith('-$oldCode'),
+      );
       await tester.ensureVisible(dropdown);
       await tester.tap(dropdown);
       await tester.pumpAndSettle();
@@ -333,8 +360,20 @@ void main() {
     await tester.tap(find.text('Stage backup for review'));
     await waitFor('Backup staged for partner review.');
     expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Verify and publish demo story'),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(
       (await room.collection('restore').doc('state').get()).data()?['status'],
       'review',
+    );
+    await expectLater(
+      aliceWriter.addPost(sessionId: roomId, content: 'Not during review'),
+      throwsA(isA<FirebaseException>()),
     );
     await auth.signOut();
     await waitFor('The signed-in account changed. Return and sign in again.');
@@ -423,6 +462,7 @@ void main() {
         ),
       ),
     );
+    await waitFor('Load story for review');
     await unlockReview('654321');
     await waitFor('Posts: 2');
     expect(tester.widget<FilledButton>(approve).onPressed, isNull);
@@ -443,16 +483,85 @@ void main() {
       email: 'android-alice@example.invalid',
       password: 'emulator-password',
     );
-    await restore.publish(
-      sessionId: roomId,
-      identity: aliceKey,
-      backup: backup,
-      authorCodes: authors,
+    final incorrectBackup = await encodeRpStory(
+      sessionId: backup.sessionId,
+      session: backup.session,
+      posts: [
+        backup.posts.first,
+        StoryPost('post', {
+          ...backup.posts.last.data,
+          'content': 'Wrong story',
+        }),
+      ],
+      decrypt: (_, _) async => throw StateError('Unexpected encryption.'),
+      exportedAt: backup.exportedAt,
     );
+    var publishSelections = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StagedStoryImportDemo(
+          auth: auth,
+          firestore: firestore,
+          functions: functions,
+          account: alice,
+          room: rooms.single,
+          selectFile: () async {
+            publishSelections++;
+            return XFile.fromData(
+              utf8.encode(
+                publishSelections == 1 ? incorrectBackup : backupJson,
+              ),
+              name: 'test-story.json',
+              mimeType: 'application/json',
+            );
+          },
+        ),
+      ),
+    );
+    await waitFor('Restore status: approved');
+    await tester.tap(find.text('Choose backup JSON'));
+    await waitFor('Posts: 2');
+    await mapAuthor('old-alice', alice.code);
+    await mapAuthor('old-bob', bob.code);
+    Future<void> publish() async {
+      await tester.enterText(find.widgetWithText(TextField, 'PIN'), '123456');
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Account password'),
+        'emulator-password',
+      );
+      await tester.ensureVisible(find.text('Verify and publish demo story'));
+      await tester.tap(find.text('Verify and publish demo story'));
+    }
+
+    await publish();
+    await waitFor('Story post post does not match.');
+    expect((await room.collection('posts').get()).docs, isEmpty);
+    await tester.ensureVisible(find.text('Refresh restore status'));
+    await tester.tap(find.text('Refresh restore status'));
+    await waitFor('Restore status: approved');
+    await tester.ensureVisible(find.text('Choose backup JSON'));
+    await tester.tap(find.text('Choose backup JSON'));
+    await waitFor('Posts: 2');
+    await mapAuthor('old-alice', bob.code);
+    await mapAuthor('old-bob', alice.code);
+    await publish();
+    await waitFor('Story post post-alice does not match.');
+    expect((await room.collection('posts').get()).docs, isEmpty);
+    await tester.tap(find.text('Refresh restore status'));
+    await waitFor('Restore status: approved');
+    await mapAuthor('old-alice', alice.code);
+    await mapAuthor('old-bob', bob.code);
+    await publish();
+    await waitFor('Demo story published and restore completed.');
     expect(
       (await room.collection('restore').doc('state').get()).data()?['status'],
       'completed',
     );
+    await publish();
+    await waitFor(
+      'Restore was already complete; the approved staging matches this backup.',
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
     await auth.signOut();
     await accounts.signIn(
       email: 'android-bob@example.invalid',
@@ -461,7 +570,116 @@ void main() {
     final post = await room.collection('posts').doc('post').get();
     expect(post.exists, isTrue);
     expect(post.data()?['content'], isNot('Story'));
+    final published = await restore.loadPublishedPosts(
+      sessionId: roomId,
+      identity: bobKey,
+    );
+    expect(published.map((post) => post['id']), ['post-alice', 'post']);
+    expect(published.last['content'], 'Story');
+    expect(published.last['contentRuns'], '[{"text":"Story","bold":true}]');
+    expect(published.last['authorCode'], bob.code);
+    final bobWriter = StagedRoomPostWriter(
+      auth: auth,
+      firestore: firestore,
+      account: bob,
+      identity: bobKey,
+    );
+    final newPostId = await bobWriter.addPost(
+      sessionId: roomId,
+      content: 'New encrypted post',
+      contentRuns: '[{"text":"New encrypted post","bold":true}]',
+      quotedContent: 'The beginning',
+      quotedAuthor: 'Alice',
+    );
+    final encryptedPost = await room.collection('posts').doc(newPostId).get();
+    expect(encryptedPost.data()?['content'], isNot('New encrypted post'));
+    var postsWithNew = await restore.loadPublishedPosts(
+      sessionId: roomId,
+      identity: bobKey,
+    );
+    expect(postsWithNew.last['content'], 'New encrypted post');
+    expect(postsWithNew.last['quotedContent'], 'The beginning');
+    await bobWriter.editPost(
+      sessionId: roomId,
+      postId: newPostId,
+      newContent: 'Edited encrypted post',
+      contentRuns: '',
+    );
+    postsWithNew = await restore.loadPublishedPosts(
+      sessionId: roomId,
+      identity: bobKey,
+    );
+    expect(postsWithNew.last['content'], 'Edited encrypted post');
+    expect(postsWithNew.last['contentRuns'], isNull);
+    expect(postsWithNew.last['quotedContent'], 'The beginning');
     await auth.signOut();
+    await accounts.signIn(
+      email: 'android-alice@example.invalid',
+      password: 'emulator-password',
+    );
+    await expectLater(
+      aliceWriter.editPost(
+        sessionId: roomId,
+        postId: newPostId,
+        newContent: 'Forbidden edit',
+      ),
+      throwsA(isA<FirebaseException>()),
+    );
+    await expectLater(
+      aliceWriter.deletePost(sessionId: roomId, postId: newPostId),
+      throwsA(isA<FirebaseException>()),
+    );
+    await expectLater(
+      bobWriter.deletePost(sessionId: roomId, postId: newPostId),
+      throwsStateError,
+    );
+    await auth.signOut();
+    await accounts.signIn(
+      email: 'android-bob@example.invalid',
+      password: 'emulator-password',
+    );
+    await bobWriter.deletePost(sessionId: roomId, postId: newPostId);
+    expect(
+      (await room.collection('posts').doc(newPostId).get()).exists,
+      isFalse,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StagedRoomInvitesDemo(
+          auth: auth,
+          firestore: firestore,
+          functions: functions,
+          account: bob,
+        ),
+      ),
+    );
+    await waitFor('View published demo story');
+    await tester.ensureVisible(find.text('View published demo story'));
+    await tester.tap(find.text('View published demo story'));
+    await waitFor('Open published story');
+    await tester.enterText(find.widgetWithText(TextField, 'PIN'), '000000');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Account password'),
+      'emulator-password',
+    );
+    await tester.ensureVisible(find.text('Open published story'));
+    await tester.tap(find.text('Open published story'));
+    await waitFor('The password or PIN is incorrect.');
+    await tester.enterText(find.widgetWithText(TextField, 'PIN'), '654321');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Account password'),
+      'emulator-password',
+    );
+    await tester.ensureVisible(find.text('Open published story'));
+    await tester.tap(find.text('Open published story'));
+    await waitFor('Posts: 2');
+    expect(find.text('The beginning'), findsOneWidget);
+    expect(find.text('Story', findRichText: true), findsOneWidget);
+    await auth.signOut();
+    await waitFor('The signed-in account changed. Return and sign in again.');
+    expect(find.text('The beginning'), findsNothing);
+    expect(find.text('Story', findRichText: true), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets('demo screen creates, confirms and unlocks an account', (
@@ -552,4 +770,89 @@ void main() {
     await waitFor('Create an account');
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  if (app_main.migrationDemoEnabled) {
+    testWidgets('real app shell opens an isolated demo account', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 3600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final name = 'Shell${DateTime.now().microsecondsSinceEpoch}';
+      final email = '$name@example.invalid';
+      final account = await StagedAccountService(
+        auth: auth,
+        firestore: firestore,
+      ).register(email: email, password: 'emulator-password', name: name);
+      await StagedIdentityService(
+        auth: auth,
+        firestore: firestore,
+      ).initialize(pin: '123456', password: 'emulator-password');
+      final originalUid = account.uid;
+      final appsBefore = Firebase.apps.map((app) => app.name).toSet();
+      await tester.pumpWidget(const app_main.LoreApp());
+      await tester.runAsync(() async {
+        for (var i = 0; i < 300; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          await tester.pump();
+          if (find.text('Create an account').evaluate().isNotEmpty) return;
+        }
+      });
+      expect(find.text('Create an account'), findsOneWidget);
+      await tester.pumpAndSettle();
+      final demoApp = Firebase.app('lore-migration-demo');
+      expect(demoApp.options.projectId, 'demo-lore-migration');
+      expect(
+        Firebase.apps.map((app) => app.name).toSet().difference(appsBefore),
+        {'lore-migration-demo'},
+      );
+      await tester.enterText(find.widgetWithText(TextField, 'Email'), email);
+      await tester.pump();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Password'),
+        'emulator-password',
+      );
+      await tester.pump();
+      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Sign in'));
+      expect(
+        tester
+            .widget<TextField>(find.widgetWithText(TextField, 'Email'))
+            .controller!
+            .text,
+        email,
+      );
+      expect(
+        tester
+            .widget<TextField>(find.widgetWithText(TextField, 'Password'))
+            .controller!
+            .text,
+        'emulator-password',
+      );
+      await tester.runAsync(() async {
+        await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+        for (var i = 0; i < 300; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          await tester.pump();
+          if (find.text('Unlock $name').evaluate().isNotEmpty) return;
+        }
+      });
+      expect(
+        find.text('Unlock $name'),
+        findsOneWidget,
+        reason: tester
+            .widgetList<Text>(find.byType(Text))
+            .map((w) => w.data)
+            .join(' | '),
+      );
+      expect(
+        FirebaseAuth.instanceFor(app: demoApp).currentUser?.uid,
+        originalUid,
+      );
+      expect(auth.currentUser?.uid, originalUid);
+      await FirebaseAuth.instanceFor(app: demoApp).signOut();
+      expect(auth.currentUser?.uid, originalUid);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
 }

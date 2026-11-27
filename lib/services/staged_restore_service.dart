@@ -1,11 +1,11 @@
-import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'rp_story_export.dart';
 import 'rp_story_import.dart';
+import 'room_story_cipher.dart';
 import 'staged_account_service.dart';
 import 'staged_room_key_service.dart';
 import 'staged_story_publish.dart';
@@ -18,44 +18,22 @@ class StagedRestoreService {
     required FirebaseAuth auth,
     required FirebaseFirestore firestore,
     required FirebaseFunctions functions,
-  }) : _accounts = StagedAccountService(auth: auth, firestore: firestore),
+  }) : _auth = auth,
+       _firestore = firestore,
+       _accounts = StagedAccountService(auth: auth, firestore: firestore),
        _keys = StagedRoomKeyService(auth: auth, firestore: firestore),
        _upload = StagedStoryUploadService(firestore),
        _review = StagedStoryReviewService(firestore),
        _publish = StagedStoryPublishService(firestore, functions: functions);
 
+  final FirebaseAuth _auth;
+  final FirebaseFirestore _firestore;
   final StagedAccountService _accounts;
   final StagedRoomKeyService _keys;
   final StagedStoryUploadService _upload;
   final StagedStoryReviewService _review;
   final StagedStoryPublishService _publish;
-  final _cipher = AesGcm.with256bits();
-
-  Future<Map<String, String>> _encrypt(String text, SecretKey key) async {
-    final box = await _cipher.encrypt(utf8.encode(text), secretKey: key);
-    return {
-      'cipher': base64.encode(box.cipherText + box.mac.bytes),
-      'iv': base64.encode(box.nonce),
-    };
-  }
-
-  Future<String?> _decrypt(String cipher, String iv, SecretKey key) async {
-    final bytes = base64.decode(cipher);
-    final nonce = base64.decode(iv);
-    if (bytes.length < 16 || nonce.length != 12) {
-      throw const FormatException('Invalid encrypted story field.');
-    }
-    return utf8.decode(
-      await _cipher.decrypt(
-        SecretBox(
-          bytes.sublist(0, bytes.length - 16),
-          nonce: nonce,
-          mac: Mac(bytes.sublist(bytes.length - 16)),
-        ),
-        secretKey: key,
-      ),
-    );
-  }
+  final _cipher = RoomStoryCipher();
 
   Future<void> stage({
     required String sessionId,
@@ -75,7 +53,7 @@ class StagedRestoreService {
       reviewerCode: reviewerCode,
       backup: backup,
       authorCodes: authorCodes,
-      encrypt: (text) => _encrypt(text, key),
+      encrypt: (text) => _cipher.encrypt(text, key),
     );
   }
 
@@ -88,7 +66,7 @@ class StagedRestoreService {
     return _review.load(
       sessionId: sessionId,
       reviewerCode: account.code,
-      decrypt: (cipher, iv) => _decrypt(cipher, iv, key),
+      decrypt: (cipher, iv) => _cipher.decrypt(cipher, iv, key),
     );
   }
 
@@ -113,7 +91,56 @@ class StagedRestoreService {
       importerCode: account.code,
       backup: backup,
       authorCodes: authorCodes,
-      decrypt: (cipher, iv) => _decrypt(cipher, iv, key),
+      decrypt: (cipher, iv) => _cipher.decrypt(cipher, iv, key),
     );
+  }
+
+  /// Loads a completed restore as decrypted maps for the existing room view.
+  Future<List<Map<String, dynamic>>> loadPublishedPosts({
+    required String sessionId,
+    required SimpleKeyPair identity,
+  }) async {
+    final account = await _accounts.currentAccount();
+    final key = await _keys.load(sessionId: sessionId, identity: identity);
+    final room = _firestore.collection('sessions_v2').doc(sessionId);
+    final stateRef = room.collection('restore').doc('state');
+    const server = GetOptions(source: Source.server);
+
+    Future<int> completedVersion() async {
+      final snapshot = await stateRef.get(server);
+      final data = snapshot.data();
+      final version = data?['reviewVersion'];
+      if (snapshot.metadata.isFromCache || snapshot.metadata.hasPendingWrites) {
+        throw StateError('Restore changes are still syncing.');
+      }
+      if (data?['status'] != 'completed' ||
+          version is! int ||
+          version < 1 ||
+          data?['decisionVersion'] != version) {
+        throw StateError('The story restore is not complete.');
+      }
+      return version;
+    }
+
+    final version = await completedVersion();
+    final snapshot = await room.collection('posts').get(server);
+    if (snapshot.metadata.isFromCache || snapshot.metadata.hasPendingWrites) {
+      throw StateError('Story changes are still syncing.');
+    }
+    final posts = await decryptStoryPosts(
+      posts: [for (final doc in snapshot.docs) StoryPost(doc.id, doc.data())],
+      decrypt: (cipher, iv) => _cipher.decrypt(cipher, iv, key),
+    );
+    if (await completedVersion() != version) {
+      throw StateError('The restore changed. Load the story again.');
+    }
+    final user = _auth.currentUser;
+    if (user == null || user.isAnonymous || user.uid != account.uid) {
+      throw StateError('The signed-in account changed.');
+    }
+    return List.unmodifiable([
+      for (final post in posts)
+        Map<String, dynamic>.unmodifiable({...post.data, 'id': post.id}),
+    ]);
   }
 }

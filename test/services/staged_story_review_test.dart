@@ -8,7 +8,9 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lore/screens/rp_room.dart';
 import 'package:lore/services/rp_story_export.dart';
 import 'package:lore/services/rp_story_import.dart';
 import 'package:lore/services/staged_restore_service.dart';
@@ -308,6 +310,29 @@ class _Firestore extends Fake implements FirebaseFirestore {
 }
 
 void main() {
+  testWidgets('read-only room post renders restored formatting', (
+    tester,
+  ) async {
+    final post = RPPost.fromData({
+      'id': 'post',
+      'authorCode': 'bob',
+      'authorName': 'Bob',
+      'content': 'Story',
+      'contentRuns': '[{"text":"Story","bold":true}]',
+      'createdAt': Timestamp(1, 0),
+    }, 'bob');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ReadOnlyRPPost(post: post)),
+      ),
+    );
+    final richText = tester.widget<RichText>(
+      find.text('Story', findRichText: true),
+    );
+    final span = richText.text as TextSpan;
+    expect(span.children!.single.style!.fontWeight, FontWeight.bold);
+  });
+
   const statePath = 'sessions_v2/room/restore/state';
   const postsPath = '$statePath/posts';
   const metadataPath = '$statePath/metadata';
@@ -861,6 +886,10 @@ void main() {
     );
     expect(firestore.documents[statePath]!['status'], 'review');
     expect(firestore.documents['$postsPath/post']!['content'], isNot('Story'));
+    await expectLater(
+      restore.loadPublishedPosts(sessionId: 'room', identity: alice),
+      throwsStateError,
+    );
     auth.user = _User('bob-uid');
     final review = await restore.loadReview(sessionId: 'room', identity: bob);
     expect(review.posts.single.data['content'], 'Story');
@@ -882,5 +911,47 @@ void main() {
       firestore.documents['sessions_v2/room/posts/post'],
       firestore.documents['$postsPath/post'],
     );
+    final alicePosts = await restore.loadPublishedPosts(
+      sessionId: 'room',
+      identity: alice,
+    );
+    expect(alicePosts.single['id'], 'post');
+    expect(alicePosts.single['authorCode'], 'bob');
+    expect(alicePosts.single['content'], 'Story');
+    expect(alicePosts.single['contentRuns'], '[{"text":"Story","bold":true}]');
+    expect(alicePosts.single['createdAt'], Timestamp(1, 0));
+    expect(alicePosts.single.containsKey('contentIv'), isFalse);
+    final visiblePost = RPPost.fromData(alicePosts.single, 'bob');
+    expect(visiblePost.content, 'Story');
+    expect(visiblePost.isUser, isTrue);
+    expect(visiblePost.runs.single, {'text': 'Story', 'bold': true});
+    expect(visiblePost.timestamp, Timestamp(1, 0).toDate());
+    auth.user = _User('bob-uid');
+    final bobPosts = await restore.loadPublishedPosts(
+      sessionId: 'room',
+      identity: bob,
+    );
+    expect(bobPosts, alicePosts);
+    await expectLater(
+      restore.loadPublishedPosts(sessionId: 'room', identity: alice),
+      throwsStateError,
+    );
+    final savedContent =
+        firestore.documents['sessions_v2/room/posts/post']!['content'];
+    firestore.documents['sessions_v2/room/posts/post']!['content'] = 'bad';
+    await expectLater(
+      restore.loadPublishedPosts(sessionId: 'room', identity: bob),
+      throwsFormatException,
+    );
+    firestore.documents['sessions_v2/room/posts/post']!['content'] =
+        savedContent;
+    firestore.beforeQuery = (path) {
+      if (path == 'sessions_v2/room/posts') auth.user = null;
+    };
+    await expectLater(
+      restore.loadPublishedPosts(sessionId: 'room', identity: bob),
+      throwsStateError,
+    );
+    firestore.beforeQuery = null;
   });
 }
